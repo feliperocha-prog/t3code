@@ -743,7 +743,7 @@ const dictionary: Readonly<Record<string, string>> = {
   "Optional. Include text and controls from the captured app.":
     "Opcional. Incluir texto e controles do app capturado.",
   "Reinstall helper": "Reinstalar auxiliar",
-  "Try again": "Tentar novamente",
+  "Try again": "Tentar de novo",
   "Capture needs attention. Go back to check access.":
     "A captura precisa de atenção. Volte para verificar o acesso.",
   "Couldn't finish this step. Try again or check Advanced for help.":
