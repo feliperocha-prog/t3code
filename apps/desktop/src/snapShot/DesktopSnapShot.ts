@@ -1,4 +1,5 @@
 // @effect-diagnostics globalTimers:off -- Capture timeouts and Electron overlay animation timers run at native callback boundaries outside Effect fibers.
+import { t } from "../i18n.ts";
 
 import {
   DEFAULT_CLIENT_SETTINGS,
@@ -693,13 +694,13 @@ function probeGlobalShortcut(accelerator: string): DesktopSnapShotShortcutAvaila
     if (!Electron.globalShortcut.register(accelerator, () => undefined)) {
       return {
         available: false,
-        message: "This shortcut is already used by the system or another app.",
+        message: t("This shortcut is already used by the system or another app."),
       };
     }
     Electron.globalShortcut.unregister(accelerator);
     return { available: true, message: null };
   } catch {
-    return { available: false, message: "The system could not register this shortcut." };
+    return { available: false, message: t("The system could not register this shortcut.") };
   }
 }
 
@@ -1011,7 +1012,7 @@ export const make = Effect.gen(function* () {
   ) {
     const mode = captureMode(environment.platform);
     if (mode === "unavailable") {
-      return { available: false, message: "SnapShots are not supported on this platform." };
+      return { available: false, message: t("SnapShots are not supported on this platform.") };
     }
     if (mode === "portal" && niriSocketPath()) {
       return {
@@ -1054,7 +1055,7 @@ export const make = Effect.gen(function* () {
         Effect.match({
           onSuccess: () => ({
             available: true,
-            message: "Your desktop will confirm this shortcut when you save it.",
+            message: t("Your desktop will confirm this shortcut when you save it."),
           }),
           onFailure: (error) => ({
             available: false,

@@ -1,3 +1,4 @@
+import { t } from "../i18n.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
 import * as Deferred from "effect/Deferred";
@@ -499,10 +500,10 @@ describe("DesktopWindow", () => {
           assert.deepEqual(
             menu.input.template.filter((item) => item.role),
             [
-              { role: "cut", enabled: false },
-              { role: "copy", enabled: true },
-              { role: "paste", enabled: true },
-              { role: "selectAll", enabled: true },
+              { role: "cut", label: t("Cut"), enabled: false },
+              { role: "copy", label: t("Copy"), enabled: true },
+              { role: "paste", label: t("Paste"), enabled: true },
+              { role: "selectAll", label: t("Select All"), enabled: true },
             ],
           );
           const correction = menu.input.template.find((item) => item.label === "hello");
@@ -524,8 +525,8 @@ describe("DesktopWindow", () => {
           );
           const imageMenu = (yield* Queue.take(menus)).input;
           assert.isUndefined(imageMenu.frame);
-          const copyImage = imageMenu.template.find((item) => item.label === "Copy Image");
-          const copyLink = imageMenu.template.find((item) => item.label === "Copy Link");
+          const copyImage = imageMenu.template.find((item) => item.label === t("Copy Image"));
+          const copyLink = imageMenu.template.find((item) => item.label === t("Copy Link"));
           assert.isDefined(copyImage?.click);
           assert.isDefined(copyLink?.click);
           copyImage.click({} as Electron.MenuItem, undefined, {} as Electron.KeyboardEvent);

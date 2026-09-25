@@ -1,3 +1,4 @@
+import { t } from "../i18n.ts";
 import * as MacPermissions from "../permissions/MacPermissions.ts";
 import { assert, it } from "@effect/vitest";
 import {
@@ -3441,7 +3442,10 @@ it.effect("defers ordinary Wayland shortcut registration until settings are appl
       });
       assert.isFalse(conflict.available);
       assert.isTrue(available.available);
-      assert.match(available.message ?? "", /desktop will confirm/);
+      assert.equal(
+        available.message,
+        t("Your desktop will confirm this shortcut when you save it."),
+      );
 
       const pair = yield* service.checkShortcut({
         kind: "modifier-pair",

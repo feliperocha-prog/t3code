@@ -1,3 +1,4 @@
+import { t } from "../i18n.ts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -67,17 +68,19 @@ const checkForUpdatesFromMenu = Effect.gen(function* () {
   if (updateState.status === "up-to-date") {
     yield* electronDialog.showMessageBox({
       type: "info",
-      title: "You're up to date!",
-      message: `T3 Code ${updateState.currentVersion} is currently the newest version available.`,
-      buttons: ["OK"],
+      title: t("You're up to date!"),
+      message: t("T3 Code {version} is currently the newest version available.", {
+        version: updateState.currentVersion,
+      }),
+      buttons: [t("OK")],
     });
   } else if (updateState.status === "error") {
     yield* electronDialog.showMessageBox({
       type: "warning",
-      title: "Update check failed",
-      message: "Could not check for updates.",
-      detail: updateState.message ?? "An unknown error occurred. Please try again later.",
-      buttons: ["OK"],
+      title: t("Update check failed"),
+      message: t("Could not check for updates."),
+      detail: updateState.message ?? t("An unknown error occurred. Please try again later."),
+      buttons: [t("OK")],
     });
   }
 }).pipe(Effect.withSpan("desktop.menu.checkForUpdates"));
@@ -92,10 +95,10 @@ const handleCheckForUpdatesMenuClick = Effect.gen(function* () {
     });
     yield* electronDialog.showMessageBox({
       type: "info",
-      title: "Updates unavailable",
-      message: "Automatic updates are not available right now.",
+      title: t("Updates unavailable"),
+      message: t("Automatic updates are not available right now."),
       detail: disabledReason.value,
-      buttons: ["OK"],
+      buttons: [t("OK")],
     });
     return;
   }
@@ -161,12 +164,12 @@ export const make = Effect.gen(function* () {
         submenu: [
           { role: "about" },
           {
-            label: "Check for Updates...",
+            label: t("Check for Updates..."),
             click: checkForUpdatesClick,
           },
           { type: "separator" },
           {
-            label: "Settings...",
+            label: t("Settings..."),
             accelerator: "CmdOrCtrl+,",
             click: settingsClick,
           },
@@ -184,55 +187,61 @@ export const make = Effect.gen(function* () {
 
     template.push(
       {
-        label: "File",
+        label: t("File"),
         submenu: [
           ...(environment.platform === "darwin"
             ? []
             : [
                 {
-                  label: "Settings...",
+                  label: t("Settings..."),
                   accelerator: "CmdOrCtrl+,",
                   click: settingsClick,
                 },
                 { type: "separator" as const },
               ]),
-          { role: environment.platform === "darwin" ? "close" : "quit" },
+          {
+            role: environment.platform === "darwin" ? "close" : "quit",
+            label: environment.platform === "darwin" ? t("Close") : t("Quit"),
+          },
         ],
       },
       {
-        label: "Edit",
+        label: t("Edit"),
         submenu: [
-          { role: "undo" },
-          { role: "redo" },
+          { role: "undo", label: t("Undo") },
+          { role: "redo", label: t("Redo") },
           { type: "separator" },
-          { role: "cut" },
-          { role: "copy" },
-          { role: "paste" },
+          { role: "cut", label: t("Cut") },
+          { role: "copy", label: t("Copy") },
+          { role: "paste", label: t("Paste") },
           {
-            label: "Paste as Text",
+            label: t("Paste as Text"),
             accelerator: "CmdOrCtrl+Shift+V",
             click: pasteAsTextClick,
           },
-          { role: "delete" },
+          { role: "delete", label: t("Delete") },
           { type: "separator" },
-          { role: "selectAll" },
+          { role: "selectAll", label: t("Select All") },
           ...(environment.platform === "darwin"
             ? [
                 { type: "separator" as const },
                 {
-                  label: "Speech",
-                  submenu: [{ role: "startSpeaking" as const }, { role: "stopSpeaking" as const }],
+                  label: t("Speech"),
+                  submenu: [
+                    { role: "startSpeaking" as const, label: t("Start Speaking") },
+                    { role: "stopSpeaking" as const, label: t("Stop Speaking") },
+                  ],
                 },
               ]
             : []),
         ],
       },
       {
-        label: "View",
+        label: t("View"),
         submenu: [
-          { role: "reload" },
-          { role: "forceReload" },
-          { role: "toggleDevTools" },
+          { role: "reload", label: t("Reload") },
+          { role: "forceReload", label: t("Force Reload") },
+          { role: "toggleDevTools", label: t("Toggle Developer Tools") },
           { type: "separator" },
           /*
             Not the zoom roles: those act on the focused webContents, so with
@@ -240,25 +249,39 @@ export const make = Effect.gen(function* () {
             page and the app UI appears stuck. These always zoom the main
             window (see DesktopWindow.zoomMain).
           */
-          { label: "Actual Size", accelerator: "CmdOrCtrl+0", click: zoomClick("reset") },
-          { label: "Zoom In", accelerator: "CmdOrCtrl+=", click: zoomClick("in") },
+          { label: t("Actual Size"), accelerator: "CmdOrCtrl+0", click: zoomClick("reset") },
+          { label: t("Zoom In"), accelerator: "CmdOrCtrl+=", click: zoomClick("in") },
           {
-            label: "Zoom In",
+            label: t("Zoom In"),
             accelerator: "CmdOrCtrl+Plus",
             visible: false,
             click: zoomClick("in"),
           },
-          { label: "Zoom Out", accelerator: "CmdOrCtrl+-", click: zoomClick("out") },
+          { label: t("Zoom Out"), accelerator: "CmdOrCtrl+-", click: zoomClick("out") },
           { type: "separator" },
-          { role: "togglefullscreen" },
+          { role: "togglefullscreen", label: t("Toggle Full Screen") },
         ],
       },
-      { role: "windowMenu" },
+      {
+        role: "windowMenu",
+        label: t("Window"),
+        submenu: [
+          { role: "minimize", label: t("Minimize") },
+          { role: "zoom", label: t("Zoom") },
+          ...(environment.platform === "darwin"
+            ? [
+                { type: "separator" as const },
+                { role: "front" as const, label: t("Bring All to Front") },
+              ]
+            : [{ role: "close" as const, label: t("Close") }]),
+        ],
+      },
       {
         role: "help",
+        label: t("Help"),
         submenu: [
           {
-            label: "Check for Updates...",
+            label: t("Check for Updates..."),
             click: checkForUpdatesClick,
           },
         ],
