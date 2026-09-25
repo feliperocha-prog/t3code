@@ -195,17 +195,25 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "color-scheme",
-    title: "Color scheme",
+    title: t("Color scheme"),
     to: "/settings/appearance",
-    searchTerms: ["appearance light dark system mode"],
+    searchTerms: [
+      "appearance light dark system mode",
+      "Color scheme",
+      "claro escuro sistema modo esquema de cores aparência",
+    ],
     // The scheme tiles sit at the top of the Appearance section.
     targetId: "appearance",
   },
   {
     id: "theme",
-    title: "Themes",
+    title: t("Themes"),
     to: "/settings/appearance",
-    searchTerms: ["appearance colors palette custom import"],
+    searchTerms: [
+      "appearance colors palette custom import",
+      "Themes",
+      "temas cores paleta personalizado importar aparência",
+    ],
     // Theme cards live directly under the scheme tiles; the section is the
     // stable scroll destination for both.
     targetId: "appearance",
@@ -213,72 +221,109 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     // Prefixed because the slider control already owns the `appearance-contrast` id.
     id: "setting-appearance-contrast",
-    title: "Contrast",
+    title: t("Contrast"),
     to: "/settings/appearance",
-    searchTerms: ["colors borders interface"],
+    searchTerms: ["colors borders interface", "Contrast", "contraste cores bordas interface"],
   },
   {
     // Prefixed because the slider control already owns the `glass-opacity` id.
     id: "setting-glass-opacity",
-    title: "Glass opacity",
+    title: t("Glass opacity"),
     to: "/settings/appearance",
-    searchTerms: ["transparent transparency solid menus dialogs composer"],
+    searchTerms: [
+      "transparent transparency solid menus dialogs composer",
+      "Glass opacity",
+      "vidro opacidade transparente transparência sólido menus diálogos",
+    ],
   },
   {
     id: "diff-color-scheme",
-    title: "Diff colors",
+    title: t("Diff colors"),
     to: "/settings/appearance",
-    searchTerms: ["red green blue orange additions deletions changes counts palette colorblind"],
+    searchTerms: [
+      "red green blue orange additions deletions changes counts palette colorblind",
+      "Diff colors",
+      "cores do diff vermelho verde azul laranja adições remoções alterações daltonismo",
+    ],
   },
   {
     id: "panel-animations",
-    title: "Panel animations",
+    title: t("Panel animations"),
     to: "/settings/appearance",
+    searchTerms: ["Panel animations", "animações de painel animação painéis"],
   },
   {
     id: "environment-identification",
-    title: "Environment identification",
+    title: t("Environment identification"),
     to: "/settings/appearance",
-    searchTerms: ["dev nightly artwork pill label hide none"],
+    searchTerms: [
+      "dev nightly artwork pill label hide none",
+      "Environment identification",
+      "identificação do ambiente rótulo arte ocultar nenhum",
+    ],
     // The setting is stage-dependent, so its parent section is the stable destination.
     targetId: "appearance-interface",
   },
   {
     id: "interface-font",
-    title: "Interface font",
+    title: t("Interface font"),
     to: "/settings/appearance",
-    searchTerms: ["typography family size system sans"],
+    searchTerms: [
+      "typography family size system sans",
+      "Interface font",
+      "fonte da interface tipografia família tamanho",
+    ],
   },
   {
     id: "prompt-font",
-    title: "Prompt font",
+    title: t("Prompt font"),
     to: "/settings/appearance",
-    searchTerms: ["typography family size composer input"],
+    searchTerms: [
+      "typography family size composer input",
+      "Prompt font",
+      "fonte do prompt tipografia família tamanho entrada",
+    ],
   },
   {
     id: "code-font",
-    title: "Code font",
+    title: t("Code font"),
     to: "/settings/appearance",
-    searchTerms: ["typography family size monospace code blocks diffs file previews"],
+    searchTerms: [
+      "typography family size monospace code blocks diffs file previews",
+      "Code font",
+      "fonte do código tipografia família tamanho monoespaçada blocos de código",
+    ],
   },
   {
     id: "terminal-font",
-    title: "Terminal font",
+    title: t("Terminal font"),
     to: "/settings/appearance",
-    searchTerms: ["typography family size monospace output"],
+    searchTerms: [
+      "typography family size monospace output",
+      "Terminal font",
+      "fonte do terminal tipografia família tamanho monoespaçada saída",
+    ],
   },
   {
     id: "font-smoothing",
-    title: "Font smoothing",
+    title: t("Font smoothing"),
     to: "/settings/appearance",
-    searchTerms: ["typography text grayscale anti aliasing macos thin"],
+    searchTerms: [
+      "typography text grayscale anti aliasing macos thin",
+      "Font smoothing",
+      "suavização da fonte tipografia texto tons de cinza antialiasing",
+    ],
     macOnly: true,
   },
   {
     id: "word-wrap",
-    title: "Word wrap",
+    title: t("Word wrap"),
     to: "/settings/appearance",
-    searchTerms: ["long lines code blocks tables diffs file previews"],
+    searchTerms: [
+      "long lines code blocks tables diffs file previews",
+      "Word wrap",
+      "quebra de linha linhas longas blocos de código tabelas",
+    ],
   },
   {
     id: "project-grouping",
