@@ -544,6 +544,7 @@ export const ptBR: Readonly<Record<string, string>> = {
   "Theme appearance": "Aparência do tema",
   Colors: "Cores",
   "Two colors, rest derived": "Duas cores, o resto é derivado",
+  "No matches.": "Nenhum resultado.",
   "Choose a color": "Escolha uma cor",
   Sort: "Ordenar",
   "Filter colors": "Filtrar cores",

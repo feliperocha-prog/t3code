@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { t } from "./index";
+import { dictionarySources, t } from "./index";
 
 describe("t", () => {
   it("returns the Portuguese entry for a known English string", () => {
@@ -15,5 +15,35 @@ describe("t", () => {
       "Reconecte Casa para alterar as configurações dele.",
     );
     expect(t("{count} left, {other}", { count: 3 })).toBe("3 left, {other}");
+  });
+});
+
+describe("dictionaries", () => {
+  it("never translate the same English text two different ways", () => {
+    const seen = new Map<string, readonly [string, string]>();
+    const conflicts: string[] = [];
+    for (const [source, dict] of dictionarySources) {
+      for (const [key, value] of Object.entries(dict)) {
+        const previous = seen.get(key);
+        if (previous && previous[1] !== value) {
+          conflicts.push(`${JSON.stringify(key)}: ${previous[0]} vs ${source}`);
+        }
+        seen.set(key, [source, value]);
+      }
+    }
+    expect(conflicts).toEqual([]);
+  });
+
+  it("keep every placeholder of the English text in the translation", () => {
+    const broken: string[] = [];
+    const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+    for (const [source, dict] of dictionarySources) {
+      for (const [key, value] of Object.entries(dict)) {
+        if (placeholders(key).join() !== placeholders(value).join()) {
+          broken.push(`${source} ${JSON.stringify(key)}`);
+        }
+      }
+    }
+    expect(broken).toEqual([]);
   });
 });
