@@ -746,5 +746,15 @@ const dictionary: Readonly<Record<string, string>> = {
   "Run both backends": "Rodar os dois backends",
   "Disable WSL": "Desativar o WSL",
   "Switch distro": "Trocar distro",
+
+  // Settings panels: changed-setting labels (rendered with t(label) in SettingsPanels.tsx)
+  "Browser viewport": "Viewport do navegador",
+  "Browser zoom": "Zoom do navegador",
+  "Browser appearance": "Aparência do navegador",
+  "Recording frame rate": "Taxa de quadros da gravação",
+  "Recording key presses": "Teclas pressionadas na gravação",
+  "Recording mouse presses": "Cliques do mouse na gravação",
+  "Open links in": "Abrir links em",
+  "Floating preview": "Visualização flutuante",
 };
 export default dictionary;
