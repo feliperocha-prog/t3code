@@ -200,7 +200,7 @@ function BreadcrumbMenuContent(props: {
           <MenuSeparator />
           <MenuItem closeOnClick={false} onClick={entriesQuery.refresh}>
             <RefreshIcon refreshing={entriesQuery.isPending} />
-            Refresh failed — retry
+            {t("Refresh failed — retry")}
           </MenuItem>
         </>
       ) : null}

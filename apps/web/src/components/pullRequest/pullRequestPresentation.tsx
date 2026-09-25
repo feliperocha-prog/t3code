@@ -33,6 +33,7 @@ import {
   type PullRequestStatePresentation,
   type PullRequestGlyphIcon,
 } from "./pullRequestIcons";
+import { t } from "~/i18n";
 
 /**
  * A host label as a flat tinted tag in the label's own color: a wash of it behind, the name
@@ -78,19 +79,19 @@ function reviewDecisionPresentation(decision: PullRequestReviewDecision) {
     case "approved":
       return {
         Icon: UserCheckIcon,
-        label: "Approved",
+        label: t("Approved"),
         toneClassName: CHECK_STATUS_PRESENTATION.success.toneClassName,
       };
     case "changes-requested":
       return {
         Icon: UserRoundXIcon,
-        label: "Changes requested",
+        label: t("Changes requested"),
         toneClassName: "text-amber-600/90 dark:text-amber-400/80",
       };
     case "review-required":
       return {
         Icon: UserRoundIcon,
-        label: "Awaiting review",
+        label: t("Awaiting review"),
         toneClassName: "text-muted-foreground/60",
       };
   }
@@ -144,7 +145,9 @@ export function resolvePullRequestConflict(input: {
     return null;
   }
   return {
-    label: input.baseBranch ? `Conflicts with ${input.baseBranch}` : "Has conflicts",
+    label: input.baseBranch
+      ? t("Conflicts with {branch}", { branch: input.baseBranch })
+      : t("Has conflicts"),
     toneClassName: "text-destructive",
     Icon: PullRequestGlyph.conflicting,
   };
@@ -211,21 +214,29 @@ export function PullRequestConflictGlyph({
 }
 
 const CHECK_STATUS_PRESENTATION = {
-  pending: { label: "Running", Icon: Spinner, toneClassName: "text-amber-500" },
+  pending: { label: t("Running"), Icon: Spinner, toneClassName: "text-amber-500" },
   "action-required": {
-    label: "Awaiting action",
+    label: t("Awaiting action"),
     Icon: CircleDotIcon,
     toneClassName: "text-amber-600 dark:text-amber-400/90",
   },
   success: {
-    label: "Passed",
+    label: t("Passed"),
     Icon: CircleCheckIcon,
     toneClassName: "text-emerald-600 dark:text-emerald-300/90",
   },
-  failure: { label: "Failed", Icon: CircleXIcon, toneClassName: "text-destructive" },
-  cancelled: { label: "Cancelled", Icon: CircleXIcon, toneClassName: "text-destructive" },
-  skipped: { label: "Skipped", Icon: CircleDashedIcon, toneClassName: "text-muted-foreground/70" },
-  neutral: { label: "Neutral", Icon: CircleDashedIcon, toneClassName: "text-muted-foreground/70" },
+  failure: { label: t("Failed"), Icon: CircleXIcon, toneClassName: "text-destructive" },
+  cancelled: { label: t("Cancelled"), Icon: CircleXIcon, toneClassName: "text-destructive" },
+  skipped: {
+    label: t("Skipped"),
+    Icon: CircleDashedIcon,
+    toneClassName: "text-muted-foreground/70",
+  },
+  neutral: {
+    label: t("Neutral"),
+    Icon: CircleDashedIcon,
+    toneClassName: "text-muted-foreground/70",
+  },
 } as const satisfies Record<
   PullRequestCheckStatus,
   { label: string; Icon: typeof CircleCheckIcon | typeof Spinner; toneClassName: string }
@@ -243,7 +254,7 @@ export function pullRequestCheckStatusLabel(
   check: Pick<PullRequestCheck, "status" | "url">,
 ): string {
   return isWorkflowApprovalCheck(check)
-    ? "Awaiting approval"
+    ? t("Awaiting approval")
     : CHECK_STATUS_PRESENTATION[check.status].label;
 }
 
@@ -263,17 +274,17 @@ export function PullRequestCheckStatusIcon({ status }: { status: PullRequestChec
  */
 const CHECKS_STATE_PRESENTATION = {
   passing: {
-    label: "All checks have passed",
+    label: t("All checks have passed"),
     Icon: CircleCheckIcon,
     toneClassName: CHECK_STATUS_PRESENTATION.success.toneClassName,
   },
   failing: {
-    label: "Some checks were not successful",
+    label: t("Some checks were not successful"),
     Icon: CircleXIcon,
     toneClassName: "text-destructive",
   },
   pending: {
-    label: "Some checks haven't completed yet",
+    label: t("Some checks haven't completed yet"),
     Icon: CircleDotIcon,
     toneClassName: "text-amber-600 dark:text-amber-400/90",
   },
@@ -312,7 +323,7 @@ export function pullRequestChecksState(
  */
 const REVIEW_OUTCOME_PRESENTATION = {
   approved: {
-    label: "Approved",
+    label: t("Approved"),
     Icon: CircleCheckIcon,
     toneClassName: "text-emerald-600 dark:text-emerald-300/90",
     ringClassName: "ring-2 ring-emerald-500 dark:ring-emerald-400",
@@ -321,7 +332,7 @@ const REVIEW_OUTCOME_PRESENTATION = {
     badgeVariant: "success",
   },
   "changes-requested": {
-    label: "Changes requested",
+    label: t("Changes requested"),
     Icon: CircleXIcon,
     toneClassName: "text-destructive",
     ringClassName: "ring-2 ring-destructive",
@@ -329,7 +340,7 @@ const REVIEW_OUTCOME_PRESENTATION = {
     badgeVariant: "error",
   },
   dismissed: {
-    label: "Review dismissed",
+    label: t("Review dismissed"),
     Icon: CircleDashedIcon,
     toneClassName: "text-muted-foreground/70",
     ringClassName: "ring-2 ring-muted-foreground/60",
@@ -488,7 +499,7 @@ export function PullRequestActorLabel({
                   href={profileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`Open ${login}'s profile`}
+                  aria-label={t("Open {login}'s profile", { login })}
                 />
               }
             />
@@ -570,7 +581,7 @@ export function PullRequestMetaLine({
 }
 
 export function summarizePullRequestChecks(checks: ReadonlyArray<PullRequestCheck>): string {
-  if (checks.length === 0) return "No checks reported";
+  if (checks.length === 0) return t("No checks reported");
   const actionRequired = checks.filter((check) => check.status === "action-required");
   const workflowApprovalRequired = actionRequired.filter(isWorkflowApprovalCheck).length;
   const otherActionRequired = actionRequired.length - workflowApprovalRequired;
@@ -579,16 +590,31 @@ export function summarizePullRequestChecks(checks: ReadonlyArray<PullRequestChec
   ).length;
   const pending = checks.filter((check) => check.status === "pending").length;
   const passed = checks.filter((check) => check.status === "success").length;
-  if (failed > 0) return `${failed} of ${checks.length} failing`;
+  if (failed > 0) return t("{count} of {total} failing", { count: failed, total: checks.length });
   if (workflowApprovalRequired > 0 && otherActionRequired > 0) {
-    return `${workflowApprovalRequired} ${workflowApprovalRequired === 1 ? "workflow" : "workflows"} and ${otherActionRequired} ${otherActionRequired === 1 ? "check" : "checks"} awaiting action`;
+    return t("{workflows} and {checks} awaiting action", {
+      workflows:
+        workflowApprovalRequired === 1
+          ? t("{count} workflow", { count: workflowApprovalRequired })
+          : t("{count} workflows", { count: workflowApprovalRequired }),
+      checks:
+        otherActionRequired === 1
+          ? t("{count} check", { count: otherActionRequired })
+          : t("{count} checks", { count: otherActionRequired }),
+    });
   }
   if (workflowApprovalRequired > 0) {
-    return `${workflowApprovalRequired} ${workflowApprovalRequired === 1 ? "workflow" : "workflows"} awaiting approval`;
+    return workflowApprovalRequired === 1
+      ? t("{count} workflow awaiting approval", { count: workflowApprovalRequired })
+      : t("{count} workflows awaiting approval", { count: workflowApprovalRequired });
   }
   if (otherActionRequired > 0) {
-    return `${otherActionRequired} ${otherActionRequired === 1 ? "check" : "checks"} awaiting action`;
+    return otherActionRequired === 1
+      ? t("{count} check awaiting action", { count: otherActionRequired })
+      : t("{count} checks awaiting action", { count: otherActionRequired });
   }
-  if (pending > 0) return `${pending} of ${checks.length} running`;
-  return passed === checks.length ? "All checks passed" : `${passed} of ${checks.length} passing`;
+  if (pending > 0) return t("{count} of {total} running", { count: pending, total: checks.length });
+  return passed === checks.length
+    ? t("All checks passed")
+    : t("{count} of {total} passing", { count: passed, total: checks.length });
 }

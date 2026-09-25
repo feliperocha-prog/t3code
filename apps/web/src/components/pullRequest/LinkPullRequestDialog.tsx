@@ -1,4 +1,5 @@
 import { changeRequestUrlFor as changeRequestWebUrl } from "@t3tools/shared/changeRequestUrl";
+import { t } from "~/i18n";
 export { changeRequestUrlFor as changeRequestWebUrl } from "@t3tools/shared/changeRequestUrl";
 import {
   pullRequestHostOf,
@@ -95,7 +96,12 @@ export function resolveLinkPullRequestInput(input: {
   const url = parseChangeRequestUrl(parsed);
   if (url !== null) {
     if (!input.hasProject({ ...url, url: parsed })) {
-      return { error: `No project in this environment can read ${url.host}/${url.repository}.` };
+      return {
+        error: t("No project in this environment can read {host}/{repository}.", {
+          host: url.host,
+          repository: url.repository,
+        }),
+      };
     }
     return {
       link: { host: url.host, repository: url.repository, number: url.number, url: parsed },
@@ -104,12 +110,12 @@ export function resolveLinkPullRequestInput(input: {
   const number = Number(parsed);
   if (!Number.isSafeInteger(number) || number < 1) return null;
   if (input.project === null) {
-    return { error: "Paste a full URL to link a pull request from another repository." };
+    return { error: t("Paste a full URL to link a pull request from another repository.") };
   }
   const webUrl = input.project.webUrl(number);
   const webReference = webUrl === null ? null : parseChangeRequestUrl(webUrl);
   if (webUrl === null || webReference === null) {
-    return { error: "Paste a full URL; this project's host has no known pull request URL." };
+    return { error: t("Paste a full URL; this project's host has no known pull request URL.") };
   }
   return {
     link: { ...webReference, url: webUrl },
@@ -180,7 +186,9 @@ function LinkPullRequestDialog({
     try {
       await linking.changeLink(threadRef, resolved.link.url, true);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Could not link the pull request.");
+      setSubmitError(
+        error instanceof Error ? error.message : t("Could not link the pull request."),
+      );
       return;
     } finally {
       setPending(false);
@@ -191,9 +199,9 @@ function LinkPullRequestDialog({
   const validation = !dirty
     ? null
     : reference.trim().length === 0
-      ? "Paste a pull request URL or enter 123 / #123."
+      ? t("Paste a pull request URL or enter 123 / #123.")
       : resolved === null
-        ? "Use a pull request URL, 123, or #123."
+        ? t("Use a pull request URL, 123, or #123.")
         : "error" in resolved
           ? resolved.error
           : null;
@@ -202,16 +210,17 @@ function LinkPullRequestDialog({
     <Dialog open={open} onOpenChange={(next) => (pending ? undefined : onOpenChange(next))}>
       <DialogPopup className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Link pull request</DialogTitle>
+          <DialogTitle>{t("Link pull request")}</DialogTitle>
           <DialogDescription>
-            Attach a pull request to this thread. A full URL can point at any repository on a host
-            this environment has a project for.
+            {t(
+              "Attach a pull request to this thread. A full URL can point at any repository on a host this environment has a project for.",
+            )}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
           <Input
             ref={inputRef}
-            placeholder="Pull request URL or #42"
+            placeholder={t("Pull request URL or #42")}
             value={reference}
             onChange={(event) => {
               setDirty(true);
@@ -240,7 +249,7 @@ function LinkPullRequestDialog({
             onClick={() => onOpenChange(false)}
             disabled={pending}
           >
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button
             type="button"
@@ -248,7 +257,7 @@ function LinkPullRequestDialog({
             onClick={() => void submit()}
             disabled={pending || resolved === null || "error" in resolved}
           >
-            {pending ? "Linking..." : "Link"}
+            {pending ? t("Linking...") : t("Link")}
           </Button>
         </DialogFooter>
       </DialogPopup>

@@ -42,6 +42,7 @@ import {
   readPullRequestListPreferences,
   writePullRequestListPreferences,
 } from "./pullRequestListPreferences";
+import { t } from "~/i18n";
 
 const VIEWERS = { "github.com": "Bilal" } as const;
 const NO_VIEWERS = {} as const;
@@ -810,7 +811,7 @@ describe("default merge-readiness ranking", () => {
     const measured = entry({ number: 2 });
     const empty = entry({ number: 3, additions: 0, deletions: 0 });
     const groups = [
-      { key: "others", label: "Others", entries: [unknown, measured, empty] },
+      { key: "others", label: t("Others"), entries: [unknown, measured, empty] },
     ] as const;
 
     const sorted = sortPullRequestGroups(groups, "ready", "", (row) => row.number !== 1);
@@ -835,8 +836,8 @@ describe("default merge-readiness ranking", () => {
     });
     const sorted = sortPullRequestGroups(
       [
-        { key: "authored", label: "Authored", entries: [authoredWaiting, authoredReady] },
-        { key: "others", label: "Others", entries: [otherReady] },
+        { key: "authored", label: t("Authored"), entries: [authoredWaiting, authoredReady] },
+        { key: "others", label: t("Others"), entries: [otherReady] },
       ],
       "ready",
       "",
@@ -867,8 +868,8 @@ describe("default merge-readiness ranking", () => {
     });
     const sorted = sortPullRequestGroups(
       [
-        { key: "authored", label: "Authored", entries: [olderLarger, newerSmaller] },
-        { key: "others", label: "Others", entries: [entry({ number: 3 })] },
+        { key: "authored", label: t("Authored"), entries: [olderLarger, newerSmaller] },
+        { key: "others", label: t("Others"), entries: [entry({ number: 3 })] },
       ],
       sort,
       "",
@@ -951,9 +952,9 @@ describe("blocked-on-me ranking", () => {
       entry({ number: 6, isDraft: true }),
     ];
     const groups = [
-      { key: "authored", label: "Authored", entries: authored },
-      { key: "reviewRequested", label: "Review requested", entries: reviewing },
-      { key: "others", label: "Others", entries: others },
+      { key: "authored", label: t("Authored"), entries: authored },
+      { key: "reviewRequested", label: t("Review requested"), entries: reviewing },
+      { key: "others", label: t("Others"), entries: others },
     ] as const;
 
     expect(

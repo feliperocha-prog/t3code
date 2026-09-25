@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type ComponentProps } from "react";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { PullRequestMarkdown } from "./PullRequestMarkdown";
+import { t } from "~/i18n";
 
 /** Keep the complete markdown intact while limiting long reports to a readable preview. */
 export function PullRequestCommentBody({
@@ -53,7 +54,7 @@ export function PullRequestCommentBody({
             setExpanded(!expanded);
           }}
         >
-          {expanded ? "Show less" : "Show full comment"}
+          {expanded ? t("Show less") : t("Show full comment")}
         </Button>
       ) : null}
     </div>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { changeRequestWebUrl, resolveLinkPullRequestInput } from "./LinkPullRequestDialog";
+import { t } from "~/i18n";
 
 const project = {
   host: "github.com",
@@ -112,7 +113,11 @@ describe("resolveLinkPullRequestInput", () => {
   it("asks for a URL when a bare number has no project to resolve against", () => {
     expect(
       resolveLinkPullRequestInput({ reference: "12", project: null, hasProject: () => true }),
-    ).toMatchObject({ error: expect.stringContaining("full URL") });
+    ).toMatchObject({
+      error: expect.stringContaining(
+        t("Paste a full URL to link a pull request from another repository."),
+      ),
+    });
   });
 
   it("accepts a checkout command as a reference", () => {

@@ -20,6 +20,7 @@ import {
   pullRequestChecksStatePresentation,
   summarizePullRequestChecks,
 } from "./pullRequestPresentation";
+import { t } from "~/i18n";
 
 /**
  * The checks behind the rollup, for a row that only carries the rollup. Mounted by the popup, so
@@ -44,7 +45,7 @@ function LazyChecksBody({
   if (detailQuery.data === null) {
     return (
       <p className="text-muted-foreground text-xs">
-        {detailQuery.isPending ? "Loading checks…" : "No checks reported"}
+        {detailQuery.isPending ? t("Loading checks…") : t("No checks reported")}
       </p>
     );
   }
@@ -60,7 +61,7 @@ function ChecksBody({
 }) {
   const openLink = useOpenLink(threadRef);
   if (checks.length === 0) {
-    return <p className="text-muted-foreground text-xs">No checks reported</p>;
+    return <p className="text-muted-foreground text-xs">{t("No checks reported")}</p>;
   }
   return (
     <ul className="flex flex-col gap-1">
@@ -86,11 +87,11 @@ function ChecksBody({
                 if (!check.url) return;
                 void openLink(check.url).catch((error: unknown) => {
                   console.error(error);
-                  toastManager.add({ type: "error", title: "Unable to open check details" });
+                  toastManager.add({ type: "error", title: t("Unable to open check details") });
                 });
               }}
             >
-              Details
+              {t("Details")}
             </button>
           )}
         </li>
@@ -139,7 +140,7 @@ export function PullRequestChecksPopover({
           <span
             role="button"
             tabIndex={0}
-            aria-label={`Checks: ${presentation.label}`}
+            aria-label={t("Checks: {label}", { label: presentation.label })}
             className={cn("inline-flex shrink-0 cursor-pointer items-center", className)}
           />
         }
@@ -152,7 +153,7 @@ export function PullRequestChecksPopover({
         {summary === null ? null : <p className="mb-2 text-muted-foreground text-xs">{summary}</p>}
         {stale ? (
           <p className="text-muted-foreground text-xs">
-            Check details are out of date. Refresh the pull request to update them.
+            {t("Check details are out of date. Refresh the pull request to update them.")}
           </p>
         ) : checks !== undefined ? (
           <ChecksBody checks={checks} threadRef={threadRef} />
