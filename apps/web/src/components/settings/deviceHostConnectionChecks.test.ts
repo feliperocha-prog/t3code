@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import * as Option from "effect/Option";
 import { describe, expect, it } from "vite-plus/test";
 import { EnvironmentId, type DeviceHostSummary } from "@t3tools/contracts";
@@ -51,7 +52,7 @@ describe("device host connection checks", () => {
       { status: "connected", platforms: summary.platforms },
       { status: "local" },
       { status: "failed", error: "SSH key rejected" },
-      { status: "failed", error: "Environment disconnected" },
+      { status: "failed", error: t("Environment disconnected") },
     ]);
   });
 

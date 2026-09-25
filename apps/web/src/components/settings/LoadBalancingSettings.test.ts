@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import { EnvironmentId } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
@@ -26,7 +27,7 @@ describe("summarizeLoadPreferences", () => {
 
   it("lists only the machines that differ from Normal, in list order", () => {
     expect(summarizeLoadPreferences(machines, { b: 100, c: 0 })).toBe(
-      "bb-1 prefer · ProMini manual only",
+      `bb-1 ${t("Prefer").toLowerCase()} · ProMini ${t("Manual only").toLowerCase()}`,
     );
   });
 });

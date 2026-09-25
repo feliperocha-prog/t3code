@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import {
   DEFAULT_SERVER_SETTINGS,
   EnvironmentId,
@@ -117,7 +118,7 @@ describe("scoped settings targets", () => {
       planScopedSettingsPatch(scope, environments, { enableProviderUpdateChecks: false }),
     ).toMatchObject({
       serverWrites: [],
-      unavailableReason: "Connect Offline to save this setting.",
+      unavailableReason: t("Connect {target} to save this setting.", { target: "Offline" }),
     });
   });
 
@@ -361,12 +362,19 @@ describe("scoped settings writes", () => {
       planScopedSettingsPatch(project, environments, { enableProviderUpdateChecks: false }),
     ).toMatchObject({
       serverWrites: [],
-      unavailableReason: "This setting is environment-wide and cannot be overridden by a project.",
+      unavailableReason: t(
+        "This setting is environment-wide and cannot be overridden by a project.",
+      ),
     });
     const legacy = environment("Server", { projectOverrides: false });
     expect(
       planScopedSettingsPatch(checkout, [laptop, legacy], { defaultAutoPull: true }),
-    ).toMatchObject({ serverWrites: [], unavailableReason: expect.stringContaining("update") });
+    ).toMatchObject({
+      serverWrites: [],
+      unavailableReason: t(
+        "Connect the selected checkouts, or update their environments, to save a project override.",
+      ),
+    });
   });
 
   it("clears overrides per member and removes an emptied entry", () => {
