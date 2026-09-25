@@ -52,7 +52,8 @@ describe("ProjectIconPickerDialog", () => {
     );
 
     expect(markup).toContain('data-current="lucide"');
-    expect(markup.indexOf(">Icons<")).toBeLessThan(markup.indexOf(">Emoji<"));
+    expect(markup.indexOf(`>${t("Icons")}<`)).toBeGreaterThan(-1);
+    expect(markup.indexOf(`>${t("Icons")}<`)).toBeLessThan(markup.indexOf(`>${t("Emoji")}<`));
     expect(markup).toContain(`aria-label="${t("Icon color")}"`);
   });
 });

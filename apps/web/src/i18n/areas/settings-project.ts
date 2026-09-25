@@ -42,7 +42,7 @@ const dictionary: Readonly<Record<string, string>> = {
   "Auto-show floating preview": "Mostrar visualização flutuante automaticamente",
   // Settings → Integrations: browser profiles
   "Profiles separate cookies and logins. Incognito data is cleared when the app closes.":
-    "Os perfis separam cookies e logins. Os dados anônimos são apagados quando o app fecha.",
+    "Os perfis separam cookies e logins. Os dados do modo anônimo são apagados quando o app fecha.",
   "Add profile": "Adicionar perfil",
   "New profile": "Novo perfil",
   "Blank profile": "Perfil em branco",
@@ -248,7 +248,7 @@ const dictionary: Readonly<Record<string, string>> = {
   "Failed to import action.": "Não foi possível importar a ação.",
   Actions: "Ações",
   "Commands that run in this project's checkout or its worktree, with optional shortcuts.":
-    "Comandos que rodam no checkout deste projeto ou na worktree dele, com atalhos opcionais.",
+    "Comandos que rodam no checkout deste projeto ou no worktree dele, com atalhos opcionais.",
   "Import scripts": "Importar scripts",
   "Import from t3.json": "Importar do t3.json",
   "Add actions declared by this checkout without editing them first.":
