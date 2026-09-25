@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import { EnvironmentId } from "@t3tools/contracts";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
@@ -74,7 +75,10 @@ describe("ProjectFaviconPickerDialog", () => {
       readonly onPickExternal: () => Promise<string | null>;
     }) as ReactElement<Record<string, unknown>>;
 
-    const button = visitElements(picker, (element) => element.props.children === "Open in Finder");
+    const button = visitElements(
+      picker,
+      (element) => element.props.children === t("Open in {name}", { name: "Finder" }),
+    );
     expect(button).not.toBeNull();
 
     (button?.props.onClick as (() => void) | undefined)?.();
@@ -108,7 +112,10 @@ describe("ProjectFaviconPickerDialog", () => {
 
     hooks.beginRender();
     const picker = ProjectFaviconPickerDialog(props) as ReactElement<Record<string, unknown>>;
-    const button = visitElements(picker, (element) => element.props.children === "Open in Finder");
+    const button = visitElements(
+      picker,
+      (element) => element.props.children === t("Open in {name}", { name: "Finder" }),
+    );
 
     (button?.props.onClick as (() => void) | undefined)?.();
     await Promise.resolve();
@@ -118,7 +125,7 @@ describe("ProjectFaviconPickerDialog", () => {
     expect(onSelect).not.toHaveBeenCalled();
     expect(toastManager.add).toHaveBeenCalledWith({
       type: "error",
-      title: "Could not open image picker",
+      title: t("Could not open image picker"),
       description: "picker failed",
     });
   });

@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import {
   isAtomCommandInterrupted,
   mapAtomCommandResult,
@@ -131,15 +132,15 @@ export function ProjectSettingsPanel({
     return (
       <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
         {groups.length === 0
-          ? "Add a project from the sidebar to configure it here."
-          : "This project is no longer available."}
+          ? t("Add a project from the sidebar to configure it here.")
+          : t("This project is no longer available.")}
       </div>
     );
   }
   if (members.length === 0)
     return (
       <p className="p-8 text-sm text-muted-foreground">
-        This checkout is no longer available in the selected project and environment.
+        {t("This checkout is no longer available in the selected project and environment.")}
       </p>
     );
   const scopedGroup = {
@@ -199,7 +200,7 @@ function ProjectDetail({
       stackedThreadToast({
         type: "error",
         title,
-        description: error instanceof Error ? error.message : "An error occurred.",
+        description: error instanceof Error ? error.message : t("An error occurred."),
       }),
     );
   }, []);
@@ -221,7 +222,9 @@ function ProjectDetail({
       });
       if (unavailable) {
         const error = new Error(
-          `Connect ${unavailable.environmentLabel ?? "the selected environment"} and try again.`,
+          t("Connect {environment} and try again.", {
+            environment: unavailable.environmentLabel ?? t("the selected environment"),
+          }),
         );
         const result: AtomCommandResult<void, unknown> = AsyncResult.failure(Cause.fail(error));
         reportFailure(failureTitle, result);
@@ -240,7 +243,10 @@ function ProjectDetail({
           // write. Name the environment so the user knows where it stopped.
           reportFailure(
             group.memberProjects.length > 1
-              ? `${failureTitle} on ${member.environmentLabel ?? "the current environment"}`
+              ? t("{title} on {environment}", {
+                  title: failureTitle,
+                  environment: member.environmentLabel ?? t("the current environment"),
+                })
               : failureTitle,
             result,
           );
@@ -256,7 +262,7 @@ function ProjectDetail({
     async (nextTitle: string, wasEdited: boolean) => {
       const title = nextTitle.trim();
       if (!title) {
-        toastManager.add({ type: "warning", title: "Project title cannot be empty" });
+        toastManager.add({ type: "warning", title: t("Project title cannot be empty") });
         return;
       }
       if (
@@ -268,7 +274,7 @@ function ProjectDetail({
       ) {
         return;
       }
-      await updateAllMembers({ title }, "Failed to rename project");
+      await updateAllMembers({ title }, t("Failed to rename project"));
     },
     [group.memberProjects, updateAllMembers],
   );
@@ -284,7 +290,7 @@ function ProjectDetail({
       savingFaviconRef.current = true;
       setIsSavingFavicon(true);
       try {
-        await updateAllMembers(input, "Failed to update project icon");
+        await updateAllMembers(input, t("Failed to update project icon"));
       } finally {
         savingFaviconRef.current = false;
         setIsSavingFavicon(false);
@@ -312,25 +318,40 @@ function ProjectDetail({
         api.dialogs.confirm(
           [
             projectThreads.length > 0
-              ? `Remove ${targetKind} "${targetLabel}" and delete its ${projectThreads.length} thread${projectThreads.length === 1 ? "" : "s"}?`
-              : `Remove ${targetKind} "${targetLabel}"?`,
+              ? projectThreads.length === 1
+                ? t('Remove {kind} "{name}" and delete its {count} thread?', {
+                    kind: targetKind === "checkout" ? t("checkout") : t("project"),
+                    name: targetLabel,
+                    count: projectThreads.length,
+                  })
+                : t('Remove {kind} "{name}" and delete its {count} threads?', {
+                    kind: targetKind === "checkout" ? t("checkout") : t("project"),
+                    name: targetLabel,
+                    count: projectThreads.length,
+                  })
+              : t('Remove {kind} "{name}"?', {
+                  kind: targetKind === "checkout" ? t("checkout") : t("project"),
+                  name: targetLabel,
+                }),
             ...(singleMember
               ? [
-                  `Path: ${singleMember.workspaceRoot}`,
+                  t("Path: {path}", { path: singleMember.workspaceRoot }),
                   ...(singleMember.environmentLabel
-                    ? [`Environment: ${singleMember.environmentLabel}`]
+                    ? [t("Environment: {name}", { name: singleMember.environmentLabel })]
                     : []),
                 ]
-              : [`This removes ${members.length} grouped project entries.`]),
+              : [t("This removes {count} grouped project entries.", { count: members.length })]),
             ...(projectThreads.length > 0
               ? [
-                  "This permanently clears conversation history for those threads and any archived threads.",
+                  t(
+                    "This permanently clears conversation history for those threads and any archived threads.",
+                  ),
                 ]
-              : ["This permanently clears any archived conversation history."]),
+              : [t("This permanently clears any archived conversation history.")]),
             isWholeGroup && !hasOtherMembers
-              ? "This removes only the project entries, not the files on disk."
-              : "Other entries in this grouped project are unaffected.",
-            "This action cannot be undone.",
+              ? t("This removes only the project entries, not the files on disk.")
+              : t("Other entries in this grouped project are unaffected."),
+            t("This action cannot be undone."),
           ].join("\n"),
           { variant: "destructive" },
         ),
@@ -354,7 +375,7 @@ function ProjectDetail({
           () => undefined,
         );
         if (result._tag === "Failure") {
-          reportFailure(`Failed to remove "${member.title}"`, result);
+          reportFailure(t('Failed to remove "{name}"', { name: member.title }), result);
           return;
         }
         const projectRef = scopeProjectRef(member.environmentId, member.id);
@@ -385,20 +406,20 @@ function ProjectDetail({
   );
 
   const checkoutChoices = (
-    <SettingsSection title="Checkouts">
+    <SettingsSection title={t("Checkouts")}>
       {group.memberProjects.map((member) => (
         <SettingsRow
           key={member.physicalProjectKey}
-          title={member.environmentLabel ?? "Environment"}
+          title={member.environmentLabel ?? t("Environment")}
           description={member.workspaceRoot}
           control={
             <Button
               size="sm"
               variant="outline"
               onClick={() => void removeMembers([member])}
-              aria-label={`Remove checkout ${member.workspaceRoot}`}
+              aria-label={t("Remove checkout {path}", { path: member.workspaceRoot })}
             >
-              Remove
+              {t("Remove")}
             </Button>
           }
         />
@@ -412,19 +433,23 @@ function ProjectDetail({
         <Alert variant="info">
           <InfoIcon aria-hidden />
           <AlertDescription>
-            Can't find a setting? Keep this project picked above and hop to any other settings page.
+            {t(
+              "Can't find a setting? Keep this project picked above and hop to any other settings page.",
+            )}
           </AlertDescription>
         </Alert>
-        <SettingsSection id="project-overview" title="Project" hideTitle>
+        <SettingsSection id="project-overview" title={t("Project")} hideTitle>
           <SettingsRow
-            title="Name"
-            description="The shared name for this project group in the sidebar and thread lists."
+            title={t("Name")}
+            description={t(
+              "The shared name for this project group in the sidebar and thread lists.",
+            )}
             control={
               <Input
                 key={`${group.projectKey}:${group.displayName}`}
                 size="sm"
                 className="w-full sm:w-64"
-                aria-label="Project name"
+                aria-label={t("Project name")}
                 defaultValue={group.displayName}
                 onChange={() => {
                   projectNameEditedRef.current = true;
@@ -441,7 +466,7 @@ function ProjectDetail({
             }
           />
           <SettingsRow
-            title="Project icon"
+            title={t("Project icon")}
             description={
               projectIcon?.kind === "lucide"
                 ? `${projectIcon.name} · ${projectIcon.color}`
@@ -449,14 +474,14 @@ function ProjectDetail({
                   ? `${projectIcon.text} · ${projectIcon.color}`
                   : projectIcon?.kind === "emoji"
                     ? projectIcon.emoji
-                    : (faviconPath ?? "Automatic")
+                    : (faviconPath ?? t("Automatic"))
             }
             resetAction={
               group.memberProjects.some(
                 (member) => member.faviconPath != null || member.projectIcon != null,
               ) ? (
                 <SettingResetButton
-                  label="project icon"
+                  label={t("project icon")}
                   disabled={isSavingFavicon}
                   onClick={() => void setProjectIcon({ faviconPath: null, projectIcon: null })}
                 />
@@ -469,21 +494,21 @@ function ProjectDetail({
                   size="sm"
                   variant="outline"
                   type="button"
-                  aria-label="Choose a project icon"
+                  aria-label={t("Choose a project icon")}
                   disabled={isSavingFavicon}
                   onClick={() => setIconPickerOpen(true)}
                 >
-                  Choose icon
+                  {t("Choose icon")}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   type="button"
-                  aria-label="Choose a project icon file"
+                  aria-label={t("Choose a project icon file")}
                   disabled={isSavingFavicon}
                   onClick={() => setFaviconPickerOpen(true)}
                 >
-                  Choose file
+                  {t("Choose file")}
                 </Button>
               </div>
             }
@@ -492,21 +517,26 @@ function ProjectDetail({
         <ProjectDefaultsSettings category="project" />
         <ProjectActionsSettings />
         {hasMultipleCheckouts ? checkoutChoices : null}
-        <SettingsSection title="Danger">
+        <SettingsSection title={t("Danger")}>
           <SettingsRow
             title={
               hasOtherMembers
-                ? "Remove checkout"
+                ? t("Remove checkout")
                 : group.memberProjects.length > 1
-                  ? "Remove this project everywhere"
-                  : "Remove project"
+                  ? t("Remove this project everywhere")
+                  : t("Remove project")
             }
             description={
               hasOtherMembers
-                ? "Deletes the selected machine's checkout entries and their threads. Other machines and files on disk are not touched."
+                ? t(
+                    "Deletes the selected machine's checkout entries and their threads. Other machines and files on disk are not touched.",
+                  )
                 : group.memberProjects.length > 1
-                  ? `Deletes all ${group.memberProjects.length} checkout entries and their threads on every machine. Files on disk are not touched.`
-                  : "Deletes the project entry and its threads. Files on disk are not touched."
+                  ? t(
+                      "Deletes all {count} checkout entries and their threads on every machine. Files on disk are not touched.",
+                      { count: group.memberProjects.length },
+                    )
+                  : t("Deletes the project entry and its threads. Files on disk are not touched.")
             }
             control={
               <Button
@@ -516,10 +546,10 @@ function ProjectDetail({
               >
                 <Trash2Icon />
                 {hasOtherMembers
-                  ? "Remove checkout"
+                  ? t("Remove checkout")
                   : group.memberProjects.length > 1
-                    ? "Remove all entries"
-                    : "Remove project"}
+                    ? t("Remove all entries")
+                    : t("Remove project")}
               </Button>
             }
           />

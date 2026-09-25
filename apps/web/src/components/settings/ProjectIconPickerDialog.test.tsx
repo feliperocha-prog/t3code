@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vite-plus/test";
@@ -52,6 +53,6 @@ describe("ProjectIconPickerDialog", () => {
 
     expect(markup).toContain('data-current="lucide"');
     expect(markup.indexOf(">Icons<")).toBeLessThan(markup.indexOf(">Emoji<"));
-    expect(markup).toContain('aria-label="Icon color"');
+    expect(markup).toContain(`aria-label="${t("Icon color")}"`);
   });
 });
