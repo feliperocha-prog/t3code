@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import type { BrowserImportFailureReason, BrowserImportSource } from "@t3tools/contracts";
 
 export interface WizardTargetProfile {
@@ -169,6 +170,13 @@ export function isRetryableReason(reason: BrowserImportFailureReason): boolean {
 export function formatSkippedDomains(domains: ReadonlyArray<string>): string {
   if (domains.length === 0) return "";
   if (domains.length === 1) return domains[0]!;
-  if (domains.length <= 3) return `${domains.slice(0, -1).join(", ")} and ${domains.at(-1)}`;
-  return `${domains.slice(0, 3).join(", ")} and ${domains.length - 3} more`;
+  if (domains.length <= 3)
+    return t("{items} and {last}", {
+      items: domains.slice(0, -1).join(", "),
+      last: domains.at(-1) ?? "",
+    });
+  return t("{items} and {count} more", {
+    items: domains.slice(0, 3).join(", "),
+    count: domains.length - 3,
+  });
 }

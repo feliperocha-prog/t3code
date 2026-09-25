@@ -154,7 +154,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
       }
       resetAction={
         settings.defaultModelSelection !== null ? (
-          <SettingResetButton label="default model" onClick={() => setModel(null)} />
+          <SettingResetButton label={t("default model")} onClick={() => setModel(null)} />
         ) : null
       }
       control={
@@ -218,7 +218,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
       resetAction={
         !isProjectScope && settings.defaultThreadEnvMode !== null ? (
           <SettingResetButton
-            label="default workspace"
+            label={t("default workspace")}
             onClick={() => updateSettings({ defaultThreadEnvMode: null })}
           />
         ) : null
@@ -264,8 +264,8 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
         category === "general" || category === "project"
           ? t("New threads")
           : category === "integrations"
-            ? "Browser"
-            : "Repositories"
+            ? t("Browser")
+            : t("Repositories")
       }
     >
       {category === "project" ? (
@@ -289,7 +289,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             resetAction={
               settings.defaultRuntimeMode !== DEFAULT_SERVER_SETTINGS.defaultRuntimeMode ? (
                 <SettingResetButton
-                  label="default permissions"
+                  label={t("default permissions")}
                   onClick={() =>
                     updateSettings({
                       defaultRuntimeMode: DEFAULT_SERVER_SETTINGS.defaultRuntimeMode,
@@ -353,7 +353,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             resetAction={
               !isProjectScope && settings.worktreeSubmodules !== null ? (
                 <SettingResetButton
-                  label="worktree submodules"
+                  label={t("worktree submodules")}
                   onClick={() => updateSettings({ worktreeSubmodules: null })}
                 />
               ) : null
@@ -394,24 +394,28 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             settingKeys={["defaultAutoPull"]}
             mixed={mixedAutoPull}
             id="automatic-pull"
-            title="Automatically pull"
+            title={t("Automatically pull")}
             description={
               isProjectScope
-                ? "Keeps this project's default branch current when the checkout has no local changes or commits."
-                : "Keeps the default branch current when the checkout has no local changes or commits. Projects can override it."
+                ? t(
+                    "Keeps this project's default branch current when the checkout has no local changes or commits.",
+                  )
+                : t(
+                    "Keeps the default branch current when the checkout has no local changes or commits. Projects can override it.",
+                  )
             }
             resetAction={
               settings.defaultAutoPull ? (
                 <SettingResetButton
-                  label="default automatic pull"
-                  tooltip="Reset automatic pull to off"
+                  label={t("default automatic pull")}
+                  tooltip={t("Reset automatic pull to off")}
                   onClick={() => updateSettings({ defaultAutoPull: false })}
                 />
               ) : null
             }
             control={
               <Switch
-                aria-label="Default automatic pull"
+                aria-label={t("Default automatic pull")}
                 mixed={mixedAutoPull}
                 checked={mixedAutoPull ? false : settings.defaultAutoPull}
                 onCheckedChange={(enabled) => updateSettings({ defaultAutoPull: enabled })}
@@ -425,14 +429,16 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             {...searchableSetting("pull-request-merge-method")}
             description={
               isProjectScope
-                ? "Pull requests in this project start with this method."
-                : "Pull requests start with this method. Last selected reuses whatever you chose most recently on this device."
+                ? t("Pull requests in this project start with this method.")
+                : t(
+                    "Pull requests start with this method. Last selected reuses whatever you chose most recently on this device.",
+                  )
             }
             resetAction={
               settings.pullRequestMergeMethod !== null ? (
                 <SettingResetButton
-                  label="default merge method"
-                  tooltip="Reset to last selected"
+                  label={t("default merge method")}
+                  tooltip={t("Reset to last selected")}
                   onClick={() => updateSettings({ pullRequestMergeMethod: null })}
                 />
               ) : null
@@ -446,19 +452,19 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
                     updateSettings({ pullRequestMergeMethod: value });
                 }}
               >
-                <SelectTrigger size="sm" aria-label="Default pull request merge method">
+                <SelectTrigger size="sm" aria-label={t("Default pull request merge method")}>
                   <SelectValue>
                     {(value: string | null) =>
                       value === "merge" || value === "squash" || value === "rebase"
                         ? PULL_REQUEST_MERGE_METHOD_LABELS[value]
                         : value === "last"
-                          ? "Last selected"
-                          : "Mixed"
+                          ? t("Last selected")
+                          : t("Mixed")
                     }
                   </SelectValue>
                 </SelectTrigger>
                 <SelectPopup align="end" alignItemWithTrigger={false}>
-                  <SelectItem value="last">Last selected</SelectItem>
+                  <SelectItem value="last">{t("Last selected")}</SelectItem>
                   <SelectItem value="merge">{PULL_REQUEST_MERGE_METHOD_LABELS.merge}</SelectItem>
                   <SelectItem value="squash">{PULL_REQUEST_MERGE_METHOD_LABELS.squash}</SelectItem>
                   <SelectItem value="rebase">{PULL_REQUEST_MERGE_METHOD_LABELS.rebase}</SelectItem>
@@ -474,17 +480,19 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             settingKeys={["enableAgentBrowserAccess"]}
             mixed={mixedBrowser}
             id={searchableSetting("agent-browser-access").id}
-            title="Agent browser access"
+            title={t("Agent browser access")}
             description={
               isProjectScope
-                ? "Allow agents in this project to use the shared browser. Applies when the agent session next starts."
-                : "Allow agents to use the shared browser. Projects can override it."
+                ? t(
+                    "Allow agents in this project to use the shared browser. Applies when the agent session next starts.",
+                  )
+                : t("Allow agents to use the shared browser. Projects can override it.")
             }
             resetAction={
               settings.enableAgentBrowserAccess !==
               DEFAULT_SERVER_SETTINGS.enableAgentBrowserAccess ? (
                 <SettingResetButton
-                  label="default browser access"
+                  label={t("default browser access")}
                   onClick={() =>
                     updateSettings({
                       enableAgentBrowserAccess: DEFAULT_SERVER_SETTINGS.enableAgentBrowserAccess,
@@ -495,7 +503,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             }
             control={
               <Switch
-                aria-label="Agent browser access"
+                aria-label={t("Agent browser access")}
                 mixed={mixedBrowser}
                 checked={mixedBrowser ? false : settings.enableAgentBrowserAccess}
                 onCheckedChange={(enabled) => updateSettings({ enableAgentBrowserAccess: enabled })}

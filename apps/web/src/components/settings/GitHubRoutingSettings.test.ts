@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
+import { t } from "~/i18n";
 
 import { summarizeGitHubRouting } from "./GitHubRoutingSettings";
 
@@ -15,6 +16,11 @@ describe("summarizeGitHubRouting", () => {
         { label: "cup2", permission: "off" },
         { label: "Theo's MacBook Pro", permission: "read-write" },
       ]),
-    ).toBe("bb-1, Theo's MacBook Pro read and act · alvin read PRs");
+    ).toBe(
+      `${t("{machines} read and act", { machines: "bb-1, Theo's MacBook Pro" })} · ${t(
+        "{machines} read PRs",
+        { machines: "alvin" },
+      )}`,
+    );
   });
 });

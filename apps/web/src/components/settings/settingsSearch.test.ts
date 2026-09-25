@@ -143,7 +143,7 @@ describe("searchSettings", () => {
   it("registers the WSL backend as a desktop-only setting", () => {
     expect(SETTINGS_SEARCH_ITEMS.find((item) => item.id === "wsl-backend")).toMatchObject({
       id: "wsl-backend",
-      title: "WSL backend",
+      title: t("WSL backend"),
       to: "/settings/connections",
       desktopOnly: true,
       windowsOnly: true,
@@ -273,7 +273,7 @@ describe("searchSettings", () => {
 
   it("serves anchor props to panels from the catalog", () => {
     expect(searchableSetting("word-wrap")).toEqual({ id: "word-wrap", title: t("Word wrap") });
-    expect(searchableSetting("archive")).toEqual({ id: "archive", title: "Archived threads" });
+    expect(searchableSetting("archive")).toEqual({ id: "archive", title: t("Archived threads") });
   });
 
   it("routes appearance settings to their current section", () => {

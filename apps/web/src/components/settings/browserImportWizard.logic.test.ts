@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import { describe, expect, it } from "vite-plus/test";
 import type { BrowserImportSource } from "@t3tools/contracts";
 
@@ -213,13 +214,17 @@ describe("formatSkippedDomains", () => {
   it("joins a short list naturally", () => {
     expect(formatSkippedDomains([])).toBe("");
     expect(formatSkippedDomains(["a.com"])).toBe("a.com");
-    expect(formatSkippedDomains(["a.com", "b.com"])).toBe("a.com and b.com");
-    expect(formatSkippedDomains(["a.com", "b.com", "c.com"])).toBe("a.com, b.com and c.com");
+    expect(formatSkippedDomains(["a.com", "b.com"])).toBe(
+      t("{items} and {last}", { items: "a.com", last: "b.com" }),
+    );
+    expect(formatSkippedDomains(["a.com", "b.com", "c.com"])).toBe(
+      t("{items} and {last}", { items: "a.com, b.com", last: "c.com" }),
+    );
   });
 
   it("summarizes a long list", () => {
     expect(formatSkippedDomains(["a.com", "b.com", "c.com", "d.com", "e.com"])).toBe(
-      "a.com, b.com, c.com and 2 more",
+      t("{items} and {count} more", { items: "a.com, b.com, c.com", count: 2 }),
     );
   });
 });
