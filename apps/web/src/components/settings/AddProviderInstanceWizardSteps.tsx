@@ -1,3 +1,5 @@
+import { t } from "~/i18n";
+
 import { WizardSteps } from "../ui/wizard";
 import {
   ADD_PROVIDER_WIZARD_STEPS,
@@ -20,7 +22,7 @@ export function AddProviderInstanceWizardSteps({
 }: AddProviderInstanceWizardStepsProps) {
   return (
     <WizardSteps
-      steps={ADD_PROVIDER_WIZARD_STEPS}
+      steps={ADD_PROVIDER_WIZARD_STEPS.map((step) => t(step))}
       currentStep={currentStep}
       summaries={summaries}
       onStepChange={(requestedStep) =>

@@ -8,6 +8,7 @@ import {
   type ServerProviderModel,
 } from "@t3tools/contracts";
 
+import { t } from "~/i18n";
 import { deriveProviderModelsForDisplay, ProviderInstanceCard } from "./ProviderInstanceCard";
 
 describe("deriveProviderModelsForDisplay", () => {
@@ -116,8 +117,8 @@ describe("deriveProviderModelsForDisplay", () => {
       }),
     );
 
-    expect(markup).toContain("Authenticated as");
-    expect(markup).toContain('aria-label="Toggle account email visibility"');
+    expect(markup).toContain(t("Authenticated as"));
+    expect(markup).toContain(`aria-label="${t("Toggle account email visibility")}"`);
     expect(markup).toContain("blur-xs");
     expect(markup).not.toContain("developer@example.com");
   });
@@ -156,7 +157,7 @@ describe("deriveProviderModelsForDisplay", () => {
 
     for (const mode of ["list", "editor"] as const) {
       const markup = renderToStaticMarkup(createElement(ProviderInstanceCard, { ...props, mode }));
-      expect(markup).toContain("Unavailable");
+      expect(markup).toContain(t("Unavailable"));
       expect(markup).toContain("is not a symlink");
     }
   });

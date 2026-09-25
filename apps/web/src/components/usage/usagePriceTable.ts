@@ -5,6 +5,7 @@ import {
   type UsagePriceForm,
 } from "./usagePriceForm";
 import type { UsagePriceChange, UsagePriceTarget } from "./usagePriceTargets";
+import { t } from "~/i18n";
 
 export type UsagePriceField = (typeof USAGE_PRICE_FIELDS)[number]["key"];
 
@@ -38,11 +39,11 @@ export function usagePriceCell(
     modelPrice(target, model) ? usagePriceForm(model, modelPrice(target, model))[field] : null,
   );
   if (targets.some((target) => target.prices === null))
-    return { value: "", placeholder: "Unavailable" };
-  if (values.some((value) => value !== values[0])) return { value: "", placeholder: "Mixed" };
+    return { value: "", placeholder: t("Unavailable") };
+  if (values.some((value) => value !== values[0])) return { value: "", placeholder: t("Mixed") };
   return {
     value: values[0] ?? "",
-    placeholder: values[0] === null ? "Automatic" : optional ? "Input rate" : "0.00",
+    placeholder: values[0] === null ? t("Automatic") : optional ? t("Input rate") : "0.00",
   };
 }
 
@@ -70,10 +71,10 @@ export function usagePriceTableChanges(
       errors.set(
         draft.id,
         model === ""
-          ? "Enter a model ID."
+          ? t("Enter a model ID.")
           : missing
-            ? `${missing.label} is required on ${target.label}.`
-            : "Use non-negative numbers for prices.",
+            ? t("{field} is required on {target}.", { field: missing.label, target: target.label })
+            : t("Use non-negative numbers for prices."),
       );
       continue;
     }

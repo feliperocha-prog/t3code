@@ -18,6 +18,7 @@ import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
 import type { ProviderClientDefinition } from "./providerDriverMeta";
 import { SettingsRow } from "./settingsLayout";
+import { t } from "~/i18n";
 
 export interface ProviderSettingsFieldModel {
   readonly key: string;
@@ -189,7 +190,8 @@ function ProviderSettingsSelect({
   const options = field.options ?? [];
   const fallback = options[0]?.value ?? "";
   const current = readProviderConfigString(value, field.key) || fallback;
-  const label = options.find((option) => option.value === current)?.label ?? current;
+  const selectedLabel = options.find((option) => option.value === current)?.label;
+  const label = selectedLabel ? t(selectedLabel) : current;
   return (
     <Select
       value={current}
@@ -198,13 +200,13 @@ function ProviderSettingsSelect({
         onChange(nextProviderConfigWithFieldValue(value, field, next === fallback ? "" : next));
       }}
     >
-      <SelectTrigger id={inputId} size={size} className={className} aria-label={field.label}>
+      <SelectTrigger id={inputId} size={size} className={className} aria-label={t(field.label)}>
         <SelectValue>{label}</SelectValue>
       </SelectTrigger>
       <SelectPopup align="start" alignItemWithTrigger={false}>
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
-            {option.label}
+            {t(option.label)}
           </SelectItem>
         ))}
       </SelectPopup>
@@ -238,13 +240,17 @@ function ProviderSettingsFieldRow({
   onChange,
 }: ProviderSettingsFieldRowProps) {
   const inputId = `${idPrefix}-${field.key}`;
+  // Field copy comes from schema annotations in contracts; translate it for display only.
+  const fieldLabel = t(field.label);
+  const fieldDescription = field.description ? t(field.description) : undefined;
+  const fieldPlaceholder = field.placeholder ? t(field.placeholder) : undefined;
   const descriptionClassName =
     variant === "dialog"
       ? "text-2xs text-muted-foreground"
       : "mt-1 block text-xs text-muted-foreground";
-  const label = <span className="text-xs font-medium text-foreground">{field.label}</span>;
+  const label = <span className="text-xs font-medium text-foreground">{fieldLabel}</span>;
   const description = field.description ? (
-    <span className={descriptionClassName}>{field.description}</span>
+    <span className={descriptionClassName}>{fieldDescription}</span>
   ) : null;
 
   if (variant === "settings") {
@@ -256,7 +262,7 @@ function ProviderSettingsFieldRow({
           onCheckedChange={(checked) =>
             onChange(nextProviderConfigWithFieldValue(value, field, Boolean(checked)))
           }
-          aria-label={field.label}
+          aria-label={fieldLabel}
           aria-describedby={descriptionId}
         />
       ) : field.control === "select" ? (
@@ -277,7 +283,7 @@ function ProviderSettingsFieldRow({
           onChange={(event) =>
             onChange(nextProviderConfigWithFieldValue(value, field, event.target.value))
           }
-          placeholder={field.placeholder}
+          placeholder={fieldPlaceholder}
           spellCheck={false}
         />
       ) : (
@@ -290,7 +296,7 @@ function ProviderSettingsFieldRow({
           autoComplete={field.control === "password" ? "off" : undefined}
           value={readProviderConfigString(value, field.key)}
           onCommit={(next) => onChange(nextProviderConfigWithFieldValue(value, field, next))}
-          placeholder={field.placeholder}
+          placeholder={fieldPlaceholder}
           spellCheck={false}
         />
       );
@@ -298,10 +304,10 @@ function ProviderSettingsFieldRow({
     return (
       <SettingsRow
         title={
-          field.control === "switch" ? field.label : <label htmlFor={inputId}>{field.label}</label>
+          field.control === "switch" ? fieldLabel : <label htmlFor={inputId}>{fieldLabel}</label>
         }
         description={
-          field.description ? <span id={descriptionId}>{field.description}</span> : undefined
+          field.description ? <span id={descriptionId}>{fieldDescription}</span> : undefined
         }
         control={control}
       />
@@ -321,7 +327,7 @@ function ProviderSettingsFieldRow({
             onCheckedChange={(checked) =>
               onChange(nextProviderConfigWithFieldValue(value, field, Boolean(checked)))
             }
-            aria-label={field.label}
+            aria-label={fieldLabel}
           />
         </div>
       </FieldFrame>
@@ -359,7 +365,7 @@ function ProviderSettingsFieldRow({
             onChange={(event) =>
               onChange(nextProviderConfigWithFieldValue(value, field, event.target.value))
             }
-            placeholder={field.placeholder}
+            placeholder={fieldPlaceholder}
             spellCheck={false}
           />
           {description}
@@ -382,7 +388,7 @@ function ProviderSettingsFieldRow({
             autoComplete={field.control === "password" ? "off" : undefined}
             value={readProviderConfigString(value, field.key)}
             onCommit={(next) => onChange(nextProviderConfigWithFieldValue(value, field, next))}
-            placeholder={field.placeholder}
+            placeholder={fieldPlaceholder}
             spellCheck={false}
           />
         ) : (
@@ -394,7 +400,7 @@ function ProviderSettingsFieldRow({
             onChange={(event) =>
               onChange(nextProviderConfigWithFieldValue(value, field, event.target.value))
             }
-            placeholder={field.placeholder}
+            placeholder={fieldPlaceholder}
             spellCheck={false}
           />
         )}

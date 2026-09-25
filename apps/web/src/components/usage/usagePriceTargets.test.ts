@@ -6,6 +6,7 @@ import {
   type UsagePriceTarget,
   type UsagePriceWriteResult,
 } from "./usagePriceTargets";
+import { t } from "~/i18n";
 
 const price = { inputCostPerMillionTokens: 2, outputCostPerMillionTokens: 8 };
 const target = (id: string, overrides: Partial<UsagePriceTarget> = {}): UsagePriceTarget => ({
@@ -129,7 +130,7 @@ describe("model price writes", () => {
     expect(write).toHaveBeenCalledTimes(1);
     expect(onResult).toHaveBeenCalledWith("lost", {
       status: "failed",
-      error: "Could not save. Try again.",
+      error: t("Could not save. Try again."),
     });
     expect(onResult).toHaveBeenCalledWith("denied", {
       status: "failed",

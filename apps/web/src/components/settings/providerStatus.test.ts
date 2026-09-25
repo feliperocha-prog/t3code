@@ -1,6 +1,8 @@
 import { ProviderDriverKind, ProviderInstanceId, type ServerProvider } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
+import { t } from "~/i18n";
+
 import { getProviderSummary, getProviderVersionAdvisoryPresentation } from "./providerStatus";
 
 const provider: ServerProvider = {
@@ -20,7 +22,7 @@ const provider: ServerProvider = {
 describe("getProviderSummary", () => {
   it("reports ready providers with unknown authentication as available", () => {
     expect(getProviderSummary({ ...provider, auth: { status: "unknown" } })).toEqual({
-      headline: "Available",
+      headline: t("Available"),
       detail: null,
     });
   });
@@ -33,7 +35,7 @@ describe("getProviderSummary", () => {
         message: "The provider process failed to start.",
       }),
     ).toEqual({
-      headline: "Unavailable",
+      headline: t("Unavailable"),
       detail: "The provider process failed to start.",
     });
   });
@@ -46,7 +48,7 @@ describe("getProviderSummary", () => {
         message: "The provider version is unsupported.",
       }),
     ).toEqual({
-      headline: "Needs attention",
+      headline: t("Needs attention"),
       detail: "The provider version is unsupported.",
     });
   });
@@ -60,13 +62,13 @@ describe("getProviderSummary", () => {
         message: "Run codex login.",
       }),
     ).toEqual({
-      headline: "Not authenticated",
+      headline: t("Not authenticated"),
       detail: "Run codex login.",
     });
   });
 
   it("treats a disabled provider status as disabled even before its enabled flag updates", () => {
-    expect(getProviderSummary({ ...provider, status: "disabled" }).headline).toBe("Disabled");
+    expect(getProviderSummary({ ...provider, status: "disabled" }).headline).toBe(t("Disabled"));
   });
 });
 
@@ -117,7 +119,7 @@ it("shows compatibility in the version popover even when the installed version i
     recommendedVersion: "1.9.0",
   };
   expect(getProviderVersionAdvisoryPresentation(advisory, compatibility)).toEqual({
-    title: "Known broken version",
+    title: t("Known broken version"),
     detail: compatibility.message,
     updateCommand: null,
     emphasis: "strong",
@@ -132,8 +134,8 @@ it("shows compatibility in the version popover even when the installed version i
       message: null,
     }),
   ).toEqual({
-    title: "Limited support",
-    detail: "Use >=2.1.0 for full support.",
+    title: t("Limited support"),
+    detail: t("Use {version} for full support.", { version: ">=2.1.0" }),
     updateCommand: null,
     emphasis: "normal",
     targetVersion: null,
