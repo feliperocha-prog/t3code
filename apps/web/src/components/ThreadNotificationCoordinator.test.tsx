@@ -3,6 +3,7 @@ import * as Option from "effect/Option";
 import { act } from "react";
 import { create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { t } from "~/i18n";
 
 const state = vi.hoisted(() => ({
   mode: "off" as ClientSettings["notificationMode"],
@@ -136,7 +137,7 @@ describe("thread notifications", () => {
     await render();
     expect(state.add).toHaveBeenCalledTimes(1);
     const toast = state.add.mock.calls[0]?.[0];
-    expect(toast?.title).toBe("Thread completed");
+    expect(toast?.title).toBe(t("Thread completed"));
     expect(toast?.description).toBe("Fix the login form");
     toast?.actionProps.onClick();
     expect(state.close).toHaveBeenCalledWith("toast-1");
@@ -162,10 +163,10 @@ describe("thread notifications", () => {
   );
 
   it.each([
-    ["input", "Input needed"],
-    ["approval", "Approval needed"],
-    ["sessionError", "Thread failed"],
-    ["turnError", "Thread failed"],
+    ["input", t("Input needed")],
+    ["approval", t("Approval needed")],
+    ["sessionError", t("Thread failed")],
+    ["turnError", t("Thread failed")],
   ] as const)("uses the same %s event for in-app and desktop alerts", async (event, title) => {
     state.mode = "notifications-and-sound";
     await render();
@@ -245,7 +246,7 @@ describe("thread notifications", () => {
     await render();
     await complete();
     expect(state.add).not.toHaveBeenCalled();
-    expect(state.notification).toHaveBeenCalledWith("Thread completed", {
+    expect(state.notification).toHaveBeenCalledWith(t("Thread completed"), {
       body: "Fix the login form",
       tag: "env-1:thread-1",
       silent: true,

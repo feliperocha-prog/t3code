@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
+import { t } from "~/i18n";
 import {
   type EnvironmentId,
   ProviderDriverKind,
@@ -285,8 +286,8 @@ describe("provider update launch notification logic", () => {
     expect(view).toMatchObject({
       phase: "initial",
       type: "warning",
-      title: "Update Available: Codex v1.1.0",
-      description: "Install the update now or review provider settings.",
+      title: t("Update Available: {provider} {version}", { provider: "Codex", version: "v1.1.0" }),
+      description: t("Install the update now or review provider settings."),
     });
   });
 
@@ -299,7 +300,11 @@ describe("provider update launch notification logic", () => {
       oneClickProviders: [],
     });
 
-    expect(view.description).toBe("Codex and Cursor can be updated from provider settings.");
+    expect(view.description).toBe(
+      t("{providers} can be updated from provider settings.", {
+        providers: t("{first} and {second}", { first: "Codex", second: "Cursor" }),
+      }),
+    );
   });
 
   it("uses server update state for running progress", () => {
@@ -322,7 +327,7 @@ describe("provider update launch notification logic", () => {
     expect(view).toMatchObject({
       phase: "running",
       type: "loading",
-      title: "Updating provider",
+      title: t("Updating provider"),
     });
     expect(shouldShowPrimaryProviderUpdateToast(view)).toBe(false);
   });
@@ -361,7 +366,7 @@ describe("provider update launch notification logic", () => {
     expect(view).toMatchObject({
       phase: "failed",
       type: "error",
-      title: "Provider update failed",
+      title: t("Provider update failed"),
       description: "command failed",
     });
   });
@@ -386,8 +391,10 @@ describe("provider update launch notification logic", () => {
     expect(view).toMatchObject({
       phase: "unchanged",
       type: "warning",
-      title: "Provider still needs an update",
-      description: "Cursor still appears outdated. Check provider settings for details.",
+      title: t("Provider still needs an update"),
+      description: t("{providers} still appears outdated. Check provider settings for details.", {
+        providers: "Cursor",
+      }),
     });
   });
 
@@ -414,8 +421,8 @@ describe("provider update launch notification logic", () => {
     expect(view).toMatchObject({
       phase: "succeeded",
       type: "success",
-      title: "Provider updated",
-      description: "New sessions will use the updated provider.",
+      title: t("Provider updated"),
+      description: t("New sessions will use the updated provider."),
       dismissAfterVisibleMs: 3_000,
     });
   });
@@ -426,7 +433,7 @@ describe("provider update launch notification logic", () => {
     expect(firstFailedProviderUpdateMessage(results)).toBe("WebSocket closed");
     expect(getProviderUpdateRejectedToastView(2, "WebSocket closed")).toMatchObject({
       phase: "failed",
-      title: "Provider updates failed",
+      title: t("Provider updates failed"),
       description: "WebSocket closed",
     });
   });
@@ -470,8 +477,10 @@ describe("provider update launch notification logic", () => {
 
     expect(view).toMatchObject({
       tone: "loading",
-      title: "Updating 2 providers",
-      description: "Codex and Cursor updates are in progress.",
+      title: t("Updating {count} providers", { count: 2 }),
+      description: t("{providers} updates are in progress.", {
+        providers: t("{first} and {second}", { first: "Codex", second: "Cursor" }),
+      }),
     });
   });
 
@@ -492,8 +501,8 @@ describe("provider update launch notification logic", () => {
     expect(view).toMatchObject({
       key: "loading:codex:running",
       tone: "loading",
-      title: "Updating Codex",
-      description: "Codex update in progress.",
+      title: t("Updating {provider}", { provider: "Codex" }),
+      description: t("{providers} update in progress.", { providers: "Codex" }),
     });
   });
 
@@ -517,7 +526,7 @@ describe("provider update launch notification logic", () => {
     expect(view).toMatchObject({
       key: "failed:claudeAgent:2026-04-23T10:00:00.000Z:Update command exited with code 1.",
       tone: "error",
-      title: "Claude v1.1.0 update failed",
+      title: t("{provider} {version} update failed", { provider: "Claude", version: "v1.1.0" }),
       description: "Update command exited with code 1.",
       dismissible: true,
     });
@@ -546,8 +555,8 @@ describe("provider update launch notification logic", () => {
     expect(view).toMatchObject({
       key: "succeeded:codex:2026-04-23T10:00:00.000Z:Provider updated.",
       tone: "success",
-      title: "Codex updated: v1.1.0",
-      description: "New sessions will use the updated provider.",
+      title: t("{provider} updated: {version}", { provider: "Codex", version: "v1.1.0" }),
+      description: t("New sessions will use the updated provider."),
       dismissAfterVisibleMs: 3_000,
     });
   });
@@ -572,7 +581,7 @@ describe("provider update launch notification logic", () => {
     expect(view).toMatchObject({
       key: "unchanged:cursor:2026-04-23T10:00:00.000Z:still old",
       tone: "warning",
-      title: "Cursor still needs an update",
+      title: t("{provider} still needs an update", { provider: "Cursor" }),
       dismissible: true,
     });
   });
@@ -630,7 +639,7 @@ describe("provider update launch notification logic", () => {
     expect(successView).toMatchObject({
       key: "succeeded:codex:2026-04-23T10:01:00.000Z:Provider updated.",
       tone: "success",
-      title: "Codex updated: v1.2.0",
+      title: t("{provider} updated: {version}", { provider: "Codex", version: "v1.2.0" }),
     });
 
     const failureView = getProviderUpdateSidebarPillView(providers, {
@@ -640,7 +649,7 @@ describe("provider update launch notification logic", () => {
     expect(failureView).toMatchObject({
       key: "failed:claudeAgent:2026-04-23T10:00:00.000Z:Update command exited with code 1.",
       tone: "error",
-      title: "Claude v1.1.0 update failed",
+      title: t("{provider} {version} update failed", { provider: "Claude", version: "v1.1.0" }),
     });
   });
 

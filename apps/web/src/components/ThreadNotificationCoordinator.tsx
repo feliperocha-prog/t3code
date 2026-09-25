@@ -22,6 +22,7 @@ import {
 } from "../threadNotifications";
 import { resolveSidebarThreadStatus } from "./Sidebar.logic";
 import { toastManager } from "./ui/toast";
+import { t } from "~/i18n";
 
 export function ThreadNotificationCoordinator() {
   const { environments } = useEnvironments();
@@ -139,12 +140,12 @@ function EnvironmentNotifications({
       if (!kind) continue;
       const title =
         kind === "completion"
-          ? "Thread completed"
+          ? t("Thread completed")
           : status === "approval"
-            ? "Approval needed"
+            ? t("Approval needed")
             : status === "failed"
-              ? "Thread failed"
-              : "Input needed";
+              ? t("Thread failed")
+              : t("Input needed");
       if (hasNotificationSound(mode)) {
         void playNotificationSound(kind, () =>
           hasNotificationSound(getClientSettings().notificationMode),
@@ -174,7 +175,7 @@ function EnvironmentNotifications({
               ),
           },
           actionProps: {
-            children: "Open thread",
+            children: t("Open thread"),
             onClick: () => {
               toastManager.close(toastId);
               void navigate({

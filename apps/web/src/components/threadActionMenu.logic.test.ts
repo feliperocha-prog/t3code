@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
+import { t } from "~/i18n";
 
 import { buildThreadActionMenuItems, type ThreadActionMenuState } from "./threadActionMenu.logic";
 
@@ -55,7 +56,7 @@ describe("buildThreadActionMenuItems", () => {
     const copyIndex = items.findIndex((item) => item.id === "copy");
     expect(items[copyIndex + 1]).toMatchObject({
       id: "project-settings",
-      label: "Project settings",
+      label: t("Project settings"),
       icon: "settings",
     });
     expect(items[copyIndex + 2]?.id).toBe("archive");
@@ -68,7 +69,10 @@ describe("buildThreadActionMenuItems", () => {
         ...baseState,
         projectFilter: { label: "Beta Project", isActive: false },
       }).find((item) => item.id === "filter-by-project"),
-    ).toMatchObject({ label: "Filter by Beta Project", icon: "folder-tree" });
+    ).toMatchObject({
+      label: t("Filter by {project}", { project: "Beta Project" }),
+      icon: "folder-tree",
+    });
   });
 
   it("offers the way back to all projects once the list is scoped", () => {
@@ -77,7 +81,10 @@ describe("buildThreadActionMenuItems", () => {
       projectFilter: { label: "Beta Project", isActive: true },
     });
     const filterIndex = items.findIndex((candidate) => candidate.id === "filter-by-project");
-    expect(items[filterIndex]).toMatchObject({ label: "Show all projects", icon: "folder-tree" });
+    expect(items[filterIndex]).toMatchObject({
+      label: t("Show all projects"),
+      icon: "folder-tree",
+    });
     expect(items[filterIndex - 1]?.id).toBe("mark-unread");
     expect(items[filterIndex + 1]?.id).toBe("auto-settle");
   });
@@ -101,7 +108,7 @@ describe("buildThreadActionMenuItems", () => {
     const find = (state: ThreadActionMenuState) =>
       buildThreadActionMenuItems(state).find((item) => item.id === "auto-settle");
     const on = find(baseState);
-    expect(on?.label).toBe("Auto-settle behavior");
+    expect(on?.label).toBe(t("Auto-settle behavior"));
     expect(on?.children?.map((child) => [child.id, child.checked])).toEqual([
       ["auto-settle:enabled", true],
       ["auto-settle:disabled", false],
@@ -128,7 +135,7 @@ describe("buildThreadActionMenuItems", () => {
     const item = buildThreadActionMenuItems({ ...baseState, isRegeneratingTitle: true }).find(
       (candidate) => candidate.id === "regenerate-title",
     );
-    expect(item).toMatchObject({ label: "Regenerating…", disabled: true });
+    expect(item).toMatchObject({ label: t("Regenerating…"), disabled: true });
   });
 
   it("marks delete as destructive and keeps it last", () => {

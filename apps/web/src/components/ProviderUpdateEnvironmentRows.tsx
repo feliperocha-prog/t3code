@@ -26,6 +26,7 @@ import {
 } from "./ProviderUpdateLaunchNotification.logic";
 import { Button } from "./ui/button";
 import { Spinner } from "./ui/spinner";
+import { t } from "~/i18n";
 
 type ProviderUpdateCommandResult = AtomCommandResult<
   { readonly providers: ReadonlyArray<ServerProvider> },
@@ -65,7 +66,7 @@ function toProviderUpdateOutcome(input: {
     const error = squashAtomCommandFailure(input.result);
     return {
       status: "rejected",
-      reason: error instanceof Error ? error : new Error("Provider update failed."),
+      reason: error instanceof Error ? error : new Error(t("Provider update failed.")),
     };
   }
 
@@ -127,14 +128,14 @@ function EnvironmentUpdateRow({
     case "unchanged":
       trailing = (
         <Button size="xs" variant="outline" onClick={onUpdate}>
-          Retry
+          {t("Retry")}
         </Button>
       );
       break;
     default:
       trailing = (
         <Button size="xs" variant="outline" onClick={onUpdate}>
-          Update
+          {t("Update")}
         </Button>
       );
       break;
@@ -261,7 +262,7 @@ export function ProviderUpdateEnvironmentRows({
         inFlightEnvironmentsRef.current.delete(environmentId);
         clearPending(environmentId);
         setErrorByEnvironment((previous) =>
-          new Map(previous).set(environmentId, "Update timed out — try again."),
+          new Map(previous).set(environmentId, t("Update timed out — try again.")),
         );
       }, PENDING_EXPIRY_MS);
       try {
@@ -283,7 +284,7 @@ export function ProviderUpdateEnvironmentRows({
             } catch (error) {
               return {
                 status: "rejected",
-                reason: error instanceof Error ? error : new Error("Provider update failed."),
+                reason: error instanceof Error ? error : new Error(t("Provider update failed.")),
               };
             }
           }),
@@ -308,7 +309,7 @@ export function ProviderUpdateEnvironmentRows({
           setErrorByEnvironment((previous) =>
             new Map(previous).set(
               environmentId,
-              "This environment isn’t connected — try again once it reconnects.",
+              t("This environment isn’t connected — try again once it reconnects."),
             ),
           );
           return;
@@ -341,7 +342,7 @@ export function ProviderUpdateEnvironmentRows({
           setErrorByEnvironment((previous) =>
             new Map(previous).set(
               environmentId,
-              error instanceof Error ? error.message : "Provider update failed.",
+              error instanceof Error ? error.message : t("Provider update failed."),
             ),
           );
         }

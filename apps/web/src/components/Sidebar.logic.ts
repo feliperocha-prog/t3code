@@ -25,6 +25,7 @@ import {
 import type { SidebarThreadSummary, Thread } from "../types";
 import { cn } from "../lib/utils";
 import { isLatestTurnSettled } from "../session-logic";
+import { t } from "~/i18n";
 
 export function shouldNavigateAfterThreadPark(input: {
   readonly threadKey: string;
@@ -467,13 +468,13 @@ export function buildMultiSelectThreadContextMenuItems(input: {
   hasRunningThread: boolean;
 }): readonly ContextMenuItem<"mark-unread" | "archive" | "delete">[] {
   return [
-    { id: "mark-unread", label: `Mark unread (${input.count})` },
+    { id: "mark-unread", label: t("Mark unread ({count})", { count: input.count }) },
     {
       id: "archive",
-      label: `Archive (${input.count})`,
+      label: t("Archive ({count})", { count: input.count }),
       disabled: input.hasRunningThread,
     },
-    { id: "delete", label: `Delete (${input.count})`, destructive: true },
+    { id: "delete", label: t("Delete ({count})", { count: input.count }), destructive: true },
   ];
 }
 
@@ -485,13 +486,13 @@ export function buildBulkTitleRegenerationContextMenuItem(input: {
   if (input.actionableCount === 0) {
     return {
       id: "regenerate-title",
-      label: `Regenerating… (${input.supportedCount})`,
+      label: t("Regenerating… ({count})", { count: input.supportedCount }),
       disabled: true,
     };
   }
   return {
     id: "regenerate-title",
-    label: `Regenerate titles (${input.actionableCount})`,
+    label: t("Regenerate titles ({count})", { count: input.actionableCount }),
   };
 }
 
@@ -504,7 +505,7 @@ export function buildBulkUnpinContextMenuItem(input: {
   pinnedCount: number;
 }): ContextMenuItem<"unpin"> | null {
   if (input.pinnedCount === 0) return null;
-  return { id: "unpin", label: `Unpin (${input.pinnedCount})` };
+  return { id: "unpin", label: t("Unpin ({count})", { count: input.pinnedCount }) };
 }
 
 export interface ThreadStatusPill {
@@ -519,6 +520,25 @@ export interface ThreadStatusPill {
   colorClass: string;
   dotClass: string;
   pulse: boolean;
+}
+
+export function threadStatusLabelText(label: ThreadStatusPill["label"]): string {
+  switch (label) {
+    case "Working":
+      return t("Working");
+    case "Monitoring":
+      return t("Monitoring");
+    case "Connecting":
+      return t("Connecting");
+    case "Completed":
+      return t("Completed");
+    case "Pending Approval":
+      return t("Pending Approval");
+    case "Awaiting Input":
+      return t("Awaiting Input");
+    case "Plan Ready":
+      return t("Plan Ready");
+  }
 }
 
 // Rollup order mirrors the per-thread resolver exactly: attention states,

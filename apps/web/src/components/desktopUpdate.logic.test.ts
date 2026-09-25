@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { DesktopUpdateActionResult, DesktopUpdateState } from "@t3tools/contracts";
+import { t } from "~/i18n";
 
 import {
   canCheckForUpdate,
@@ -54,7 +55,9 @@ describe("desktop update button state", () => {
       canRetry: true,
     };
     expect(resolveDesktopUpdateButtonAction(state)).toBe("download");
-    expect(getDesktopUpdateButtonTooltip(state)).toContain("Click to retry");
+    expect(getDesktopUpdateButtonTooltip(state)).toBe(
+      t("Download failed for {version}. Click to retry.", { version: "1.1.0" }),
+    );
   });
 
   it("keeps install action available after an install error", () => {
@@ -68,7 +71,9 @@ describe("desktop update button state", () => {
       canRetry: true,
     };
     expect(resolveDesktopUpdateButtonAction(state)).toBe("install");
-    expect(getDesktopUpdateButtonTooltip(state)).toContain("Click to retry");
+    expect(getDesktopUpdateButtonTooltip(state)).toBe(
+      t("Install failed for {version}. Click to retry.", { version: "1.1.0" }),
+    );
   });
 
   it("keeps install action available after a background updater error", () => {
@@ -82,7 +87,9 @@ describe("desktop update button state", () => {
       canRetry: true,
     };
     expect(resolveDesktopUpdateButtonAction(state)).toBe("install");
-    expect(getDesktopUpdateButtonTooltip(state)).toContain("Click to restart and install");
+    expect(getDesktopUpdateButtonTooltip(state)).toBe(
+      t("Update {version} downloaded. Click to restart and install.", { version: "1.1.0" }),
+    );
   });
 
   it("prefers a newly available release over a stale downloaded version", () => {
@@ -236,8 +243,11 @@ describe("desktop update UI helpers", () => {
     };
 
     expect(shouldShowArm64IntelBuildWarning(state)).toBe(true);
-    expect(getArm64IntelBuildWarningDescription(state)).toContain("Apple Silicon");
-    expect(getArm64IntelBuildWarningDescription(state)).toContain("Intel build");
+    expect(getArm64IntelBuildWarningDescription(state)).toBe(
+      t(
+        "This Mac has Apple Silicon, but T3 Code is still running the Intel build under Rosetta. The next app update will replace it with the native Apple Silicon build.",
+      ),
+    );
   });
 
   it("changes the warning copy when a native build update is ready to download", () => {
@@ -250,7 +260,11 @@ describe("desktop update UI helpers", () => {
       availableVersion: "1.1.0",
     };
 
-    expect(getArm64IntelBuildWarningDescription(state)).toContain("Download the available update");
+    expect(getArm64IntelBuildWarningDescription(state)).toBe(
+      t(
+        "This Mac has Apple Silicon, but T3 Code is still running the Intel build under Rosetta. Download the available update to switch to the native Apple Silicon build.",
+      ),
+    );
   });
 
   it("includes the downloaded version in the install confirmation copy", () => {
@@ -259,7 +273,7 @@ describe("desktop update UI helpers", () => {
         availableVersion: "1.1.0",
         downloadedVersion: "1.1.1",
       }),
-    ).toContain("Install update 1.1.1 and restart T3 Code?");
+    ).toContain(t("Install update {version} and restart T3 Code?", { version: "1.1.1" }));
   });
 
   it("falls back to generic install confirmation copy when no version is available", () => {
@@ -268,7 +282,7 @@ describe("desktop update UI helpers", () => {
         availableVersion: null,
         downloadedVersion: null,
       }),
-    ).toContain("Install update and restart T3 Code?");
+    ).toContain(t("Install update and restart T3 Code?"));
   });
 
   it("keeps the same install confirmation copy across desktop platforms", () => {
@@ -278,7 +292,7 @@ describe("desktop update UI helpers", () => {
         downloadedVersion: "1.1.0",
       }),
     ).toBe(
-      "Install update 1.1.0 and restart T3 Code?\n\nAny running tasks will be interrupted. Make sure you're ready before continuing.",
+      `${t("Install update {version} and restart T3 Code?", { version: "1.1.0" })}\n\n${t("Any running tasks will be interrupted. Make sure you're ready before continuing.")}`,
     );
   });
 });
@@ -341,9 +355,9 @@ describe("canCheckForUpdate", () => {
 
 describe("getDesktopUpdateButtonTooltip", () => {
   it("returns 'Up to date' for non-actionable states", () => {
-    expect(getDesktopUpdateButtonTooltip({ ...baseState, status: "idle" })).toBe("Up to date");
+    expect(getDesktopUpdateButtonTooltip({ ...baseState, status: "idle" })).toBe(t("Up to date"));
     expect(getDesktopUpdateButtonTooltip({ ...baseState, status: "up-to-date" })).toBe(
-      "Up to date",
+      t("Up to date"),
     );
   });
 });

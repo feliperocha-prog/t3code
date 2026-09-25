@@ -7,6 +7,7 @@ import {
 } from "../desktopUpdate.logic";
 import { openDesktopUpdateReleaseNotes } from "../desktopUpdate.toast";
 import { Separator } from "../ui/separator";
+import { t } from "~/i18n";
 
 type DesktopUpdateShell = Pick<DesktopBridge, "openExternal">;
 
@@ -62,7 +63,7 @@ export function SidebarUpdateReleaseNotes({
         {state.status === "available" ? (
           <div>
             <div className="whitespace-nowrap text-sm leading-5 font-medium">
-              Update ready to download
+              {t("Update ready to download")}
             </div>
             {state.availableVersion ? (
               <div className="mt-0.5 text-xs leading-4 text-muted-foreground">
@@ -80,15 +81,19 @@ export function SidebarUpdateReleaseNotes({
           const omittedItemCount = Math.max(0, releaseNote.totalItems - releaseNote.items.length);
           const linkLabel =
             omittedItemCount === 0
-              ? "View release on GitHub"
-              : `${omittedItemCount} more ${omittedItemCount === 1 ? "change" : "changes"} on GitHub`;
+              ? t("View release on GitHub")
+              : omittedItemCount === 1
+                ? t("{count} more change on GitHub", { count: omittedItemCount })
+                : t("{count} more changes on GitHub", { count: omittedItemCount });
 
           return (
             <div key={releaseNote.version}>
               {index > 0 && <Separator className="my-3" />}
               <section>
                 <h3 className="text-foreground text-xs leading-4 font-semibold">
-                  {index === 0 ? "What's changed" : `Changes in ${releaseNote.version}`}
+                  {index === 0
+                    ? t("What's changed")
+                    : t("Changes in {version}", { version: releaseNote.version })}
                 </h3>
                 <ul className="mt-2 space-y-1.5 pl-4 text-xs leading-5 text-popover-foreground/90">
                   {keyReleaseNoteItems(releaseNote.items).map(({ item, key }) => (
@@ -110,7 +115,9 @@ export function SidebarUpdateReleaseNotes({
           <div>
             <Separator className="my-3" />
             <ReleaseLink releaseUrl={getDesktopUpdateReleaseHistoryUrl()} shell={shell}>
-              {`${state.omittedReleaseCount} older ${state.omittedReleaseCount === 1 ? "release" : "releases"} on GitHub`}
+              {state.omittedReleaseCount === 1
+                ? t("{count} older release on GitHub", { count: state.omittedReleaseCount })
+                : t("{count} older releases on GitHub", { count: state.omittedReleaseCount })}
             </ReleaseLink>
           </div>
         ) : null}

@@ -75,6 +75,7 @@ import {
 import { stackedThreadToast, toastManager } from "./ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { MiddleTruncate } from "./ui/middle-truncate";
+import { t } from "~/i18n";
 
 export interface BranchToolbarBranchSelectorHandle {
   open: () => void;
@@ -98,7 +99,7 @@ interface BranchToolbarBranchSelectorProps {
 }
 
 function toBranchActionErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "An error occurred.";
+  return error instanceof Error ? error.message : t("An error occurred.");
 }
 
 export function BranchToolbarBranchSelector({
@@ -355,11 +356,11 @@ export function BranchToolbarBranchSelector({
   const [isBranchActionPending, startBranchActionTransition] = useTransition();
   const totalBranchCount = branchRefState.data?.totalCount ?? 0;
   const branchStatusText = isInitialBranchesLoadPending
-    ? "Loading refs..."
+    ? t("Loading refs...")
     : isFetchingNextPage
-      ? "Loading more refs..."
+      ? t("Loading more refs...")
       : hasNextPage
-        ? `Showing ${refs.length} of ${totalBranchCount} refs`
+        ? t("Showing {count} of {total} refs", { count: refs.length, total: totalBranchCount })
         : null;
 
   // ---------------------------------------------------------------------------
@@ -371,7 +372,7 @@ export function BranchToolbarBranchSelector({
         if (!didCopy) return;
         toastManager.add({
           type: "success",
-          title: "Branch name copied",
+          title: t("Branch name copied"),
           description: branchName,
         });
       },
@@ -379,7 +380,7 @@ export function BranchToolbarBranchSelector({
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to copy branch name",
+            title: t("Failed to copy branch name"),
             description: toBranchActionErrorMessage(error),
           }),
         );
@@ -395,7 +396,7 @@ export function BranchToolbarBranchSelector({
       event.preventDefault();
       event.stopPropagation();
       const items: ContextMenuItem<"copy-branch-name">[] = [
-        { id: "copy-branch-name", label: "Copy branch name", icon: "copy" },
+        { id: "copy-branch-name", label: t("Copy branch name"), icon: "copy" },
       ];
       void api.contextMenu.show(items, { x: event.clientX, y: event.clientY }).then((action) => {
         if (action === "copy-branch-name") copyBranchName(branchName);
@@ -465,7 +466,7 @@ export function BranchToolbarBranchSelector({
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to switch ref.",
+            title: t("Failed to switch ref."),
             description: toBranchActionErrorMessage(squashAtomCommandFailure(checkoutResult)),
           }),
         );
@@ -501,7 +502,7 @@ export function BranchToolbarBranchSelector({
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to create and switch ref.",
+            title: t("Failed to create and switch ref."),
             description: toBranchActionErrorMessage(squashAtomCommandFailure(createBranchResult)),
           }),
         );
@@ -835,7 +836,7 @@ export function BranchToolbarBranchSelector({
         {...composerFloatingLayerProps}
       >
         <ComboboxSearchInput
-          placeholder="Search refs..."
+          placeholder={t("Search refs...")}
           value={branchQuery}
           onChange={(event) => setBranchQuery(event.target.value)}
           onKeyDown={(event) => {
@@ -858,7 +859,7 @@ export function BranchToolbarBranchSelector({
           }}
         />
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <ComboboxEmpty>No refs found.</ComboboxEmpty>
+          <ComboboxEmpty>{t("No refs found.")}</ComboboxEmpty>
           <div className="relative min-h-0 w-full max-h-56 flex-1 overflow-hidden">
             <ComboboxListVirtualized>
               <LegendList<string>
@@ -905,21 +906,22 @@ export function BranchToolbarBranchSelector({
                   >
                     <span className="flex min-w-0 items-center gap-1.5 font-medium text-muted-foreground">
                       <RefreshIcon aria-hidden="true" size="xs" className="shrink-0" />
-                      <span className="truncate">Start from origin</span>
+                      <span className="truncate">{t("Start from origin")}</span>
                     </span>
                     <Switch
                       id={startFromOriginSwitchId}
                       checked={startFromOrigin}
                       size="sm"
-                      aria-label="Start worktree from origin"
+                      aria-label={t("Start worktree from origin")}
                       onCheckedChange={(checked) => onStartFromOriginChange(Boolean(checked))}
                     />
                   </label>
                 }
               />
               <TooltipPopup side="top">
-                Creates the worktree from the latest matching branch on origin instead of your local
-                branch.
+                {t(
+                  "Creates the worktree from the latest matching branch on origin instead of your local branch.",
+                )}
               </TooltipPopup>
             </Tooltip>
           ) : null}

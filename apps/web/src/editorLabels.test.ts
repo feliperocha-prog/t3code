@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
+import { t } from "~/i18n";
 import { editorLabelForPlatform, openInEditorMenuLabel } from "./editorLabels";
 
 describe("editorLabelForPlatform", () => {
@@ -19,11 +20,11 @@ describe("editorLabelForPlatform", () => {
 
 describe("openInEditorMenuLabel", () => {
   it("names the preferred editor", () => {
-    expect(openInEditorMenuLabel("zed")).toBe("Open in Zed");
+    expect(openInEditorMenuLabel("zed")).toBe(t("Open in {editor}", { editor: "Zed" }));
   });
 
   it("keeps the generic label for the default file handler and missing preferences", () => {
-    expect(openInEditorMenuLabel("file-manager")).toBe("Open in editor");
-    expect(openInEditorMenuLabel(null)).toBe("Open in editor");
+    expect(openInEditorMenuLabel("file-manager")).toBe(t("Open in editor"));
+    expect(openInEditorMenuLabel(null)).toBe(t("Open in editor"));
   });
 });

@@ -2,6 +2,7 @@ import type { EnvironmentMachineKind } from "@t3tools/contracts";
 import { CloudIcon, LaptopIcon, MonitorIcon, ServerIcon, type LucideProps } from "lucide-react";
 import type { FunctionComponent, SVGProps } from "react";
 import { LinuxIcon } from "./Icons";
+import { t } from "~/i18n";
 
 // Lucide has no Apple desktops, so these two are drawn to its grammar (24
 // unit grid, 2 unit stroke, round joins) and share its prop surface so callers
@@ -54,13 +55,13 @@ const ICON_BY_KIND: Record<EnvironmentMachineKind, FunctionComponent<LucideProps
 };
 
 export const ENVIRONMENT_MACHINE_KIND_LABELS: Record<EnvironmentMachineKind, string> = {
-  server: "Server",
-  cloud: "Cloud VM",
+  server: t("Server"),
+  cloud: t("Cloud VM"),
   linux: "Linux/WSL",
   desktop: "Desktop",
-  laptop: "Laptop",
+  laptop: t("Laptop"),
   "mac-mini": "Mini PC",
-  "mac-studio": "Workstation",
+  "mac-studio": t("Workstation"),
 };
 
 export function environmentMachineIcon(

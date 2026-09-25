@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { type SlowRpcAckRequest, useSlowRpcAckRequests } from "../rpc/requestLatencyState";
 import { toastManager } from "./ui/toast";
+import { t } from "~/i18n";
 
 function describeSlowRequests(requests: ReadonlyArray<SlowRpcAckRequest>): string {
   const count = requests.length;
@@ -10,7 +11,9 @@ function describeSlowRequests(requests: ReadonlyArray<SlowRpcAckRequest>): strin
     Math.min(...requests.map((request) => request.thresholdMs)) / 1000,
   );
 
-  return `${count} request${count === 1 ? "" : "s"} waiting longer than ${thresholdSeconds}s.`;
+  return count === 1
+    ? t("{count} request waiting longer than {seconds}s.", { count, seconds: thresholdSeconds })
+    : t("{count} requests waiting longer than {seconds}s.", { count, seconds: thresholdSeconds });
 }
 
 function SlowRequestDetails({ requests }: { requests: ReadonlyArray<SlowRpcAckRequest> }) {
@@ -23,7 +26,7 @@ function SlowRequestDetails({ requests }: { requests: ReadonlyArray<SlowRpcAckRe
         >
           <div className="wrap-break-word font-medium text-foreground">{request.tag}</div>
           <div className="mt-0.5 text-3xs opacity-75">
-            Started {new Date(request.startedAt).toLocaleTimeString()}
+            {t("Started {time}", { time: new Date(request.startedAt).toLocaleTimeString() })}
           </div>
         </li>
       ))}
@@ -48,11 +51,11 @@ export function SlowRpcRequestToastCoordinator() {
       data: {
         expandableContent: <SlowRequestDetails requests={slowRequests} />,
         expandableDescriptionTrigger: true,
-        expandableLabels: { collapse: "Hide requests", expand: "Show requests" },
+        expandableLabels: { collapse: t("Hide requests"), expand: t("Show requests") },
       },
       description: describeSlowRequests(slowRequests),
       timeout: 0,
-      title: "Some requests are slow",
+      title: t("Some requests are slow"),
       type: "warning" as const,
     };
 
