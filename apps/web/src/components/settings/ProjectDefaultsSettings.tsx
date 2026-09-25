@@ -24,6 +24,7 @@ import { PULL_REQUEST_MERGE_METHOD_LABELS } from "../pullRequest/pullRequestDeta
 import { TraitsPicker } from "../chat/TraitsPicker";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { toastManager } from "../ui/toast";
+import { t } from "~/i18n";
 import { Switch } from "../ui/switch";
 import type { ProjectSettingsCategory } from "./ProjectSettingsPanel";
 import { searchableSetting } from "./settingsSearch";
@@ -114,7 +115,10 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
         entry.driverKind !== sourceEntry?.driverKind ||
         !options?.some((option) => option.slug === model && !option.isUnavailable)
       ) {
-        return `This model is unavailable on ${environment?.label ?? "a selected environment"}. Select that environment to choose its model separately.`;
+        return t(
+          "This model is unavailable on {environment}. Select that environment to choose its model separately.",
+          { environment: environment?.label ?? t("a selected environment") },
+        );
       }
     }
     return null;
@@ -123,7 +127,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
   const setModel = (value: ModelSelection | null) => {
     const reason = value ? modelDisabledReason(value.instanceId, value.model) : null;
     if (reason) {
-      toastManager.add({ type: "error", title: "Default model not saved", description: reason });
+      toastManager.add({ type: "error", title: t("Default model not saved"), description: reason });
       return;
     }
     updateSettings({ defaultModelSelection: value });
@@ -135,17 +139,17 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
       settingKeys={["defaultModelSelection"]}
       mixed={mixedModel}
       id="default-model"
-      title="Model"
+      title={t("Model")}
       description={
         isProjectScope
-          ? "Model for new threads in this project."
-          : "Default model for new threads. Projects can override it."
+          ? t("Model for new threads in this project.")
+          : t("Default model for new threads. Projects can override it.")
       }
       status={
         unavailable || mixedModel || modelSource === "project"
           ? undefined
           : settings.defaultModelSelection === null
-            ? "Automatic"
+            ? t("Automatic")
             : undefined
       }
       resetAction={
@@ -163,7 +167,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
               instanceEntries={entries}
               modelOptionsByInstance={modelOptions}
               triggerClassName={SETTINGS_PICKER_TRIGGER_CLASSNAME}
-              {...(mixedModel ? { triggerLabel: "Mixed" } : {})}
+              {...(mixedModel ? { triggerLabel: t("Mixed") } : {})}
               getModelDisabledReason={modelDisabledReason}
               onOpenProviderSetup={(instanceId) => {
                 if (representative)
@@ -194,7 +198,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             ) : null}
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground">No providers available</span>
+          <span className="text-sm text-muted-foreground">{t("No providers available")}</span>
         )
       }
     />
@@ -205,11 +209,11 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
       settingKeys={["defaultThreadEnvMode"]}
       mixed={mixedWorkspace}
       id={searchableSetting("new-threads").id}
-      title="Workspace"
+      title={t("Workspace")}
       description={
         isProjectScope
-          ? "Where new threads in this project start."
-          : "Where new threads start. Projects and their t3.json can override it."
+          ? t("Where new threads in this project start.")
+          : t("Where new threads start. Projects and their t3.json can override it.")
       }
       resetAction={
         !isProjectScope && settings.defaultThreadEnvMode !== null ? (
@@ -227,14 +231,14 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
               updateSettings({ defaultThreadEnvMode: value });
           }}
         >
-          <SelectTrigger size="sm" aria-label="Default workspace">
+          <SelectTrigger size="sm" aria-label={t("Default workspace")}>
             <SelectValue>
               {(value: string | null) =>
                 value === "local" || value === "worktree"
                   ? resolveEnvModeLabel(value)
                   : unavailable
-                    ? "Unavailable"
-                    : "Mixed"
+                    ? t("Unavailable")
+                    : t("Mixed")
               }
             </SelectValue>
           </SelectTrigger>
@@ -258,7 +262,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
       }
       title={
         category === "general" || category === "project"
-          ? "New threads"
+          ? t("New threads")
           : category === "integrations"
             ? "Browser"
             : "Repositories"
@@ -279,8 +283,8 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             {...searchableSetting("default-permissions")}
             description={
               isProjectScope
-                ? "Permissions for new threads in this project."
-                : "Default permissions for new threads. Projects can override them."
+                ? t("Permissions for new threads in this project.")
+                : t("Default permissions for new threads. Projects can override them.")
             }
             resetAction={
               settings.defaultRuntimeMode !== DEFAULT_SERVER_SETTINGS.defaultRuntimeMode ? (
@@ -301,13 +305,13 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
                   if (value) updateSettings({ defaultRuntimeMode: value });
                 }}
               >
-                <SelectTrigger size="sm" aria-label="Default permissions">
+                <SelectTrigger size="sm" aria-label={t("Default permissions")}>
                   {!mixedPermissions && (
                     <PermissionIcon className="size-3.5 shrink-0 text-muted-foreground" />
                   )}
                   <SelectValue>
                     {mixedPermissions
-                      ? "Mixed"
+                      ? t("Mixed")
                       : runtimeModeConfig[settings.defaultRuntimeMode].label}
                   </SelectValue>
                 </SelectTrigger>
@@ -341,8 +345,10 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             {...searchableSetting("worktree-submodules")}
             description={
               isProjectScope
-                ? "How new worktrees in this project populate git submodules."
-                : "How new worktrees populate git submodules. Projects and their t3.json can override it."
+                ? t("How new worktrees in this project populate git submodules.")
+                : t(
+                    "How new worktrees populate git submodules. Projects and their t3.json can override it.",
+                  )
             }
             resetAction={
               !isProjectScope && settings.worktreeSubmodules !== null ? (
@@ -359,14 +365,14 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
                   if (isWorktreeSubmodules(value)) updateSettings({ worktreeSubmodules: value });
                 }}
               >
-                <SelectTrigger size="sm" aria-label="Worktree submodules">
+                <SelectTrigger size="sm" aria-label={t("Worktree submodules")}>
                   <SelectValue>
                     {(value: string | null) =>
                       isWorktreeSubmodules(value)
                         ? WORKTREE_SUBMODULES_LABELS[value]
                         : unavailable
-                          ? "Unavailable"
-                          : "Mixed"
+                          ? t("Unavailable")
+                          : t("Mixed")
                     }
                   </SelectValue>
                 </SelectTrigger>

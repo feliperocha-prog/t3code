@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { EnvironmentId } from "@t3tools/contracts";
+import { t } from "~/i18n";
 
 import {
   filterAvailableSettingsSearchItems,
@@ -377,7 +378,7 @@ describe("settings search targets", () => {
 
   it("treats device-local rows as reachable from every selection", () => {
     const setting = getSettingsSearchTargetScope("time-format")!;
-    expect(setting).toEqual({ title: "Time format", scope: null });
+    expect(setting).toEqual({ title: t("Time format"), scope: null });
     expect(isSettingsSearchScopeAvailable(setting.scope, "project")).toBe(true);
     expect(isSettingsSearchScopeAvailable(setting.scope, "all")).toBe(true);
     expect(getSettingsSearchTargetScope("appearance")).toMatchObject({ scope: null });

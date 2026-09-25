@@ -9,6 +9,7 @@ import { SidebarInset } from "../components/ui/sidebar";
 import { useNavigateToMainApp } from "../components/sidebar/mainAppLocation";
 import { WorkspacePageHeader } from "../components/WorkspacePageHeader";
 import { isElectron } from "../env";
+import { t } from "../i18n";
 import {
   SettingsScopeProvider,
   useSettingsScope,
@@ -37,7 +38,7 @@ function RestoreDeviceDefaultsButton({ onRestored }: { onRestored: () => void })
       onClick={() => void restoreDefaults()}
     >
       <RotateCcwIcon className="mx-1 size-3.5" />
-      Restore device defaults
+      {t("Restore device defaults")}
     </Button>
   );
 }
@@ -63,8 +64,13 @@ function SettingsScopeBoundary({ pathname, children }: { pathname: string; child
         eligibleEnvironmentIds={autoSettlementAvailability.eligibleEnvironmentIds}
       >
         {autoSettlementAvailability.eligibleEnvironmentIds.length > 0
-          ? `${searchTarget.title} requires a supporting environment. Choose one to continue.`
-          : `${searchTarget.title} requires a supporting environment. Connect or update an environment to continue.`}
+          ? t("{title} requires a supporting environment. Choose one to continue.", {
+              title: searchTarget.title,
+            })
+          : t(
+              "{title} requires a supporting environment. Connect or update an environment to continue.",
+              { title: searchTarget.title },
+            )}
       </SettingsScopeNotice>
     );
   }
@@ -81,7 +87,10 @@ function SettingsScopeBoundary({ pathname, children }: { pathname: string; child
         : "all";
     return (
       <SettingsScopeNotice target={target} targetId={hash}>
-        {`${searchTarget.title} is not available for the selected target. Choose its owning scope to continue.`}
+        {t(
+          "{title} is not available for the selected target. Choose its owning scope to continue.",
+          { title: searchTarget.title },
+        )}
       </SettingsScopeNotice>
     );
   }
@@ -101,7 +110,7 @@ function SettingsScopeBoundary({ pathname, children }: { pathname: string; child
     return (
       <SettingsPageContainer>
         <p className="text-sm text-muted-foreground">
-          Reconnect {scope.label} to change its settings.
+          {t("Reconnect {label} to change its settings.", { label: scope.label })}
         </p>
       </SettingsPageContainer>
     );

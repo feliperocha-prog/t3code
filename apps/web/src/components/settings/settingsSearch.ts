@@ -1,4 +1,5 @@
 import { isElectron } from "~/env";
+import { t } from "~/i18n";
 import { isMacPlatform, isWindowsPlatform, normalizeSearchText } from "~/lib/utils";
 import { STATIC_KEYBINDING_COMMANDS, type KeybindingCommand } from "@t3tools/contracts";
 import type { EnvironmentId } from "@t3tools/contracts";
@@ -79,10 +80,10 @@ export interface SettingsSearchAvailability {
 }
 
 /**
- * Section labels in sidebar order. The sidebar nav and the search-result
- * subtitles both render from this record, so each label exists once.
+ * English section labels in sidebar order. Search matches these as well as the
+ * translated labels, so a query in either language finds the section.
  */
-export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
+const SETTINGS_SECTION_SOURCE_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/projects": "Project",
   "/settings/general": "General",
   "/settings/appearance": "Appearance",
@@ -95,6 +96,14 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/connections": "Connections",
   "/settings/archived": "Archive",
 };
+
+/**
+ * Section labels in sidebar order. The sidebar nav and the search-result
+ * subtitles both render from this record, so each label exists once.
+ */
+export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = Object.fromEntries(
+  Object.entries(SETTINGS_SECTION_SOURCE_LABELS).map(([to, label]) => [to, t(label)]),
+) as Record<SettingsPath, string>;
 
 /** Anchor id of the first row bound to `command` on the Keybindings page. */
 export function keybindingSearchAnchorId<Command extends KeybindingCommand>(command: Command) {
@@ -147,10 +156,14 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "project-defaults",
-    title: "Project defaults and overrides",
+    title: t("Project defaults and overrides"),
     to: "/settings/general",
     scope: "project-defaults",
-    searchTerms: ["model workspace environments projects inheritance checkout"],
+    searchTerms: [
+      "model workspace environments projects inheritance checkout",
+      "Project defaults and overrides",
+      "modelo ambientes projetos herança",
+    ],
   },
   {
     id: "project-overview",
@@ -160,18 +173,24 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "default-model",
-    title: "Default model",
+    title: t("Default model"),
     to: "/settings/general",
     scope: "project-defaults",
-    searchTerms: ["new thread project provider reasoning effort"],
+    searchTerms: [
+      "new thread project provider reasoning effort",
+      "Default model",
+      "nova thread projeto provedor esforço de raciocínio",
+    ],
   },
   {
     id: "default-permissions",
-    title: "Permissions",
+    title: t("Permissions"),
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: [
       "new thread default runtime mode supervised approvals auto accept edits full access",
+      "Permissions",
+      "nova thread modo aprovações aceitar edições acesso total",
     ],
   },
   {
@@ -263,227 +282,352 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "project-grouping",
-    title: "Project grouping",
+    title: t("Project grouping"),
     to: "/settings/general",
-    searchTerms: ["combine matching repositories environments sidebar"],
+    searchTerms: [
+      "combine matching repositories environments sidebar",
+      "Project grouping",
+      "combinar repositórios iguais ambientes barra lateral",
+    ],
   },
   {
     id: "auto-settle-inactive-threads",
-    title: "Auto-settle inactive threads",
+    title: t("Auto-settle inactive threads"),
     to: "/settings/general",
-    searchTerms: ["sidebar inactivity days no activity automatically"],
+    searchTerms: [
+      "sidebar inactivity days no activity automatically",
+      "Auto-settle inactive threads",
+      "barra lateral inatividade dias sem atividade",
+    ],
     requiresThreadAutoSettlement: true,
     scope: "project-defaults",
   },
   {
     id: "auto-settle-merged-threads",
-    title: "Auto-settle merged threads",
+    title: t("Auto-settle merged threads"),
     to: "/settings/general",
-    searchTerms: ["pull request merge closed automatically sidebar"],
+    searchTerms: [
+      "pull request merge closed automatically sidebar",
+      "Auto-settle merged threads",
+      "pull request merge fechado barra lateral",
+    ],
     requiresThreadAutoSettlement: true,
     scope: "project-defaults",
   },
   {
     id: "days-before-auto-settle",
-    title: "Days of inactivity before auto-settle",
+    title: t("Days of inactivity before auto-settle"),
     to: "/settings/general",
     targetId: "auto-settle-inactive-threads",
-    searchTerms: ["thread timeout activity sidebar"],
+    searchTerms: [
+      "thread timeout activity sidebar",
+      "Days of inactivity before auto-settle",
+      "thread tempo atividade barra lateral",
+    ],
     requiresThreadAutoSettlement: true,
     scope: "project-defaults",
   },
   {
     id: "thread-notifications",
-    title: "Thread notifications",
+    title: t("Thread notifications"),
     to: "/settings/general",
-    searchTerms: ["notification sound alert completion input approval desktop"],
+    searchTerms: [
+      "notification sound alert completion input approval desktop",
+      "Thread notifications",
+      "notificação som alerta conclusão aprovação",
+    ],
   },
   {
     id: "in-app-notifications",
-    title: "In-app notifications",
+    title: t("In-app notifications"),
     to: "/settings/general",
-    searchTerms: ["notification toast popup completion input approval failure"],
+    searchTerms: [
+      "notification toast popup completion input approval failure",
+      "In-app notifications",
+      "notificação aviso conclusão aprovação falha",
+    ],
   },
   {
     id: "time-format",
-    title: "Time format",
+    title: t("Time format"),
     to: "/settings/general",
-    searchTerms: ["timestamp clock locale system browser os 12 hour 24 hour"],
+    searchTerms: [
+      "timestamp clock locale system browser os 12 hour 24 hour",
+      "Time format",
+      "horário relógio sistema navegador 12 horas 24 horas",
+    ],
   },
   {
     id: "response-streaming",
-    title: "Response streaming",
+    title: t("Response streaming"),
     to: "/settings/general",
     scope: "project-defaults",
-    searchTerms: ["output token paragraph buffered wait turn legacy"],
+    searchTerms: [
+      "output token paragraph buffered wait turn legacy",
+      "Response streaming",
+      "saída token parágrafo aguardar turno legado",
+    ],
   },
   {
     id: "hide-whitespace-changes",
-    title: "Hide whitespace changes",
+    title: t("Hide whitespace changes"),
     to: "/settings/general",
-    searchTerms: ["diff ignore spaces edits default"],
+    searchTerms: [
+      "diff ignore spaces edits default",
+      "Hide whitespace changes",
+      "diff ignorar espaços edições padrão",
+    ],
   },
   {
     id: "default-diff-file-state",
-    title: "Default diff file state",
+    title: t("Default diff file state"),
     to: "/settings/general",
-    searchTerms: ["collapsed expanded collapse expand files pull request pr code tab"],
+    searchTerms: [
+      "collapsed expanded collapse expand files pull request pr code tab",
+      "Default diff file state",
+      "recolhido expandido recolher expandir arquivos pull request aba código",
+    ],
   },
   {
     id: "diff-layout",
-    title: "Diff layout",
+    title: t("Diff layout"),
     to: "/settings/general",
-    searchTerms: ["stacked split side by side unified inline view"],
+    searchTerms: [
+      "stacked split side by side unified inline view",
+      "Diff layout",
+      "empilhado dividido lado a lado visualização",
+    ],
   },
   {
     id: "proactive-panels",
-    title: "Proactive panels",
+    title: t("Proactive panels"),
     to: "/settings/general",
-    searchTerms: ["automatically open diff pull request pr right panel agent completion"],
+    searchTerms: [
+      "automatically open diff pull request pr right panel agent completion",
+      "Proactive panels",
+      "abrir automaticamente diff pull request painel direito",
+    ],
   },
   {
     id: "skills-in-slash-menu",
-    title: "Show skills in slash menu",
+    title: t("Show skills in slash menu"),
     to: "/settings/general",
-    searchTerms: ["command menu dollar $ slash /"],
+    searchTerms: [
+      "command menu dollar $ slash /",
+      "Show skills in slash menu",
+      "menu de comandos barra",
+    ],
   },
   {
     id: "composer-rich-text",
-    title: "Rich text composer",
+    title: t("Rich text composer"),
     to: "/settings/general",
-    searchTerms: ["composer rich text tiptap bold italic markdown styled wysiwyg"],
+    searchTerms: [
+      "composer rich text tiptap bold italic markdown styled wysiwyg",
+      "Rich text composer",
+      "negrito itálico markdown formatação",
+    ],
   },
   {
     id: "composer-collapse",
-    title: "Collapse composer on scroll",
+    title: t("Collapse composer on scroll"),
     to: "/settings/general",
-    searchTerms: ["composer rest resting scroll wheel conversation timeline shrink minimize"],
+    searchTerms: [
+      "composer rest resting scroll wheel conversation timeline shrink minimize",
+      "Collapse composer on scroll",
+      "rolagem conversa encolher minimizar",
+    ],
   },
   {
     id: "send-shortcut",
-    title: "Send shortcut",
+    title: t("Send shortcut"),
     to: "/settings/general",
-    searchTerms: ["enter return command ctrl multiline prompt new line composer"],
+    searchTerms: [
+      "enter return command ctrl multiline prompt new line composer",
+      "Send shortcut",
+      "enviar nova linha multilinha prompt",
+    ],
   },
   {
     id: "follow-up-behavior",
-    title: "Follow-up behavior",
+    title: t("Follow-up behavior"),
     to: "/settings/general",
-    searchTerms: ["queue steer running turn send default behavior composer"],
+    searchTerms: [
+      "queue steer running turn send default behavior composer",
+      "Follow-up behavior",
+      "fila direcionar enviar execução",
+    ],
   },
   {
     id: "provider-update-checks",
-    title: "Provider update checks",
+    title: t("Provider update checks"),
     to: "/settings/general",
-    searchTerms: ["installed cli versions newer available codex claude cursor grok opencode"],
+    searchTerms: [
+      "installed cli versions newer available codex claude cursor grok opencode",
+      "Provider update checks",
+      "versões instaladas cli atualização",
+    ],
     scope: "environment-defaults",
   },
   {
     id: "continue-threads-after-server-update",
-    title: "Continue threads after restarts",
+    title: t("Continue threads after restarts"),
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: [
       "resume running active interrupted work restart reboot machine crash desktop update automatically",
+      "Continue threads after restarts",
+      "retomar interrompido reiniciar travamento atualização automaticamente",
     ],
   },
   {
     id: "background-activity",
-    title: "Background activity",
+    title: t("Background activity"),
     to: "/settings/general",
     scope: "environment-defaults",
     searchTerms: [
       "balanced performance battery saver advanced git fetch provider health refresh host power monitor idle policy",
+      "Background activity",
+      "equilibrado desempenho economia de bateria avançado saúde provedor energia política",
     ],
   },
   {
     id: "new-threads",
-    title: "New threads",
+    title: t("New threads"),
     to: "/settings/general",
     scope: "project-defaults",
-    searchTerms: ["default workspace mode draft local worktree"],
+    searchTerms: [
+      "default workspace mode draft local worktree",
+      "New threads",
+      "modo de workspace rascunho local worktree",
+    ],
   },
   {
     id: "worktree-submodules",
-    title: "Submodules",
+    title: t("Submodules"),
     to: "/settings/general",
     scope: "project-defaults",
-    searchTerms: ["git submodule init recursive top-level none worktree t3.json"],
+    searchTerms: [
+      "git submodule init recursive top-level none worktree t3.json",
+      "Submodules",
+      "submódulo git worktree",
+    ],
   },
   {
     id: "start-from-origin",
-    title: "Start from origin",
+    title: t("Start from origin"),
     to: "/settings/general",
     scope: "project-defaults",
-    searchTerms: ["new worktrees latest matching remote branch local"],
+    searchTerms: [
+      "new worktrees latest matching remote branch local",
+      "Start from origin",
+      "novas worktrees branch remota local",
+    ],
   },
   {
     id: "add-project-starts-in",
-    title: "Add project starts in",
+    title: t("Add project starts in"),
     to: "/settings/general",
     scope: "environment-defaults",
-    searchTerms: ["base directory folder browser path home"],
+    searchTerms: [
+      "base directory folder browser path home",
+      "Add project starts in",
+      "diretório base pasta caminho",
+    ],
   },
   {
     id: "unpin-confirmation",
-    title: "Unpin confirmation",
+    title: t("Unpin confirmation"),
     to: "/settings/general",
-    searchTerms: ["ask before thread pinned section"],
+    searchTerms: [
+      "ask before thread pinned section",
+      "Unpin confirmation",
+      "perguntar antes thread fixada",
+    ],
   },
   {
     id: "archive-confirmation",
-    title: "Archive confirmation",
+    title: t("Archive confirmation"),
     to: "/settings/general",
-    searchTerms: ["ask before thread second click inline action"],
+    searchTerms: [
+      "ask before thread second click inline action",
+      "Archive confirmation",
+      "perguntar antes thread segundo clique",
+    ],
   },
   {
     id: "delete-confirmation",
-    title: "Delete confirmation",
+    title: t("Delete confirmation"),
     to: "/settings/general",
-    searchTerms: ["ask before thread chat history"],
+    searchTerms: [
+      "ask before thread chat history",
+      "Delete confirmation",
+      "perguntar antes thread histórico apagar",
+    ],
   },
   {
     id: "quit-confirmation",
-    title: "Quit shortcut",
+    title: t("Quit shortcut"),
     to: "/settings/general",
-    searchTerms: ["confirmation desktop app exit direct hold double click press twice"],
+    searchTerms: [
+      "confirmation desktop app exit direct hold double click press twice",
+      "Quit shortcut",
+      "confirmação sair fechar app pressionar duas vezes segurar",
+    ],
     desktopOnly: true,
   },
   {
     id: "text-generation-model",
-    title: "Text generation model",
+    title: t("Text generation model"),
     to: "/settings/general",
     scope: "project-defaults",
-    searchTerms: ["generated thread titles source control content default provider"],
+    searchTerms: [
+      "generated thread titles source control content default provider",
+      "Text generation model",
+      "títulos gerados threads controle de versão provedor padrão",
+    ],
   },
   {
     id: "diagnostics",
-    title: "Diagnostics",
+    title: t("Diagnostics"),
     to: "/settings/general",
-    searchTerms: ["logs traces processes resource history failures spans cpu memory"],
+    searchTerms: [
+      "logs traces processes resource history failures spans cpu memory",
+      "Diagnostics",
+      "diagnóstico logs processos recursos memória falhas",
+    ],
   },
   {
     id: "open-source-licenses",
-    title: "Open source licenses",
+    title: t("Open source licenses"),
     to: "/settings/general",
+    searchTerms: ["Open source licenses", "licenças código aberto"],
   },
   {
     id: "legacy-plan-mode",
-    title: "Plan mode (legacy)",
+    title: t("Plan mode (legacy)"),
     to: "/settings/general",
-    searchTerms: ["build plan composer old"],
+    searchTerms: ["build plan composer old", "Plan mode (legacy)", "antigo plano"],
   },
   {
     id: "legacy-context-window-indicator",
-    title: "Context window indicator (legacy)",
+    title: t("Context window indicator (legacy)"),
     to: "/settings/general",
-    searchTerms: ["composer meter usage tokens circle old"],
+    searchTerms: [
+      "composer meter usage tokens circle old",
+      "Context window indicator (legacy)",
+      "medidor uso tokens círculo antigo",
+    ],
   },
   {
     id: "legacy-sidebar",
-    title: "Sidebar (legacy)",
+    title: t("Sidebar (legacy)"),
     to: "/settings/general",
-    searchTerms: ["project thread tree old flat list"],
+    searchTerms: [
+      "project thread tree old flat list",
+      "Sidebar (legacy)",
+      "árvore projeto thread lista antiga",
+    ],
   },
   {
     id: "keybindings",
@@ -980,6 +1124,7 @@ export function searchSettings(
       const fields = [
         title,
         normalizeSearchText(SETTINGS_SECTION_LABELS[item.to]),
+        normalizeSearchText(SETTINGS_SECTION_SOURCE_LABELS[item.to]),
         ...(item.searchTerms ?? []).map(normalizeSearchText),
       ];
       if (!queryTokens.every((token) => fields.some((field) => field.includes(token)))) return [];
