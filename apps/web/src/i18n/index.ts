@@ -27,3 +27,13 @@ export function t(text: string, vars?: TemplateVars): string {
     name in vars ? String(vars[name]) : placeholder,
   );
 }
+
+/**
+ * t() for a short word whose translation depends on where it appears, such as
+ * "Open" the button versus "Open" the pull request state. The dictionary key
+ * is "<context>|<English text>"; without that entry it falls back to t(text).
+ */
+export function tc(context: string, text: string, vars?: TemplateVars): string {
+  const key = `${context}|${text}`;
+  return key in messages ? t(key, vars) : t(text, vars);
+}

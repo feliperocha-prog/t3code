@@ -340,7 +340,7 @@ const dictionary: Readonly<Record<string, string>> = {
   "No cookies were imported for {environment}.": "Nenhum cookie foi importado para {environment}.",
   "There were no cookies to import for {environment}.":
     "Não havia cookies para importar para {environment}.",
-  Skipped: "Ignorados",
+  "Skipped domains": "Domínios ignorados",
   "Couldn’t import from {name}": "Não foi possível importar do {name}",
   "{items} and {last}": "{items} e {last}",
   "{items} and {count} more": "{items} e mais {count}",

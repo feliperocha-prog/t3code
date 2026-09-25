@@ -9,7 +9,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import type { PullRequestState } from "@t3tools/contracts";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 export const PullRequestGlyph = {
   pullRequest: GitPullRequestArrowIcon,
@@ -33,7 +33,7 @@ export interface PullRequestStatePresentation {
 
 export const PULL_REQUEST_STATE_PRESENTATION = {
   open: {
-    label: "Open",
+    label: tc("pull request state", "Open"),
     toneClassName: "text-emerald-600 dark:text-emerald-300/90",
     Icon: PullRequestGlyph.pullRequest,
   },

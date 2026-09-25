@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { dictionarySources, t } from "./index";
+import { dictionarySources, t, tc } from "./index";
 
 describe("t", () => {
   it("returns the Portuguese entry for a known English string", () => {
@@ -15,6 +15,12 @@ describe("t", () => {
       "Reconecte Casa para alterar as configurações dele.",
     );
     expect(t("{count} left, {other}", { count: 3 })).toBe("3 left, {other}");
+  });
+
+  it("uses the context entry when one exists and plain t() otherwise", () => {
+    expect(tc("pull request state", "Open")).toBe("Aberto");
+    expect(t("Open")).toBe("Abrir");
+    expect(tc("pull request state", "Settings")).toBe("Configurações");
   });
 });
 

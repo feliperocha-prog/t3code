@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { resolvePullRequestConflict, resolvePullRequestState } from "./pullRequestPresentation";
 import { PullRequestGlyph } from "./pullRequestIcons";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 describe("resolvePullRequestState", () => {
   it.each([
@@ -10,7 +10,7 @@ describe("resolvePullRequestState", () => {
       "open",
       { state: "open", isDraft: false },
       PullRequestGlyph.pullRequest,
-      "Open",
+      tc("pull request state", "Open"),
       "text-emerald-600 dark:text-emerald-300/90",
     ],
     [
@@ -69,7 +69,7 @@ describe("resolvePullRequestState", () => {
 
     expect(resolvePullRequestState(input)).toMatchObject({
       Icon: PullRequestGlyph.pullRequest,
-      label: "Open",
+      label: tc("pull request state", "Open"),
     });
     expect(resolvePullRequestConflict(input)).toMatchObject({
       Icon: PullRequestGlyph.conflicting,
