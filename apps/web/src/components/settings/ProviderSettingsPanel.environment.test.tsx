@@ -9,6 +9,7 @@ import {
 } from "@t3tools/contracts";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
+import { t } from "~/i18n";
 import { visitElements } from "../../test/reactElementTree";
 import { reactHookHarness as hooks } from "../../test/reactHookHarness";
 
@@ -155,13 +156,13 @@ function isRefreshButton(element: ReactElement<Record<string, unknown>>): boolea
         child !== null &&
         (child as ReactElement<Record<string, unknown>>).props?.className === "sr-only" &&
         (child as ReactElement<Record<string, unknown>>).props?.children ===
-          "Refresh provider status",
+          t("Refresh provider status"),
     )
   );
 }
 
 function isAddProviderButton(element: ReactElement<Record<string, unknown>>): boolean {
-  return element.props["aria-label"] === "Add provider";
+  return element.props["aria-label"] === t("Add provider");
 }
 
 async function flushPromises(): Promise<void> {
@@ -292,7 +293,10 @@ describe("EnvironmentProviderSettings routing", () => {
     );
     expect(customEditor).not.toBeNull();
 
-    const notice = visitElements(panel, (element) => element.props.title === "Limited permissions");
+    const notice = visitElements(
+      panel,
+      (element) => element.props.title === t("Limited permissions"),
+    );
     expect(notice).not.toBeNull();
 
     expect(visitElements(panel, isRefreshButton)).toBeNull();
@@ -304,7 +308,7 @@ describe("EnvironmentProviderSettings routing", () => {
     const panel = renderPanel();
     expect(visitElements(panel, (element) => element.props.inert === true)).toBeNull();
     expect(
-      visitElements(panel, (element) => element.props.title === "Limited permissions"),
+      visitElements(panel, (element) => element.props.title === t("Limited permissions")),
     ).toBeNull();
     expect(visitElements(panel, isRefreshButton)).not.toBeNull();
     expect(visitElements(panel, isAddProviderButton)).not.toBeNull();
@@ -312,14 +316,14 @@ describe("EnvironmentProviderSettings routing", () => {
 
   it("keeps Advanced visible when search targets the provider health interval", () => {
     let panel = renderPanel();
-    expect(visitElements(panel, (element) => element.props.title === "Advanced")).not.toBeNull();
+    expect(visitElements(panel, (element) => element.props.title === t("Advanced"))).not.toBeNull();
     expect(
       visitElements(panel, (element) => element.props.id === "provider-health-check-interval"),
     ).not.toBeNull();
 
     settingsSearchState.targetId = "provider-health-check-interval";
     panel = renderPanel();
-    expect(visitElements(panel, (element) => element.props.title === "Advanced")).not.toBeNull();
+    expect(visitElements(panel, (element) => element.props.title === t("Advanced"))).not.toBeNull();
     expect(
       visitElements(panel, (element) => element.props.id === "provider-health-check-interval"),
     ).not.toBeNull();

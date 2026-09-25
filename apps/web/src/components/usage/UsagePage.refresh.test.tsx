@@ -4,6 +4,8 @@ import { StrictMode, act } from "react";
 import { create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 
+import { t } from "~/i18n";
+
 const state = vi.hoisted(() => ({
   presentations: new Map(),
   refreshProviders: vi.fn(async () => undefined),
@@ -145,11 +147,11 @@ it.each([0, 1])(
     });
     expect(
       JSON.stringify(renderer.toJSON(), (key, value) => (key === "props" ? undefined : value)),
-    ).toContain("in 2h 0m");
+    ).toContain(`${t("in")} 2h 0m`);
     vi.mocked(Date.now).mockReturnValue(Date.parse("2026-09-11T12:30:00Z"));
     await act(async () => {
       renderer.root
-        .findAllByProps({ "aria-label": "Refresh limits" })
+        .findAllByProps({ "aria-label": t("Refresh limits") })
         .filter((node) => node.type === "button")
         .at(buttonIndex)!
         .props.onClick();
@@ -160,10 +162,10 @@ it.each([0, 1])(
     });
     expect(
       JSON.stringify(renderer.toJSON(), (key, value) => (key === "props" ? undefined : value)),
-    ).toContain("in 1h 30m");
+    ).toContain(`${t("in")} 1h 30m`);
     expect(
       JSON.stringify(renderer.toJSON(), (key, value) => (key === "props" ? undefined : value)),
-    ).not.toContain("in 2h 0m");
+    ).not.toContain(`${t("in")} 2h 0m`);
   },
 );
 
@@ -173,7 +175,7 @@ it("uses the current time when returning to limits from tokens", async () => {
   });
   const selectMetric = (metric: string) => {
     renderer.root
-      .findAll((node) => node.type === "div" && node.props["aria-label"] === "Usage metric")[0]!
+      .findAll((node) => node.type === "div" && node.props["aria-label"] === t("Usage metric"))[0]!
       .props.onValueChange([metric]);
   };
   await act(() => selectMetric("tokens"));
@@ -181,7 +183,7 @@ it("uses the current time when returning to limits from tokens", async () => {
   await act(() => selectMetric("limits"));
   expect(
     JSON.stringify(renderer.toJSON(), (key, value) => (key === "props" ? undefined : value)),
-  ).toContain("in 1h 0m");
+  ).toContain(`${t("in")} 1h 0m`);
   expect(state.refreshProviders).toHaveBeenCalledTimes(2);
 });
 
@@ -197,7 +199,7 @@ it("refreshes once on opening Limits and suppresses rapid returns and remounts",
   expect(state.refreshProviders).not.toHaveBeenCalled();
   const selectMetric = (metric: string) =>
     renderer.root
-      .findAll((node) => node.type === "div" && node.props["aria-label"] === "Usage metric")[0]!
+      .findAll((node) => node.type === "div" && node.props["aria-label"] === t("Usage metric"))[0]!
       .props.onValueChange([metric]);
   await act(() => selectMetric("limits"));
   expect(state.refreshProviders).toHaveBeenCalledTimes(1);
@@ -255,7 +257,7 @@ it("keeps manual refresh busy until the already-running automatic check settles"
   });
   const button = () =>
     renderer.root.findAll(
-      (node) => node.type === "button" && node.props["aria-label"] === "Refresh limits",
+      (node) => node.type === "button" && node.props["aria-label"] === t("Refresh limits"),
     )[0]!;
   expect(state.refreshProviders).toHaveBeenCalledTimes(1);
   await act(() => button().props.onClick());

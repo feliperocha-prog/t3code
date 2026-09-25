@@ -9,6 +9,7 @@ import {
   formatTokens,
   formatUsd,
 } from "@t3tools/shared/usageFormat";
+import { t } from "~/i18n";
 import { PROVIDER_ORDER, PROVIDER_PRESENTATION } from "./usageProviders";
 
 const VIEW_WIDTH = 960;
@@ -344,7 +345,15 @@ export function UsageProviderChart({
             viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
             preserveAspectRatio="none"
             role="img"
-            aria-label={`${resolution === "hour" ? "Hourly" : "Daily"} ${metric === "tokens" ? "processed tokens" : "cost"} by provider`}
+            aria-label={
+              resolution === "hour"
+                ? metric === "tokens"
+                  ? t("Hourly processed tokens by provider")
+                  : t("Hourly cost by provider")
+                : metric === "tokens"
+                  ? t("Daily processed tokens by provider")
+                  : t("Daily cost by provider")
+            }
           >
             {ticks.map((tick) => {
               const y = toY(tick);
@@ -424,7 +433,7 @@ export function UsageProviderChart({
                 );
               })}
               <div className="mt-1 flex items-center justify-between gap-3 border-t border-border pt-1">
-                <span className="text-muted-foreground">Total</span>
+                <span className="text-muted-foreground">{t("Total")}</span>
                 <span className="text-foreground tabular-nums">
                   {format(hoveredColumn?.total ?? 0)}
                 </span>

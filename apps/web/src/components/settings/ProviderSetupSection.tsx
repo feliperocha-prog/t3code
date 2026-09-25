@@ -14,6 +14,7 @@ import {
 import { useRef, useState } from "react";
 import { Trash2Icon } from "lucide-react";
 
+import { t } from "~/i18n";
 import { writeTextToClipboard } from "../../hooks/useCopyToClipboard";
 import { ensureLocalApi } from "../../localApi";
 import { useEnvironmentQuery } from "../../state/query";
@@ -37,24 +38,24 @@ interface ProviderSetupSectionProps {
 }
 
 const AUTH_PHASE_LABELS: Record<ProviderAuthState["phase"], string> = {
-  idle: "Sign in with your Google account.",
-  starting: "Starting Google sign-in.",
-  waiting: "Waiting for Google sign-in.",
-  verifying: "Checking Google sign-in and available models.",
-  succeeded: "Google sign-in complete.",
-  failed: "Google sign-in failed.",
-  cancelled: "Google sign-in cancelled.",
+  idle: t("Sign in with your Google account."),
+  starting: t("Starting Google sign-in."),
+  waiting: t("Waiting for Google sign-in."),
+  verifying: t("Checking Google sign-in and available models."),
+  succeeded: t("Google sign-in complete."),
+  failed: t("Google sign-in failed."),
+  cancelled: t("Google sign-in cancelled."),
 };
 
 /** API key methods skip the browser, so the phases read as a credential check. */
 const CREDENTIAL_PHASE_LABELS: Record<ProviderAuthState["phase"], string> = {
-  idle: "Connect with the credentials in the provider settings.",
-  starting: "Checking credentials.",
-  waiting: "Checking credentials.",
-  verifying: "Checking credentials and available models.",
-  succeeded: "Connected.",
-  failed: "Could not connect with the configured credentials.",
-  cancelled: "Connection cancelled.",
+  idle: t("Connect with the credentials in the provider settings."),
+  starting: t("Checking credentials."),
+  waiting: t("Checking credentials."),
+  verifying: t("Checking credentials and available models."),
+  succeeded: t("Connected."),
+  failed: t("Could not connect with the configured credentials."),
+  cancelled: t("Connection cancelled."),
 };
 
 /** Read the configured method from the instance config. Unknown values fall back to personal. */
@@ -72,13 +73,13 @@ export function readAntigravityAuthMethod(config: unknown): AntigravityAuthMetho
 export function ProviderSetupSection(props: ProviderSetupSectionProps) {
   return (
     <section
-      aria-label="Antigravity setup"
+      aria-label={t("Antigravity setup")}
       className="@container/setup divide-y divide-border/50 text-xs"
     >
       <SettingsRow
         className="@max-lg/setup:[&>div:first-child]:flex @max-lg/setup:[&>div:first-child]:items-stretch @max-lg/setup:[&>div:first-child]:gap-3"
-        title="Environment"
-        description="Device that runs this provider."
+        title={t("Environment")}
+        description={t("Device that runs this provider.")}
         control={
           <div className="flex min-w-0 flex-col gap-2 sm:items-end">
             <span className="text-muted-foreground [overflow-wrap:anywhere]">
@@ -86,18 +87,21 @@ export function ProviderSetupSection(props: ProviderSetupSectionProps) {
             </span>
             {!props.enabled && !props.readOnly ? (
               <Button size="sm" variant="outline" onClick={props.onEnable}>
-                Enable Antigravity
+                {t("Enable Antigravity")}
               </Button>
             ) : null}
           </div>
         }
       />
       {props.readOnly ? (
-        <SettingsRow title="Setup unavailable" description="Provider setup is read-only." />
+        <SettingsRow
+          title={t("Setup unavailable")}
+          description={t("Provider setup is read-only.")}
+        />
       ) : props.provider?.setup === undefined ? (
         <SettingsRow
-          title="Update required"
-          description="Update this environment to manage Antigravity."
+          title={t("Update required")}
+          description={t("Update this environment to manage Antigravity.")}
         />
       ) : (
         <ProviderSetupActions
@@ -133,9 +137,10 @@ function ProviderSetupActions({
   const target = { environmentId, input: { instanceId } };
   const usesBrowser = authMethod === "oauth-personal" || authMethod === "oauth-business";
   const phaseLabels = usesBrowser ? AUTH_PHASE_LABELS : CREDENTIAL_PHASE_LABELS;
-  const methodLabel =
+  const methodLabel = t(
     ANTIGRAVITY_AUTH_METHODS.find((method) => method.value === authMethod)?.label ??
-    "Google account";
+      "Google account",
+  );
   const authQuery = useEnvironmentQuery(serverEnvironment.providerAuthState(target));
   const installQuery = useEnvironmentQuery(serverEnvironment.providerInstallState(target));
   const auth = authQuery.data;
@@ -169,13 +174,13 @@ function ProviderSetupActions({
   const authenticated = provider.auth.status === "authenticated";
   const authStatusMessage =
     auth === null
-      ? "Reading sign-in status."
+      ? t("Reading sign-in status.")
       : authActive || auth.phase === "failed" || auth.phase === "cancelled"
         ? (auth.message ?? phaseLabels[auth.phase])
         : authenticated
           ? usesBrowser
-            ? "Signed in with Google."
-            : "Connected."
+            ? t("Signed in with Google.")
+            : t("Connected.")
           : auth.phase === "idle" && auth.message
             ? auth.message
             : phaseLabels.idle;
@@ -184,20 +189,27 @@ function ProviderSetupActions({
   const actionsDisabled = pendingLabel !== null || queryError !== null;
   const installationStatusMessage =
     installation?.phase === "downloading"
-      ? `Downloading ${(installation.downloadedBytes / 1_000_000).toFixed(1)} MB${installation.totalBytes === null ? "" : ` of ${(installation.totalBytes / 1_000_000).toFixed(1)} MB`}.`
+      ? installation.totalBytes === null
+        ? t("Downloading {downloaded} MB.", {
+            downloaded: (installation.downloadedBytes / 1_000_000).toFixed(1),
+          })
+        : t("Downloading {downloaded} MB of {total} MB.", {
+            downloaded: (installation.downloadedBytes / 1_000_000).toFixed(1),
+            total: (installation.totalBytes / 1_000_000).toFixed(1),
+          })
       : installation?.phase === "extracting"
-        ? "Extracting Antigravity."
+        ? t("Extracting Antigravity.")
         : installation?.phase === "verifying"
-          ? "Checking the downloaded runtime."
+          ? t("Checking the downloaded runtime.")
           : installed
-            ? "Installed."
+            ? t("Installed.")
             : usesCustomBinary
               ? enabled
-                ? "The configured Antigravity runtime is unavailable."
-                : "The configured Antigravity runtime has not been checked."
+                ? t("The configured Antigravity runtime is unavailable.")
+                : t("The configured Antigravity runtime has not been checked.")
               : installation?.totalBytes
-                ? `${Math.ceil(installation.totalBytes / 1_000_000)} MB download.`
-                : "Not installed.";
+                ? t("{size} MB download.", { size: Math.ceil(installation.totalBytes / 1_000_000) })
+                : t("Not installed.");
 
   async function runCommand<A, E>(
     label: string,
@@ -212,13 +224,13 @@ function ProviderSetupActions({
       if (result._tag === "Failure") {
         if (!isAtomCommandInterrupted(result)) {
           const failure = squashAtomCommandFailure(result);
-          setError(failure instanceof Error ? failure.message : "Provider setup failed.");
+          setError(failure instanceof Error ? failure.message : t("Provider setup failed."));
         }
         return false;
       }
       return true;
     } catch {
-      setError("Provider setup failed. Try again.");
+      setError(t("Provider setup failed. Try again."));
       return false;
     } finally {
       pendingRef.current = false;
@@ -232,7 +244,7 @@ function ProviderSetupActions({
       await ensureLocalApi().shell.openExternal(authorizationUrl);
       setError(null);
     } catch {
-      setError("Could not open the sign-in page. Copy the link and open it in your browser.");
+      setError(t("Could not open the sign-in page. Copy the link and open it in your browser."));
     }
   }
 
@@ -243,14 +255,14 @@ function ProviderSetupActions({
       setCopiedFlowId(auth?.flowId ?? null);
       setError(null);
     } catch {
-      setError("Could not copy the sign-in link. Use Open sign-in page.");
+      setError(t("Could not copy the sign-in link. Use Open sign-in page."));
     }
   }
 
   async function submitCallback() {
     const flowId = auth?.flowId;
     if (!flowId || !callbackUrl.trim() || auth.phase !== "waiting") return;
-    const accepted = await runCommand("Checking redirect", () =>
+    const accepted = await runCommand(t("Checking redirect"), () =>
       completeAuth({ environmentId, input: { instanceId, flowId, callbackUrl } }),
     );
     if (accepted) {
@@ -260,38 +272,51 @@ function ProviderSetupActions({
 
   async function signOut() {
     const confirmed = await ensureLocalApi().dialogs.confirm(
-      `${usesBrowser ? "Sign out of Google" : "Disconnect"} for ${provider.displayName ?? "Antigravity"} on ${environmentLabel}? This stops its running threads. Thread history is kept.`,
+      usesBrowser
+        ? t(
+            "Sign out of Google for {name} on {environment}? This stops its running threads. Thread history is kept.",
+            { name: provider.displayName ?? "Antigravity", environment: environmentLabel },
+          )
+        : t(
+            "Disconnect for {name} on {environment}? This stops its running threads. Thread history is kept.",
+            { name: provider.displayName ?? "Antigravity", environment: environmentLabel },
+          ),
     );
     if (confirmed) {
-      await runCommand("Signing out", () => logoutAuth(target));
+      await runCommand(t("Signing out"), () => logoutAuth(target));
     }
   }
 
   async function removeRuntime() {
     const confirmed = await ensureLocalApi().dialogs.confirm(
-      `Remove the downloaded Antigravity runtime from ${environmentLabel}? Google sign-in and thread history are kept.`,
+      t(
+        "Remove the downloaded Antigravity runtime from {environment}? Google sign-in and thread history are kept.",
+        { environment: environmentLabel },
+      ),
     );
     if (confirmed) {
-      await runCommand("Removing runtime", () => removeInstall(target));
+      await runCommand(t("Removing runtime"), () => removeInstall(target));
     }
   }
 
   return (
     <div className="divide-y divide-border/50">
       <SettingsRow
-        title="Runtime"
+        title={t("Runtime")}
         className="@max-lg/setup:[&>div:first-child]:flex @max-lg/setup:[&>div:first-child]:items-stretch @max-lg/setup:[&>div:first-child]:gap-3"
-        description="Install and manage Antigravity."
+        description={t("Install and manage Antigravity.")}
         status={
           <div className="space-y-2">
             {usesCustomBinary ? (
               <p className="text-muted-foreground">
-                Uses the custom binary path below. Installation keeps that path.
+                {t("Uses the custom binary path below. Installation keeps that path.")}
               </p>
             ) : null}
             {!installed && !provider.setup?.canInstall ? (
               <p className="text-muted-foreground">
-                Automatic installation unavailable. Set a binary path or use another environment.
+                {t(
+                  "Automatic installation unavailable. Set a binary path or use another environment.",
+                )}
               </p>
             ) : null}
           </div>
@@ -306,7 +331,7 @@ function ProviderSetupActions({
               installation.totalBytes !== null &&
               installation.totalBytes > 0 ? (
                 <progress
-                  aria-label="Antigravity download"
+                  aria-label={t("Antigravity download")}
                   className="block h-1 w-full accent-foreground"
                   value={installation.downloadedBytes}
                   max={installation.totalBytes}
@@ -330,12 +355,12 @@ function ProviderSetupActions({
                     onClick={() => {
                       const operationId = installation.operationId;
                       if (!operationId) return;
-                      void runCommand("Cancelling installation", () =>
+                      void runCommand(t("Cancelling installation"), () =>
                         cancelInstall({ environmentId, input: { instanceId, operationId } }),
                       );
                     }}
                   >
-                    Cancel installation
+                    {t("Cancel installation")}
                   </Button>
                 ) : !installActive && provider.setup?.canInstall ? (
                   <Button
@@ -343,19 +368,19 @@ function ProviderSetupActions({
                     variant="outline"
                     disabled={actionsDisabled || installation === null || authActive}
                     onClick={() =>
-                      void runCommand("Starting installation", () => startInstall(target))
+                      void runCommand(t("Starting installation"), () => startInstall(target))
                     }
                   >
                     {installation?.installedVersion
                       ? installation.version &&
                         installation.version !== installation.installedVersion
-                        ? "Update Antigravity"
-                        : "Reinstall Antigravity"
+                        ? t("Update Antigravity")
+                        : t("Reinstall Antigravity")
                       : installation?.phase === "failed" || installation?.phase === "cancelled"
-                        ? "Retry installation"
+                        ? t("Retry installation")
                         : installed
-                          ? "Install managed runtime"
-                          : "Install Antigravity"}
+                          ? t("Install managed runtime")
+                          : t("Install Antigravity")}
                   </Button>
                 ) : null}
               </div>
@@ -367,7 +392,7 @@ function ProviderSetupActions({
                         size="icon-sm"
                         variant="ghost"
                         className="col-start-1 row-start-1"
-                        aria-label="Remove downloaded runtime"
+                        aria-label={t("Remove downloaded runtime")}
                         disabled={actionsDisabled || authActive}
                         onClick={() => void removeRuntime()}
                       />
@@ -375,7 +400,7 @@ function ProviderSetupActions({
                   >
                     <Trash2Icon className="size-3.5" />
                   </TooltipTrigger>
-                  <TooltipPopup>Remove downloaded runtime</TooltipPopup>
+                  <TooltipPopup>{t("Remove downloaded runtime")}</TooltipPopup>
                 </Tooltip>
               ) : null}
             </div>
@@ -387,7 +412,7 @@ function ProviderSetupActions({
         title={methodLabel}
         className="@max-lg/setup:[&>div:first-child]:flex @max-lg/setup:[&>div:first-child]:items-stretch @max-lg/setup:[&>div:first-child]:gap-3"
         description={
-          usesBrowser ? "Connect your Google account." : "Connect with the credentials below."
+          usesBrowser ? t("Connect your Google account.") : t("Connect with the credentials below.")
         }
         control={
           <div className="flex min-w-0 flex-col gap-2 sm:max-w-56 sm:items-end sm:text-right xl:max-w-72">
@@ -404,10 +429,10 @@ function ProviderSetupActions({
             {authorizationUrl ? (
               <div className="flex flex-wrap gap-2 sm:justify-end">
                 <Button size="sm" variant="outline" onClick={() => void openSignInPage()}>
-                  Open sign-in page
+                  {t("Open sign-in page")}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => void copySignInLink()}>
-                  {copiedFlowId === auth?.flowId ? "Link copied" : "Copy sign-in link"}
+                  {copiedFlowId === auth?.flowId ? t("Link copied") : t("Copy sign-in link")}
                 </Button>
               </div>
             ) : null}
@@ -420,27 +445,27 @@ function ProviderSetupActions({
                   onClick={() => {
                     const flowId = auth.flowId;
                     if (!flowId) return;
-                    void runCommand("Cancelling sign-in", () =>
+                    void runCommand(t("Cancelling sign-in"), () =>
                       cancelAuth({ environmentId, input: { instanceId, flowId } }),
                     );
                   }}
                 >
-                  Cancel sign-in
+                  {t("Cancel sign-in")}
                 </Button>
               ) : !authActive && !authenticated && provider.setup?.canAuthenticate ? (
                 <Button
                   size="sm"
                   variant="outline"
                   disabled={actionsDisabled || !installed || auth === null || installActive}
-                  onClick={() => void runCommand("Starting sign-in", () => startAuth(target))}
+                  onClick={() => void runCommand(t("Starting sign-in"), () => startAuth(target))}
                 >
                   {usesBrowser
                     ? auth?.phase === "failed" || auth?.phase === "cancelled"
-                      ? "Retry Google sign-in"
-                      : "Sign in with Google"
+                      ? t("Retry Google sign-in")
+                      : t("Sign in with Google")
                     : auth?.phase === "failed" || auth?.phase === "cancelled"
-                      ? "Retry connection"
-                      : "Connect"}
+                      ? t("Retry connection")
+                      : t("Connect")}
                 </Button>
               ) : null}
               {!authActive && provider.setup?.canAuthenticate ? (
@@ -450,7 +475,7 @@ function ProviderSetupActions({
                   disabled={actionsDisabled || auth === null}
                   onClick={() => void signOut()}
                 >
-                  {usesBrowser ? "Sign out of Google" : "Disconnect"}
+                  {usesBrowser ? t("Sign out of Google") : t("Disconnect")}
                 </Button>
               ) : null}
             </div>
@@ -463,7 +488,7 @@ function ProviderSetupActions({
               <>
                 {auth?.expiresAt ? (
                   <p className="text-muted-foreground">
-                    Link expires at{" "}
+                    {t("Link expires at")}{" "}
                     <time dateTime={auth.expiresAt}>
                       {new Date(auth.expiresAt).toLocaleTimeString([], {
                         hour: "numeric",
@@ -481,7 +506,7 @@ function ProviderSetupActions({
                   }}
                 >
                   <label htmlFor={`provider-callback-${instanceId}`}>
-                    If the final localhost page does not load, paste its full URL here.
+                    {t("If the final localhost page does not load, paste its full URL here.")}
                   </label>
                   <Input
                     id={`provider-callback-${instanceId}`}
@@ -504,13 +529,13 @@ function ProviderSetupActions({
                     className="w-fit"
                     disabled={actionsDisabled || !callbackUrl.trim()}
                   >
-                    Continue
+                    {t("Continue")}
                   </Button>
                 </form>
               </>
             ) : auth?.phase === "waiting" ? (
               <p className="text-muted-foreground">
-                Sign-in is open in another client. Complete or cancel it there.
+                {t("Sign-in is open in another client. Complete or cancel it there.")}
               </p>
             ) : null}
           </div>
@@ -535,7 +560,7 @@ function ProviderSetupActions({
                 installQuery.refresh();
               }}
             >
-              Retry setup status
+              {t("Retry setup status")}
             </Button>
           ) : null}
         </div>

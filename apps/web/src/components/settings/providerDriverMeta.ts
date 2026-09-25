@@ -8,6 +8,7 @@ import {
   ProviderDriverKind,
 } from "@t3tools/contracts";
 import type * as Schema from "effect/Schema";
+import { t } from "~/i18n";
 import {
   AntigravityIcon,
   ClaudeAI,
@@ -60,14 +61,14 @@ const PROVIDER_CLIENT_DEFINITIONS: readonly ProviderClientDefinition[] = [
     value: ProviderDriverKind.make("cursor"),
     label: "Cursor",
     icon: CursorIcon,
-    badgeLabel: "Early Access",
+    badgeLabel: t("Early Access"),
     settingsSchema: CursorSettings,
   },
   {
     value: ProviderDriverKind.make("grok"),
     label: "Grok",
     icon: GrokIcon,
-    badgeLabel: "Early Access",
+    badgeLabel: t("Early Access"),
     settingsSchema: GrokSettings,
   },
   {

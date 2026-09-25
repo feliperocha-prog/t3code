@@ -2,6 +2,8 @@ import { describe, expect, it } from "vite-plus/test";
 import type { ResolvedKeybindingsConfig } from "@t3tools/contracts";
 import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t3tools/shared/keybindings";
 
+import { t } from "~/i18n";
+
 import {
   buildKeybindingRows,
   buildKeybindingCommandOptions,
@@ -37,7 +39,7 @@ describe("KeybindingsSettings.logic", () => {
       });
     }
   });
-  it.each(["pu", "pull request", "copy link", "thread id"])(
+  it.each(["pu", "pull request", "copiar link", "id da thread"])(
     "finds the copy link shortcut with %s",
     (query) => {
       const rows = buildKeybindingRows(DEFAULT_RESOLVED_KEYBINDINGS, query);
@@ -171,7 +173,7 @@ describe("KeybindingsSettings.logic", () => {
     });
     expect(parseWhenExpressionDraft("editorFocus &&")).toEqual({
       ok: false,
-      message: "Use variables with !, &&, ||, and parentheses.",
+      message: t("Use variables with !, &&, ||, and parentheses."),
     });
 
     expect(parseWhenExpressionDraft("!(terminalFocus || modelPickerOpen)")).toEqual({
@@ -193,17 +195,17 @@ describe("KeybindingsSettings.logic", () => {
     const group = { type: "and", left: condition, right: negatedCondition } as const;
     const negatedGroup = { type: "not", node: group } as const;
 
-    expect(whenNodeRemoveLabel(group, 0)).toBe("Clear all conditions");
-    expect(whenNodeRemoveLabel(condition, 1)).toBe("Remove condition");
-    expect(whenNodeRemoveLabel(negatedCondition, 1)).toBe("Remove condition");
-    expect(whenNodeRemoveLabel(group, 1)).toBe("Remove group and its conditions");
-    expect(whenNodeRemoveLabel(negatedGroup, 1)).toBe("Remove group and its conditions");
+    expect(whenNodeRemoveLabel(group, 0)).toBe(t("Clear all conditions"));
+    expect(whenNodeRemoveLabel(condition, 1)).toBe(t("Remove condition"));
+    expect(whenNodeRemoveLabel(negatedCondition, 1)).toBe(t("Remove condition"));
+    expect(whenNodeRemoveLabel(group, 1)).toBe(t("Remove group and its conditions"));
+    expect(whenNodeRemoveLabel(negatedGroup, 1)).toBe(t("Remove group and its conditions"));
   });
 
   it("formats static and project script command labels", () => {
-    expect(commandLabel("commandPalette.toggle")).toBe("Command Palette: Toggle");
-    expect(commandLabel("themeEditor.toggle")).toBe("Theme Editor: Toggle");
-    expect(commandLabel("script.setup-db.run")).toBe("Run Script: Setup Db");
+    expect(commandLabel("commandPalette.toggle")).toBe(t("Command Palette: Toggle"));
+    expect(commandLabel("themeEditor.toggle")).toBe(t("Theme Editor: Toggle"));
+    expect(commandLabel("script.setup-db.run")).toBe(t("Run Script: {name}", { name: "Setup Db" }));
   });
 
   it("builds known when variable options from defaults without frontend labels", () => {
@@ -336,13 +338,13 @@ describe("KeybindingsSettings.logic", () => {
       "",
     );
 
-    expect(rows[0]?.conflicts).toEqual(["Chat: New Local"]);
+    expect(rows[0]?.conflicts).toEqual([t("Chat: New Local")]);
     expect(
       keybindingConflictLabels(rows, {
         rowId: rows[0]?.id ?? "",
         key: "mod+n",
         when: "",
       }),
-    ).toEqual(["Chat: New Local"]);
+    ).toEqual([t("Chat: New Local")]);
   });
 });

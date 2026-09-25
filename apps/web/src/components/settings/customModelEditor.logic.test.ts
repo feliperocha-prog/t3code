@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { ProviderDriverKind, type ModelCapabilities } from "@t3tools/contracts";
+import { t } from "~/i18n";
 
 import {
   DESCRIPTOR_PRESETS_BY_KIND,
@@ -241,19 +242,19 @@ describe("customModelEditor.logic", () => {
     });
 
     expect(validateDraft(draft({ descriptors: [select("", [{ id: "a" }])] }))).toBe(
-      "Option 1 needs an id.",
+      t("Option {position} needs an id.", { position: 1 }),
     );
     expect(
       validateDraft(
         draft({ descriptors: [select("effort", [{ id: "a" }]), select("effort", [{ id: "b" }])] }),
       ),
-    ).toBe('Option 2: id "effort" is used twice.');
+    ).toBe(t('Option {position}: id "{id}" is used twice.', { position: 2, id: "effort" }));
     expect(validateDraft(draft({ descriptors: [select("effort", [])] }))).toBe(
-      "Option 1 needs at least one choice.",
+      t("Option {position} needs at least one choice.", { position: 1 }),
     );
     expect(
       validateDraft(draft({ descriptors: [select("effort", [{ id: "a" }, { id: "a" }])] })),
-    ).toBe('Option 1: choice "a" is used twice.');
+    ).toBe(t('Option {position}: choice "{choice}" is used twice.', { position: 1, choice: "a" }));
     expect(validateDraft(draft({ descriptors: [select("effort", [{ id: "a" }])] }))).toBeNull();
   });
 });

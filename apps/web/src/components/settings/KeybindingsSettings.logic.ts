@@ -11,6 +11,7 @@ import {
   parseKeybindingWhenExpression,
 } from "@t3tools/shared/keybindings";
 
+import { t } from "~/i18n";
 import { shortcutKeyFromEvent } from "../../keybindings";
 import { isMacPlatform } from "../../lib/utils";
 
@@ -77,11 +78,11 @@ export function whenAstToExpression(node: KeybindingWhenNode | undefined): strin
 }
 
 export function whenNodeRemoveLabel(node: KeybindingWhenNode, depth: number): string {
-  if (depth === 0) return "Clear all conditions";
+  if (depth === 0) return t("Clear all conditions");
   if (node.type === "identifier" || (node.type === "not" && node.node.type === "identifier")) {
-    return "Remove condition";
+    return t("Remove condition");
   }
-  return "Remove group and its conditions";
+  return t("Remove group and its conditions");
 }
 
 function wrapWhenExpression(node: KeybindingWhenNode): string {
@@ -99,7 +100,7 @@ export function parseWhenExpressionDraft(
   if (!ast) {
     return {
       ok: false,
-      message: "Use variables with !, &&, ||, and parentheses.",
+      message: t("Use variables with !, &&, ||, and parentheses."),
     };
   }
 
@@ -283,12 +284,15 @@ export function buildKeybindingCommandOptions(
 }
 
 export function commandLabel(command: KeybindingCommand): string {
-  if (command === "thread.copyReference") return "Pull Request: Copy Link or Thread ID";
+  if (command === "thread.copyReference") return t("Pull Request: Copy Link or Thread ID");
   const raw = String(command);
   if (raw.startsWith("script.") && raw.endsWith(".run")) {
-    return `Run Script: ${titleCaseCommandSegment(raw.slice("script.".length, -".run".length))}`;
+    return t("Run Script: {name}", {
+      name: titleCaseCommandSegment(raw.slice("script.".length, -".run".length)),
+    });
   }
-  return raw.split(".").map(titleCaseCommandSegment).join(": ");
+  // Static command labels are dictionary keys; unknown commands fall back to English.
+  return t(raw.split(".").map(titleCaseCommandSegment).join(": "));
 }
 
 function titleCaseCommandSegment(segment: string): string {
