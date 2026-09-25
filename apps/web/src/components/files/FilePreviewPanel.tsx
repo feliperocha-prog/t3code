@@ -90,6 +90,7 @@ import {
   setProjectFileQueryData,
   useProjectFileQuery,
 } from "./projectFilesQueryState";
+import { t } from "~/i18n";
 
 interface FilePreviewPanelProps {
   environmentId: EnvironmentId;
@@ -150,7 +151,7 @@ function WorkspaceImagePreview(props: {
     return (
       <MediaActions source={actionsSource}>
         <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-xs leading-relaxed text-destructive">
-          Unable to load workspace image.
+          {t("Unable to load workspace image.")}
         </div>
       </MediaActions>
     );
@@ -207,7 +208,7 @@ function WorkspaceBrowserPreview(props: {
   if (assetUrl._tag === "Failure") {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-xs leading-relaxed text-destructive">
-        Unable to load file preview.
+        {t("Unable to load file preview.")}
       </div>
     );
   }
@@ -314,7 +315,7 @@ function WorkspaceAudioPreview(props: {
   if (assetUrl._tag === "Failure" || (url !== null && failedUrl === url)) {
     return (
       <FileSurfaceFailure
-        message="Unable to load audio."
+        message={t("Unable to load audio.")}
         onRetry={() => {
           setFailedUrl(null);
           void refreshAssetUrl().catch(() => undefined);
@@ -889,9 +890,10 @@ function RenderedMarkdownSurface({
 }
 
 function renderedToggleLabel(mode: "markdown" | "html" | "table", rendered: boolean): string {
-  if (mode === "markdown") return rendered ? "Show markdown source" : "Show rendered markdown";
-  if (mode === "table") return rendered ? "Show source" : "Show table";
-  return rendered ? "Show HTML source" : "Show rendered page";
+  if (mode === "markdown")
+    return rendered ? t("Show markdown source") : t("Show rendered markdown");
+  if (mode === "table") return rendered ? t("Show source") : t("Show table");
+  return rendered ? t("Show HTML source") : t("Show rendered page");
 }
 
 function initialExplorerOpen(): boolean {
@@ -1078,8 +1080,8 @@ export default function FilePreviewPanel({
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Unable to open file in browser",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: t("Unable to open file in browser"),
+          description: error instanceof Error ? error.message : t("An error occurred."),
         }),
       );
     })();
@@ -1144,7 +1146,7 @@ export default function FilePreviewPanel({
           ) : null}
           {showsRawText ? (
             <FileSurfaceAction
-              label={wordWrap ? "Disable word wrap" : "Enable word wrap"}
+              label={wordWrap ? t("Disable word wrap") : t("Enable word wrap")}
               pressed={wordWrap}
               onPress={() => updateClientSettings({ wordWrap: !wordWrap })}
             >
@@ -1152,13 +1154,16 @@ export default function FilePreviewPanel({
             </FileSurfaceAction>
           ) : null}
           {canOpenInBrowser ? (
-            <FileSurfaceAction label="Open file in preview browser" onPress={handleOpenInBrowser}>
+            <FileSurfaceAction
+              label={t("Open file in preview browser")}
+              onPress={handleOpenInBrowser}
+            >
               <Globe2 className="size-3.5" />
             </FileSurfaceAction>
           ) : null}
           {!isHostFile && previewPath !== null ? (
             <FileSurfaceAction
-              label={explorerOpen ? "Hide file explorer" : "Show file explorer"}
+              label={explorerOpen ? t("Hide file explorer") : t("Show file explorer")}
               pressed={explorerOpen}
               onPress={toggleExplorer}
             >
@@ -1173,7 +1178,9 @@ export default function FilePreviewPanel({
       !renderBrowserFile &&
       file.data?.truncated ? (
         <div className="shrink-0 border-b border-warning/20 bg-warning-surface px-3 py-1.5 text-2xs text-warning-foreground">
-          Preview limited to the first 1 MB of a {file.data.byteLength.toLocaleString()} byte file.
+          {t("Preview limited to the first 1 MB of a {size} byte file.", {
+            size: file.data.byteLength.toLocaleString(),
+          })}
         </div>
       ) : null}
       <div className="flex min-h-0 flex-1 overflow-hidden">

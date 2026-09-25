@@ -3,6 +3,7 @@ import { DownloadIcon, ExternalLinkIcon } from "lucide-react";
 import { resolveExternalWebLinkHost } from "../chat/externalLinkContextMenu";
 import { Button } from "../ui/button";
 import { resolveProtocolRelativeMediaUrl } from "./mediaContent";
+import { t } from "~/i18n";
 
 /** Navigates directly so the browser handles video playback and downloads, without fetching bytes. */
 export function OpenMediaLink(props: {
@@ -39,7 +40,7 @@ export function OpenMediaLink(props: {
       }
     >
       {isBlob ? <DownloadIcon /> : <ExternalLinkIcon />}
-      {originalUrl ? "Open original" : isBlob ? "Download video" : "Open in browser"}
+      {originalUrl ? t("Open original") : isBlob ? t("Download video") : t("Open in browser")}
     </Button>
   );
 }

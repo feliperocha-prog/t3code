@@ -4,6 +4,7 @@ import { create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { AttachmentFilePreview } from "./AttachmentFilePreview";
+import { t } from "~/i18n";
 
 const { refresh } = vi.hoisted(() => ({ refresh: vi.fn<() => Promise<string | null>>() }));
 
@@ -74,12 +75,12 @@ describe("attachment HTML preview recovery", () => {
   it("keeps a renewed URL for subsequent rendered and source views", async () => {
     await openRemote();
     now = 61 * 60_000;
-    await toggleMode("Show HTML source");
+    await toggleMode(t("Show HTML source"));
     expect(fetch).toHaveBeenCalledExactlyOnceWith(renewedUrl, expect.any(Object));
 
-    await toggleMode("Show rendered page");
+    await toggleMode(t("Show rendered page"));
     expect(renderer.root.findByType("iframe").props.src).toBe(renewedUrl);
-    await toggleMode("Show HTML source");
+    await toggleMode(t("Show HTML source"));
     expect(refresh).toHaveBeenCalledTimes(2);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([renewedUrl, renewedUrl]);
@@ -89,14 +90,14 @@ describe("attachment HTML preview recovery", () => {
     await openRemote();
     now = 61 * 60_000;
     refresh.mockResolvedValue(null);
-    await toggleMode("Show HTML source");
+    await toggleMode(t("Show HTML source"));
     expect(fetch).not.toHaveBeenCalled();
     expect(renderer.root.findByProps({ role: "alert" }).children).toEqual([
-      "Reconnect to the environment and try again.",
+      t("Reconnect to the environment and try again."),
     ]);
 
-    await toggleMode("Show rendered page");
-    await toggleMode("Show HTML source");
+    await toggleMode(t("Show rendered page"));
+    await toggleMode(t("Show HTML source"));
     expect(refresh).toHaveBeenCalledTimes(3);
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -123,10 +124,10 @@ describe("attachment HTML preview recovery", () => {
         />,
       );
     });
-    await toggleMode("Show HTML source");
+    await toggleMode(t("Show HTML source"));
     expect(renderer.root.findByProps({ role: "alert" }).children.join("")).toContain("not UTF-8");
 
-    await toggleMode("Show rendered page");
+    await toggleMode(t("Show rendered page"));
     expect(renderer.root.findAllByProps({ role: "alert" })).toHaveLength(0);
     expect(renderer.root.findByType("iframe").props.title).toBe("document.html");
   });
