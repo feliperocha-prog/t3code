@@ -22,6 +22,7 @@ import {
   usePendingReviewComments,
   usePullRequestReviewStore,
 } from "./pullRequestReviewStore";
+import { t } from "~/i18n";
 
 export function PullRequestComposer({
   environmentId,
@@ -83,10 +84,14 @@ export function PullRequestComposer({
         // the icon is decorative and a reader who cannot see it still needs the number.
         aria-label={
           pendingComments.length > 0
-            ? `Review pull request, ${pendingComments.length} ${pendingComments.length === 1 ? "comment" : "comments"} pending`
+            ? pendingComments.length === 1
+              ? t("Review pull request, {count} comment pending", { count: pendingComments.length })
+              : t("Review pull request, {count} comments pending", {
+                  count: pendingComments.length,
+                })
             : reviewStarted || !canComment
-              ? "Review pull request"
-              : "Comment on pull request"
+              ? t("Review pull request")
+              : t("Comment on pull request")
         }
       >
         <MessageSquareIcon className="size-4" />
@@ -106,12 +111,12 @@ export function PullRequestComposer({
         sideOffset={8}
         width="lg"
         initialFocus={mode === "review" ? reviewRef : commentRef}
-        aria-label="Pull request composer"
+        aria-label={t("Pull request composer")}
       >
         <div className="mb-3 flex items-center justify-between gap-2">
           {canComment && verdicts.length > 0 ? (
             <ToggleGroup
-              aria-label="Composer mode"
+              aria-label={t("Composer mode")}
               variant="segmented"
               value={[mode]}
               onValueChange={(next) => {
@@ -119,14 +124,16 @@ export function PullRequestComposer({
                 if (value === "comment" || value === "review") setRequestedMode(value);
               }}
             >
-              <Toggle value="comment">Comment</Toggle>
+              <Toggle value="comment">{t("Comment")}</Toggle>
               <Toggle value="review">
-                {pendingComments.length > 0 ? `Review (${pendingComments.length})` : "Review"}
+                {pendingComments.length > 0
+                  ? t("Review ({count})", { count: pendingComments.length })
+                  : t("Review")}
               </Toggle>
             </ToggleGroup>
           ) : (
             <PopoverTitle>
-              {mode === "review" ? "Review pull request" : "Comment on pull request"}
+              {mode === "review" ? t("Review pull request") : t("Comment on pull request")}
             </PopoverTitle>
           )}
           <div className="flex items-center gap-1">
@@ -134,8 +141,8 @@ export function PullRequestComposer({
               <Button
                 size="icon-xs"
                 variant="ghost"
-                aria-label="Discard pending line comments"
-                title="Discard pending line comments"
+                aria-label={t("Discard pending line comments")}
+                title={t("Discard pending line comments")}
                 disabled={reviewPending}
                 onClick={() => clearComments(reviewKey)}
               >
@@ -144,7 +151,7 @@ export function PullRequestComposer({
             ) : null}
             <PopoverClose
               render={<Button size="icon-xs" variant="ghost" />}
-              aria-label="Close composer"
+              aria-label={t("Close composer")}
             >
               <XIcon className="size-3.5" />
             </PopoverClose>

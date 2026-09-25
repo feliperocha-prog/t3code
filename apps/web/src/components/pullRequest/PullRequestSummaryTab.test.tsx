@@ -2,6 +2,7 @@ import { EnvironmentId, ProjectId, type PullRequestDetailView } from "@t3tools/c
 import { act, type ReactNode } from "react";
 import { create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
+import { t } from "~/i18n";
 
 vi.mock("~/state/use-atom-command", () => ({ useAtomCommand: () => vi.fn() }));
 vi.mock("~/state/pullRequests", () => ({ pullRequestEnvironment: {} }));
@@ -112,26 +113,26 @@ it("toggles checks from their heading and resets sections for another pull reque
   expect(
     renderer.root.findAllByType("span").some((span) => span.children.includes("Unit tests")),
   ).toBe(false);
-  click("Checks");
+  click(t("Checks"));
   expect(
     renderer.root.findAllByType("span").some((span) => span.children.includes("Unit tests")),
   ).toBe(true);
-  click("Checks");
-  expect(heading("Checks").props["aria-expanded"]).toBe(false);
-  click("Checks");
-  click("Description");
+  click(t("Checks"));
+  expect(heading(t("Checks")).props["aria-expanded"]).toBe(false);
+  click(t("Checks"));
+  click(t("Description"));
   act(() =>
     renderer.update(render({ ...detail, url: "https://github.com/owner/repo/pull/2", number: 2 })),
   );
-  expect(heading("Checks").props["aria-expanded"]).toBe(false);
-  expect(heading("Description").props["aria-expanded"]).toBe(true);
+  expect(heading(t("Checks")).props["aria-expanded"]).toBe(false);
+  expect(heading(t("Description")).props["aria-expanded"]).toBe(true);
 });
 
 it("keeps an unsaved description when collapsed and reopened", () => {
   act(() => {
     renderer = create(render());
   });
-  act(() => renderer.root.findByProps({ "aria-label": "Edit description" }).props.onClick());
+  act(() => renderer.root.findByProps({ "aria-label": t("Edit description") }).props.onClick());
   act(() =>
     renderer.root.findByType("textarea").props.onChange({
       target: { value: "Unsaved description" },
@@ -139,9 +140,9 @@ it("keeps an unsaved description when collapsed and reopened", () => {
       nativeEvent: {},
     }),
   );
-  click("Description");
-  expect(heading("Description").props["aria-expanded"]).toBe(false);
-  click("Description");
+  click(t("Description"));
+  expect(heading(t("Description")).props["aria-expanded"]).toBe(false);
+  click(t("Description"));
   expect(renderer.root.findByType("textarea").props.value).toBe("Unsaved description");
 });
 
@@ -176,7 +177,7 @@ it("opens bot reports in pages without hiding human comments", () => {
   ).toBe(false);
   const group = renderer.root
     .findAllByType("button")
-    .find((button) => button.props["aria-label"] === "12 bot comments")!;
+    .find((button) => button.props["aria-label"] === t("{count} bot comments", { count: 12 }))!;
   act(() => group.props.onClick({ nativeEvent: {}, preventDefault() {}, stopPropagation() {} }));
   expect(
     renderer.root.findAllByType("p").filter((p) => p.children.join("").startsWith("Bot report")),
@@ -187,7 +188,11 @@ it("opens bot reports in pages without hiding human comments", () => {
   act(() =>
     renderer.root
       .findAllByType("button")
-      .find((button) => button.children.includes(" older bot comment"))!
+      .find((button) =>
+        button.children.includes(
+          t("Show {count} older bot comments ({hidden} hidden)", { count: 2, hidden: 2 }),
+        ),
+      )!
       .props.onClick(),
   );
   expect(
@@ -201,7 +206,9 @@ it("opens bot reports in pages without hiding human comments", () => {
   act(() =>
     renderer.root
       .findAllByType("button")
-      .find((button) => button.children.includes(" recent bot comments"))!
+      .find((button) =>
+        button.children.includes(t("Show only {count} recent bot comments", { count: 10 })),
+      )!
       .props.onClick(),
   );
   expect(

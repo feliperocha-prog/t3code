@@ -33,11 +33,12 @@ import {
 import { inferReviewCommentFenceLanguage, type ReviewCommentContext } from "~/reviewCommentContext";
 import { reviewCommentContextId } from "~/lib/composerContextRecords";
 import { removeInlineContextReference } from "~/lib/composerContextReferences";
+import { t } from "~/i18n";
 
 export const PULL_REQUEST_MERGE_METHOD_LABELS: Record<PullRequestMergeMethod, string> = {
   merge: "Merge",
-  squash: "Squash and merge",
-  rebase: "Rebase and merge",
+  squash: t("Squash and merge"),
+  rebase: t("Rebase and merge"),
 };
 
 /** Old environments keep their existing actions; new ones must finish stack discovery first. */
@@ -240,14 +241,14 @@ export function pullRequestPanelContext(
 export function pullRequestHandoffLabels(inThisThread: boolean) {
   return inThisThread
     ? {
-        fixFinding: "Fix in this thread",
-        fixCheck: "Fix in this thread",
-        fixFindings: "Fix findings in this thread",
+        fixFinding: t("Fix in this thread"),
+        fixCheck: t("Fix in this thread"),
+        fixFindings: t("Fix findings in this thread"),
       }
     : {
-        fixFinding: "Fix in a thread",
-        fixCheck: "Fix",
-        fixFindings: "Fix findings in a thread",
+        fixFinding: t("Fix in a thread"),
+        fixCheck: t("Fix"),
+        fixFindings: t("Fix findings in a thread"),
       };
 }
 
@@ -485,7 +486,7 @@ export function buildPullRequestTimeline(
       id: "created",
       at: detail.createdAt,
       kind: "opened" as const,
-      title: "opened this pull request",
+      title: t("opened this pull request"),
       body: null,
       markdown: false,
       url: null,
@@ -517,7 +518,7 @@ export function buildPullRequestTimeline(
       id: comment.id,
       at: comment.createdAt,
       kind: comment.kind === "review" ? ("review" as const) : ("comment" as const),
-      title: comment.kind === "review" ? "reviewed" : "commented",
+      title: comment.kind === "review" ? t("reviewed") : t("commented"),
       body: visibleBody(comment.body),
       markdown: true,
       url: comment.url,
@@ -535,7 +536,7 @@ export function buildPullRequestTimeline(
             id: "merged",
             at: detail.mergedAt,
             kind: "merged" as const,
-            title: "Pull request merged",
+            title: t("Pull request merged"),
             body: null,
             markdown: false,
             url: null,
@@ -555,7 +556,7 @@ export function buildPullRequestTimeline(
             id: "closed",
             at: detail.closedAt,
             kind: "closed" as const,
-            title: "Pull request closed",
+            title: t("Pull request closed"),
             body: null,
             markdown: false,
             url: null,

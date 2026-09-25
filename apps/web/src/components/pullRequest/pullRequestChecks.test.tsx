@@ -10,6 +10,7 @@ import {
   pullRequestCheckStatusLabel,
   summarizePullRequestChecks,
 } from "./pullRequestPresentation";
+import { t } from "~/i18n";
 
 function check(
   status: PullRequestCheck["status"],
@@ -37,17 +38,22 @@ describe("pullRequestChecksState", () => {
       url: "https://github.com/acme/web/actions/runs/42/job/7",
     });
     const manualGate = check("action-required", { url: "https://example.com/manual-gate" });
-    expect(pullRequestCheckStatusLabel(workflow)).toBe("Awaiting approval");
-    expect(pullRequestCheckStatusLabel(manualGate)).toBe("Awaiting action");
+    expect(pullRequestCheckStatusLabel(workflow)).toBe(t("Awaiting approval"));
+    expect(pullRequestCheckStatusLabel(manualGate)).toBe(t("Awaiting action"));
     expect(summarizePullRequestChecks([check("success"), workflow])).toBe(
-      "1 workflow awaiting approval",
+      t("{count} workflow awaiting approval", { count: 1 }),
     );
-    expect(summarizePullRequestChecks([check("failure"), workflow])).toBe("1 of 2 failing");
+    expect(summarizePullRequestChecks([check("failure"), workflow])).toBe(
+      t("{count} of {total} failing", { count: 1, total: 2 }),
+    );
     expect(summarizePullRequestChecks([check("success"), manualGate])).toBe(
-      "1 check awaiting action",
+      t("{count} check awaiting action", { count: 1 }),
     );
     expect(summarizePullRequestChecks([workflow, manualGate])).toBe(
-      "1 workflow and 1 check awaiting action",
+      t("{workflows} and {checks} awaiting action", {
+        workflows: t("{count} workflow", { count: 1 }),
+        checks: t("{count} check", { count: 1 }),
+      }),
     );
   });
 });

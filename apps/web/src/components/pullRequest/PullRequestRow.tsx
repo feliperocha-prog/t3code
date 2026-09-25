@@ -21,6 +21,7 @@ import {
   PullRequestLabelChip,
   PullRequestReviewDecisionGlyph,
 } from "./pullRequestPresentation";
+import { t } from "~/i18n";
 
 /**
  * Each slot past the first only appears once the meta line is wide enough to hold it, so a
@@ -213,7 +214,7 @@ function PullRequestRowImpl({
                     matched in the description
                   </span>
                 </TooltipTrigger>
-                <TooltipPopup side="top">Matched in the description</TooltipPopup>
+                <TooltipPopup side="top">{t("Matched in the description")}</TooltipPopup>
               </Tooltip>
             ) : null}
             {showProvider ? (

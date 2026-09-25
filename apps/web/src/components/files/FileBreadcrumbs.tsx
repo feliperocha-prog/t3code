@@ -28,6 +28,7 @@ import {
   fileBreadcrumbs,
 } from "./filePath";
 import { useProjectEntriesQuery } from "./projectFilesQueryState";
+import { t } from "~/i18n";
 
 interface FileBreadcrumbsProps {
   readonly cwd: string;
@@ -124,20 +125,20 @@ function BreadcrumbMenuContent(props: {
         {entriesQuery.isPending && entriesQuery.data === null ? (
           <MenuItem disabled>
             <Spinner />
-            Loading folder…
+            {t("Loading folder…")}
           </MenuItem>
         ) : entriesQuery.error && entriesQuery.data === null ? (
           <MenuItem closeOnClick={false} onClick={entriesQuery.refresh}>
             <RefreshIcon refreshing={entriesQuery.isPending} />
-            <span className="min-w-0 flex-1 truncate">Retry loading folder</span>
+            <span className="min-w-0 flex-1 truncate">{t("Retry loading folder")}</span>
           </MenuItem>
         ) : !directoryAvailable && !entriesTruncated ? (
-          <MenuItem disabled>This folder is no longer available.</MenuItem>
+          <MenuItem disabled>{t("This folder is no longer available.")}</MenuItem>
         ) : children.length === 0 ? (
           <MenuItem disabled>
             {entriesTruncated
-              ? "No entries from this folder are available in the partial workspace index."
-              : "This folder is empty."}
+              ? t("No entries from this folder are available in the partial workspace index.")
+              : t("This folder is empty.")}
           </MenuItem>
         ) : (
           // Files form a radio group keyed by path so the open file is marked as checked;
@@ -199,14 +200,14 @@ function BreadcrumbMenuContent(props: {
           <MenuSeparator />
           <MenuItem closeOnClick={false} onClick={entriesQuery.refresh}>
             <RefreshIcon refreshing={entriesQuery.isPending} />
-            Refresh failed — retry
+            {t("Refresh failed — retry")}
           </MenuItem>
         </>
       ) : null}
       {entriesTruncated ? (
         <>
           <MenuSeparator />
-          <MenuItem disabled>Some workspace entries are not shown.</MenuItem>
+          <MenuItem disabled>{t("Some workspace entries are not shown.")}</MenuItem>
         </>
       ) : null}
     </MenuPopup>
@@ -236,7 +237,7 @@ function DirectoryBreadcrumb(props: FileBreadcrumbsProps & { readonly crumb: Fil
               render={
                 <button
                   type="button"
-                  aria-label={`Browse ${props.crumb.label}`}
+                  aria-label={t("Browse {label}", { label: props.crumb.label })}
                   className="relative block max-w-40 cursor-pointer rounded-sm px-0.5 text-left text-muted-foreground outline-none pointer-coarse:after:-inset-y-3 pointer-coarse:after:absolute pointer-coarse:after:inset-x-0 hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-popup-open:bg-accent data-popup-open:text-foreground"
                 />
               }

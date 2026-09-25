@@ -22,6 +22,7 @@ import type {
 
 import { toSortableTimestamp } from "../../lib/threadSort";
 import type { PullRequestListSort } from "./pullRequestListPreferences";
+import { t } from "~/i18n";
 
 /**
  * A listed change request with the environment that read it. Nothing on a row says which machine
@@ -73,9 +74,9 @@ const pullRequestViewerKey = (entry: ScopedEntry): string =>
   `${entry.environmentId ?? ""} ${entry.host}`;
 
 const GROUP_LABELS: Record<PullRequestGroupKey, string> = {
-  reviewRequested: "Review requested",
-  authored: "Authored",
-  others: "Others",
+  reviewRequested: t("Review requested"),
+  authored: t("Authored"),
+  others: t("Others"),
 };
 
 function normalize(value: string | null | undefined): string | null {

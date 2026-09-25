@@ -11,6 +11,7 @@ import { act, type ReactNode, type ReactElement, type ComponentProps } from "rea
 import { create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { DraftId, useComposerDraftStore } from "~/composerDraftStore";
+import { t } from "~/i18n";
 
 const { newThread, prepareThread, refresh, Wrapper, Trigger } = vi.hoisted(() => ({
   newThread: vi.fn(),
@@ -306,15 +307,16 @@ describe.each([
     await act(async () => render());
     const checkout = renderer.root
       .findAllByType("button")
-      .filter((node) => node.props["aria-label"] === "Check out");
+      .filter((node) => node.props["aria-label"] === t("Check out"));
     expect(checkout).toHaveLength(thread === stackThread ? 0 : 1);
   });
 
   it.each(actions)("%s writes to the correct composer", async (action) => {
     if (target) useComposerDraftStore.getState().setPrompt(target, "Keep my draft");
     await act(async () => render());
-    if (action === "Add to agent") await click("Code");
-    await click(target ? action : action.replace("in this thread", "in a thread"));
+    if (action === "Add to agent") await click(t("Code"));
+    const label = target ? action : action.replace("in this thread", "in a thread");
+    await click(action === "Fix check" || action === "Add to agent" ? label : t(label));
     const draft = useComposerDraftStore.getState().getComposerDraft(target ?? newDraftId);
     if (action === "Resolve conflicts") expect(draft?.prompt).toContain("resolve every conflict");
     else if (action === "Fix check") expect(draft?.prompt).toContain("Fix the failing check");
