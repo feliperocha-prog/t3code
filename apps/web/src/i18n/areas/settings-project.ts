@@ -4,7 +4,6 @@ const dictionary: Readonly<Record<string, string>> = {
   "Only available in the desktop app.": "Disponível só no app desktop.",
   "Fill panel": "Preencher painel",
   Responsive: "Responsivo",
-  Standard: "Predefinidos",
   "Tab size for you and agents. Fill fits the panel; other sizes show the device toolbar.":
     "Tamanho da aba para você e para os agentes. Preencher ocupa o painel; os outros tamanhos mostram a barra de dispositivo.",
   "default browser viewport": "viewport padrão do navegador",
@@ -343,7 +342,6 @@ const dictionary: Readonly<Record<string, string>> = {
     "Não havia cookies para importar para {environment}.",
   Skipped: "Ignorados",
   "Couldn’t import from {name}": "Não foi possível importar do {name}",
-  "Try again": "Tentar novamente",
   "{items} and {last}": "{items} e {last}",
   "{items} and {count} more": "{items} e mais {count}",
   // Settings → Integrations: browser import failures (text from BROWSER_IMPORT_FAILURE_COPY)
@@ -382,7 +380,6 @@ const dictionary: Readonly<Record<string, string>> = {
   "Usage providers": "Provedores de uso",
   "Cursor account usage": "Uso da conta do Cursor",
   "Health check interval": "Intervalo da verificação de saúde",
-  "Device hosts": "Hosts de dispositivos",
   "Simulator support": "Suporte a simuladores",
   "Browser profiles": "Perfis do navegador",
   "Default browser profile": "Perfil padrão do navegador",
@@ -394,7 +391,6 @@ const dictionary: Readonly<Record<string, string>> = {
   "Local environment": "Ambiente local",
   "Network access": "Acesso pela rede",
   "Tailscale HTTPS": "Tailscale HTTPS",
-  "WSL backend": "Backend do WSL",
   "T3 Connect": "T3 Connect",
   "Publish agent activity": "Publicar atividade do agente",
   "This machine": "Esta máquina",
