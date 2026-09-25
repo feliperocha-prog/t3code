@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import {
   DEFAULT_SERVER_SETTINGS,
   PROJECT_FILE_BACKED_SETTINGS,
@@ -29,30 +30,32 @@ interface InheritanceLayer {
 }
 
 const WRITING_STYLE_LABELS: Record<string, string> = {
-  repo_conventions: "Repository conventions",
+  repo_conventions: t("Repository conventions"),
   conventional_commits: "Conventional Commits",
-  custom: "Custom instructions",
+  custom: t("Custom instructions"),
 };
 
 /** Human labels for the values the chain can show; falls back to a type summary. */
 function formatValue(key: keyof ServerSettings, value: unknown): string {
   if (value === null || value === undefined) {
     return key === "pullRequestMergeMethod"
-      ? "Last selected"
+      ? t("Last selected")
       : key === "sidebarAutoSettleAfterDays"
-        ? "Never"
+        ? t("Never")
         : key === "defaultModelSelection"
-          ? "Automatic"
+          ? t("Automatic")
           : key === "sourceControlWriterModelSelection"
-            ? "Text generation model"
+            ? t("Text generation model")
             : key === "defaultThreadEnvMode" || key === "worktreeSubmodules"
-              ? "Inherit"
-              : "Not set";
+              ? t("Inherit")
+              : t("Not set");
   }
-  if (typeof value === "boolean") return value ? "On" : "Off";
+  if (typeof value === "boolean") return value ? t("On") : t("Off");
   if (typeof value === "number") {
     return key === "sidebarAutoSettleAfterDays"
-      ? `${value} ${value === 1 ? "day" : "days"}`
+      ? value === 1
+        ? t("{count} day", { count: value })
+        : t("{count} days", { count: value })
       : String(value);
   }
   if (typeof value === "string") {
@@ -67,16 +70,19 @@ function formatValue(key: keyof ServerSettings, value: unknown): string {
         value as keyof typeof PULL_REQUEST_MERGE_METHOD_LABELS
       ];
     }
-    return value === "" ? "Empty" : value;
+    return value === "" ? t("Empty") : value;
   }
-  if (Array.isArray(value)) return `${value.length} ${value.length === 1 ? "item" : "items"}`;
+  if (Array.isArray(value))
+    return value.length === 1
+      ? t("{count} item", { count: value.length })
+      : t("{count} items", { count: value.length });
   if (typeof value === "object") {
     if ("model" in value && typeof value.model === "string") return value.model;
     if ("mode" in value && typeof value.mode === "string") {
       return WRITING_STYLE_LABELS[value.mode] ?? value.mode;
     }
   }
-  return "Custom";
+  return t("Custom");
 }
 
 /**
@@ -98,8 +104,8 @@ export function settingInheritanceLayers(
   if (target.projectId !== null && isProjectScopedSettingKey(key)) {
     layers.push({
       key: "project",
-      label: "Project",
-      value: source === "project" ? formatValue(key, target.settings[key]) : "Inherits",
+      label: t("Project"),
+      value: source === "project" ? formatValue(key, target.settings[key]) : t("Inherits"),
       effective: source === "project",
       set: source === "project",
     });
@@ -107,7 +113,7 @@ export function settingInheritanceLayers(
   layers.push({
     key: "environment",
     label: target.label,
-    value: environmentSet ? formatValue(key, environmentValue) : "Inherits",
+    value: environmentSet ? formatValue(key, environmentValue) : t("Inherits"),
     effective: source === "environment" && environmentSet,
     set: environmentSet,
   });
@@ -115,7 +121,7 @@ export function settingInheritanceLayers(
     layers.push({
       key: "t3.json",
       label: "t3.json",
-      value: source === "t3.json" ? formatValue(key, target.settings[key]) : "Inherits",
+      value: source === "t3.json" ? formatValue(key, target.settings[key]) : t("Inherits"),
       effective: source === "t3.json",
       set: source === "t3.json",
     });
@@ -127,7 +133,7 @@ export function settingInheritanceLayers(
     : DEFAULT_SERVER_SETTINGS[key];
   layers.push({
     key: "built-in",
-    label: "Default",
+    label: t("Default"),
     value: formatValue(key, builtIn),
     effective: source === "environment" && !environmentSet,
     set: true,
@@ -181,7 +187,11 @@ export function SettingInheritance({
   if (!key || targets.length === 0) return null;
   const overrideSummary =
     overridingProjects.length > 0
-      ? `${summary} · ${overridingProjects.length} project ${overridingProjects.length === 1 ? "override" : "overrides"}`
+      ? `${summary} · ${
+          overridingProjects.length === 1
+            ? t("{count} project override", { count: overridingProjects.length })
+            : t("{count} project overrides", { count: overridingProjects.length })
+        }`
       : summary;
   const chains = targets.flatMap((target) => {
     const environment = environments.find(
@@ -207,7 +217,9 @@ export function SettingInheritance({
                 <Button
                   size="icon-micro"
                   variant="ghost-muted"
-                  aria-label={`${overrideSummary}. Show where this value comes from`}
+                  aria-label={t("{summary}. Show where this value comes from", {
+                    summary: overrideSummary,
+                  })}
                 />
               }
             />
@@ -249,7 +261,7 @@ export function SettingInheritance({
                         layer.effective ? "font-medium text-foreground" : "text-muted-foreground",
                       )}
                     >
-                      {layer.key === "environment" ? "Environment" : layer.label}
+                      {layer.key === "environment" ? t("Environment") : layer.label}
                     </span>
                     <span
                       className={cn(
@@ -280,10 +292,10 @@ export function SettingInheritance({
                 return (
                   <div className="mt-2 border-t border-border/60 pt-2">
                     <div className="flex items-center justify-between gap-3 px-2 text-xs text-muted-foreground">
-                      <span>Overridden by</span>
+                      <span>{t("Overridden by")}</span>
                       {onClearOverrides ? (
                         <InlineButton onClick={() => onClearOverrides(overriding)}>
-                          Reset {overriding.length === 1 ? "it" : "all"}
+                          {overriding.length === 1 ? t("Reset it") : t("Reset all")}
                         </InlineButton>
                       ) : null}
                     </div>

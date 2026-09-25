@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import { DEFAULT_SERVER_SETTINGS, EnvironmentId, ProjectId } from "@t3tools/contracts";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import { describe, expect, it } from "vite-plus/test";
@@ -16,8 +17,8 @@ describe("settingInheritanceLayers", () => {
       "defaultAutoPull",
     );
     expect(layers.map((layer) => [layer.label, layer.value, layer.effective])).toEqual([
-      ["Laptop", "Inherits", false],
-      ["Default", "Off", true],
+      ["Laptop", t("Inherits"), false],
+      [t("Default"), t("Off"), true],
     ]);
   });
 
@@ -34,9 +35,9 @@ describe("settingInheritanceLayers", () => {
       "defaultAutoPull",
     );
     expect(layers.map((layer) => [layer.label, layer.value, layer.effective])).toEqual([
-      ["Project", "Off", true],
-      ["Laptop", "On", false],
-      ["Default", "Off", false],
+      [t("Project"), t("Off"), true],
+      ["Laptop", t("On"), false],
+      [t("Default"), t("Off"), false],
     ]);
     const inherited = settingInheritanceLayers(
       {
@@ -49,9 +50,9 @@ describe("settingInheritanceLayers", () => {
       "defaultAutoPull",
     );
     expect(inherited.map((layer) => [layer.value, layer.effective])).toEqual([
-      ["Inherits", false],
-      ["On", true],
-      ["Off", false],
+      [t("Inherits"), false],
+      [t("On"), true],
+      [t("Off"), false],
     ]);
   });
 
@@ -68,10 +69,10 @@ describe("settingInheritanceLayers", () => {
       "defaultThreadEnvMode",
     );
     expect(fromFile.map((layer) => [layer.label, layer.value, layer.effective])).toEqual([
-      ["Project", "Inherits", false],
-      ["Laptop", "Inherits", false],
+      [t("Project"), t("Inherits"), false],
+      ["Laptop", t("Inherits"), false],
       ["t3.json", "New worktree", true],
-      ["Default", "Current checkout", false],
+      [t("Default"), "Current checkout", false],
     ]);
     const settings = { ...DEFAULT_SERVER_SETTINGS, defaultThreadEnvMode: "local" as const };
     const fromEnvironment = settingInheritanceLayers(
@@ -85,9 +86,9 @@ describe("settingInheritanceLayers", () => {
       "defaultThreadEnvMode",
     );
     expect(fromEnvironment.map((layer) => [layer.value, layer.effective])).toEqual([
-      ["Inherits", false],
+      [t("Inherits"), false],
       ["Current checkout", true],
-      ["Inherits", false],
+      [t("Inherits"), false],
       ["Current checkout", false],
     ]);
   });

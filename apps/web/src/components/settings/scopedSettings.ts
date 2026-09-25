@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import {
   ClientSettingsSchema,
   type ClientSettingsPatch,
@@ -297,10 +298,14 @@ export function planScopedSettingsPatch(
       : scope.kind === "unavailable"
         ? scope.message
         : unscopableKeys.length > 0
-          ? "This setting is environment-wide and cannot be overridden by a project."
+          ? t("This setting is environment-wide and cannot be overridden by a project.")
           : isProjectScope
-            ? "Connect the selected checkouts, or update their environments, to save a project override."
-            : `Connect ${scope.kind === "environment" ? scope.label : "an environment"} to save this setting.`;
+            ? t(
+                "Connect the selected checkouts, or update their environments, to save a project override.",
+              )
+            : t("Connect {target} to save this setting.", {
+                target: scope.kind === "environment" ? scope.label : t("an environment"),
+              });
   return { clientPatch, hasClientWrite, serverWrites, unavailableReason };
 }
 
@@ -323,7 +328,9 @@ export function planScopedSettingsClear(
     unavailableReason:
       serverWrites.length > 0
         ? null
-        : "Connect the selected checkouts, or update their environments, to reset this override.",
+        : t(
+            "Connect the selected checkouts, or update their environments, to reset this override.",
+          ),
   };
 }
 
@@ -384,7 +391,7 @@ export function planProjectOverridesClear(
     hasClientWrite: false,
     serverWrites,
     unavailableReason:
-      serverWrites.length > 0 ? null : "Connect the environments to reset these overrides.",
+      serverWrites.length > 0 ? null : t("Connect the environments to reset these overrides."),
   };
 }
 

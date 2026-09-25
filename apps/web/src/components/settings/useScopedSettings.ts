@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 import {
   DEFAULT_SERVER_SETTINGS,
   type ProjectScopedServerSettingKey,
@@ -58,7 +59,7 @@ function useRunScopedPlan() {
       if (plan.unavailableReason) {
         toastManager.add({
           type: "warning",
-          title: "Setting not saved",
+          title: t("Setting not saved"),
           description: plan.unavailableReason,
         });
         return;
@@ -70,9 +71,9 @@ function useRunScopedPlan() {
             type: "error",
             title:
               savedEnvironmentCount > 0
-                ? "Setting saved on some environments"
-                : "Setting not saved",
-            description: `Could not update ${failedEnvironments.map((environment) => environment.label).join(", ")}.${savedEnvironmentCount > 0 ? " The other selected environments saved the change." : ""}`,
+                ? t("Setting saved on some environments")
+                : t("Setting not saved"),
+            description: `${t("Could not update {environments}.", { environments: failedEnvironments.map((environment) => environment.label).join(", ") })}${savedEnvironmentCount > 0 ? ` ${t("The other selected environments saved the change.")}` : ""}`,
           });
         },
       );
