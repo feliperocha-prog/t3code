@@ -1,15 +1,36 @@
 import type { TimestampFormat } from "@t3tools/contracts/settings";
 import {
   resolveSnoozePresets as resolveSharedSnoozePresets,
-  snoozeWakeLabel,
+  snoozeWakeLabel as resolveSharedSnoozeWakeLabel,
   type SnoozePreset,
 } from "@t3tools/client-runtime/state/thread-settled";
 
+import { t } from "~/i18n";
 import { formatShortTimestamp, parseTimestampDate } from "../timestampFormat";
 
-export { snoozeWakeLabel, type SnoozePreset };
+export { type SnoozePreset };
 
 const DAY_MS = 24 * 60 * 60 * 1_000;
+
+function snoozePresetLabel(id: SnoozePreset["id"]): string {
+  switch (id) {
+    case "hour":
+      return t("In 1 hour");
+    case "three-hours":
+      return t("In 3 hours");
+    case "evening":
+      return t("This evening");
+    case "tomorrow":
+      return t("Tomorrow");
+    case "next-week":
+      return t("Next week");
+  }
+}
+
+export function snoozeWakeLabel(snoozedUntil: string, options: { readonly now: string }): string {
+  const label = resolveSharedSnoozeWakeLabel(snoozedUntil, options);
+  return label === "now" ? t("now") : label;
+}
 
 function timeOfDayLabel(date: Date, timestampFormat: TimestampFormat): string {
   return formatShortTimestamp(date.toISOString(), timestampFormat);
@@ -20,11 +41,13 @@ export function resolveSnoozePresets(
   timestampFormat: TimestampFormat,
 ): ReadonlyArray<SnoozePreset> {
   return resolveSharedSnoozePresets(now).map((preset) => {
+    const label = snoozePresetLabel(preset.id);
     const wake = parseTimestampDate(preset.snoozedUntil);
-    if (wake === null) return preset;
+    if (wake === null) return { ...preset, label };
     const time = timeOfDayLabel(wake, timestampFormat);
     return {
       ...preset,
+      label,
       whenLabel:
         preset.id === "next-week"
           ? `${wake.toLocaleDateString(undefined, { weekday: "short" })} ${time}`
@@ -49,7 +72,7 @@ export function snoozeWakeDescription(
   startOfToday.setHours(0, 0, 0, 0);
   const dayDelta = Math.floor((wake.getTime() - startOfToday.getTime()) / DAY_MS);
   if (dayDelta === 0) return time;
-  if (dayDelta === 1) return `tomorrow ${time}`;
+  if (dayDelta === 1) return t("tomorrow {time}", { time });
   const weekday = wake.toLocaleDateString(undefined, { weekday: "short" });
   if (dayDelta < 7) return `${weekday} ${time}`;
   const date = wake.toLocaleDateString(undefined, { month: "short", day: "numeric" });

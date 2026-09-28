@@ -15,6 +15,7 @@ import {
 } from "./ProviderUpdateLaunchNotification.logic";
 import { ProviderUpdatePrimaryNotification } from "./ProviderUpdatePrimaryNotification";
 import { stackedThreadToast, toastManager } from "./ui/toast";
+import { t } from "~/i18n";
 
 /**
  * True when a desktop-local secondary backend (the parallel WSL backend) is
@@ -173,7 +174,7 @@ function ProviderUpdateEnvironmentsNotification() {
         ),
         timeout: 0,
         actionProps: {
-          children: "Settings",
+          children: t("Settings"),
           onClick: openProviderSettings,
         },
         actionVariant: "outline",

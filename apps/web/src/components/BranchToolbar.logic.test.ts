@@ -1,5 +1,6 @@
 import { EnvironmentId, type VcsRef } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
+import { t } from "~/i18n";
 import {
   dedupeRemoteBranchesWithLocalMatches,
   deriveLocalBranchNameFromRemoteRef,
@@ -102,10 +103,10 @@ describe("resolvePreviousWorktreeSeed", () => {
 describe("resolvePreviousWorktreeLabel", () => {
   it("includes the branch when known", () => {
     expect(resolvePreviousWorktreeLabel({ branch: "t3/fix-thing", worktreePath: "/wt" })).toBe(
-      "Previous worktree (t3/fix-thing)",
+      t("Previous worktree ({branch})", { branch: "t3/fix-thing" }),
     );
     expect(resolvePreviousWorktreeLabel({ branch: null, worktreePath: "/wt" })).toBe(
-      "Previous worktree",
+      t("Previous worktree"),
     );
   });
 });
@@ -187,7 +188,7 @@ describe("resolveBranchTriggerLabel", () => {
         resolvedActiveBranchIsRemote: false,
         startFromOrigin: true,
       }),
-    ).toBe("From origin/main");
+    ).toBe(t("From {ref}", { ref: "origin/main" }));
   });
 
   it("shows the origin ref for local branch names that contain slashes", () => {
@@ -199,7 +200,7 @@ describe("resolveBranchTriggerLabel", () => {
         resolvedActiveBranchIsRemote: false,
         startFromOrigin: true,
       }),
-    ).toBe("From origin/feature/demo");
+    ).toBe(t("From {ref}", { ref: "origin/feature/demo" }));
   });
 
   it("shows the local ref when start from origin is disabled", () => {
@@ -211,7 +212,7 @@ describe("resolveBranchTriggerLabel", () => {
         resolvedActiveBranchIsRemote: false,
         startFromOrigin: false,
       }),
-    ).toBe("From main");
+    ).toBe(t("From {ref}", { ref: "main" }));
   });
 
   it("does not duplicate the origin prefix for an explicit remote ref", () => {
@@ -223,7 +224,7 @@ describe("resolveBranchTriggerLabel", () => {
         resolvedActiveBranchIsRemote: true,
         startFromOrigin: true,
       }),
-    ).toBe("From origin/feature/demo");
+    ).toBe(t("From {ref}", { ref: "origin/feature/demo" }));
   });
 
   it("preserves an explicit ref from a non-origin remote", () => {
@@ -235,7 +236,7 @@ describe("resolveBranchTriggerLabel", () => {
         resolvedActiveBranchIsRemote: true,
         startFromOrigin: true,
       }),
-    ).toBe("From upstream/feature/demo");
+    ).toBe(t("From {ref}", { ref: "upstream/feature/demo" }));
   });
 
   it("keeps current-checkout labels and empty state unchanged", () => {
@@ -256,7 +257,7 @@ describe("resolveBranchTriggerLabel", () => {
         resolvedActiveBranchIsRemote: null,
         startFromOrigin: true,
       }),
-    ).toBe("Select ref");
+    ).toBe(t("Select ref"));
   });
 
   it("does not fabricate an origin ref while branch metadata is loading", () => {
@@ -268,7 +269,7 @@ describe("resolveBranchTriggerLabel", () => {
         resolvedActiveBranchIsRemote: null,
         startFromOrigin: true,
       }),
-    ).toBe("From upstream/feature/demo");
+    ).toBe(t("From {ref}", { ref: "upstream/feature/demo" }));
   });
 });
 
@@ -370,7 +371,7 @@ describe("resolveEnvironmentOptionLabel", () => {
         runtimeLabel: "Local environment",
         savedLabel: "Local",
       }),
-    ).toBe("This device");
+    ).toBe(t("This device"));
   });
 
   it("keeps configured labels for non-primary environments", () => {
@@ -511,24 +512,26 @@ describe("resolveEffectiveEnvMode", () => {
 
 describe("resolveEnvModeLabel", () => {
   it("uses explicit workspace labels", () => {
-    expect(resolveEnvModeLabel("local")).toBe("Current checkout");
-    expect(resolveEnvModeLabel("worktree")).toBe("New worktree");
+    expect(resolveEnvModeLabel("local")).toBe(t("Current checkout"));
+    expect(resolveEnvModeLabel("worktree")).toBe(t("New worktree"));
   });
 });
 
 describe("resolveCurrentWorkspaceLabel", () => {
   it("describes the main repo checkout when no worktree path is active", () => {
-    expect(resolveCurrentWorkspaceLabel(null)).toBe("Current checkout");
+    expect(resolveCurrentWorkspaceLabel(null)).toBe(t("Current checkout"));
   });
 
   it("describes the active checkout as a worktree when one is attached", () => {
-    expect(resolveCurrentWorkspaceLabel("/repo/.t3/worktrees/feature-a")).toBe("Current worktree");
+    expect(resolveCurrentWorkspaceLabel("/repo/.t3/worktrees/feature-a")).toBe(
+      t("Current worktree"),
+    );
   });
 });
 
 describe("resolveLockedWorkspaceLabel", () => {
   it("uses a shorter label for the main repo checkout", () => {
-    expect(resolveLockedWorkspaceLabel(null, "local")).toBe("Local checkout");
+    expect(resolveLockedWorkspaceLabel(null, "local")).toBe(t("Local checkout"));
   });
 
   it("uses a shorter label for an attached worktree", () => {
@@ -538,7 +541,7 @@ describe("resolveLockedWorkspaceLabel", () => {
   });
 
   it("describes a worktree that is still being created as a new worktree", () => {
-    expect(resolveLockedWorkspaceLabel(null, "worktree")).toBe("New worktree");
+    expect(resolveLockedWorkspaceLabel(null, "worktree")).toBe(t("New worktree"));
   });
 });
 

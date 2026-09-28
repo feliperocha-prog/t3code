@@ -2,6 +2,7 @@ import { EnvironmentId, type ThreadPullRequestLink } from "@t3tools/contracts";
 import type { DesktopPreviewFavicon, PreviewSessionSnapshot } from "@t3tools/contracts";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
+import { t } from "~/i18n";
 
 import {
   RightPanelTabs,
@@ -222,15 +223,15 @@ describe("RightPanelTabs audio indicator", () => {
   const cases = [
     { audible: false, audioMuted: false, label: null },
     { audible: false, audioMuted: true, label: null },
-    { audible: true, audioMuted: false, label: "Mute Local site" },
-    { audible: true, audioMuted: true, label: "Unmute Local site" },
+    { audible: true, audioMuted: false, label: t("Mute {title}", { title: "Local site" }) },
+    { audible: true, audioMuted: true, label: t("Unmute {title}", { title: "Local site" }) },
   ] as const;
 
   it.each(cases)("audible=$audible muted=$audioMuted", ({ audible, audioMuted, label }) => {
     const html = renderTabs(null, undefined, { audible, audioMuted });
     if (label === null) {
-      expect(html).not.toContain("Mute Local site");
-      expect(html).not.toContain("Unmute Local site");
+      expect(html).not.toContain(t("Mute {title}", { title: "Local site" }));
+      expect(html).not.toContain(t("Unmute {title}", { title: "Local site" }));
     } else {
       expect(html).toContain(`aria-label="${label}"`);
     }
@@ -249,7 +250,7 @@ describe("RightPanelTabs audio indicator", () => {
 
   it("hides the toggle when no runtime tab id can be resolved", () => {
     const html = renderTabs(null, undefined, { audible: true }, null);
-    expect(html).not.toContain("Mute Local site");
+    expect(html).not.toContain(t("Mute {title}", { title: "Local site" }));
   });
 });
 
@@ -261,25 +262,25 @@ describe("tabMuteMenuItem", () => {
     // The server session id resolves before the preview manager finishes
     // createTab. Muting in that window fails with an error nobody surfaces.
     expect(tabMuteMenuItem({ overlay: null, canResolveRuntimeTabId: true })).toEqual({
-      label: "Mute tab",
+      label: t("Mute tab"),
       disabled: true,
     });
   });
 
   it("stays disabled when no runtime tab id can be resolved", () => {
     expect(tabMuteMenuItem({ overlay: overlay(false), canResolveRuntimeTabId: false })).toEqual({
-      label: "Mute tab",
+      label: t("Mute tab"),
       disabled: true,
     });
   });
 
   it("offers mute and unmute once the tab is addressable", () => {
     expect(tabMuteMenuItem({ overlay: overlay(false), canResolveRuntimeTabId: true })).toEqual({
-      label: "Mute tab",
+      label: t("Mute tab"),
       disabled: false,
     });
     expect(tabMuteMenuItem({ overlay: overlay(true), canResolveRuntimeTabId: true })).toEqual({
-      label: "Unmute tab",
+      label: t("Unmute tab"),
       disabled: false,
     });
   });

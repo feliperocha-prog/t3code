@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
+import { t } from "~/i18n";
 import { resolveSnoozePresets, snoozeWakeDescription } from "./Sidebar.snooze";
 
 // Local-time constructor so preset math is timezone-stable in tests.
@@ -76,9 +77,9 @@ describe("snoozeWakeDescription", () => {
   it("uses bare time today, 'tomorrow' next day, weekday within the week", () => {
     expect(
       snoozeWakeDescription(localDate(2026, 4, 8, 18).toISOString(), now, "locale"),
-    ).not.toContain("tomorrow");
+    ).not.toContain(t("tomorrow {time}", { time: "" }).trim());
     expect(snoozeWakeDescription(localDate(2026, 4, 9, 9).toISOString(), now, "locale")).toContain(
-      "tomorrow",
+      t("tomorrow {time}", { time: "" }).trim(),
     );
     expect(snoozeWakeDescription(localDate(2026, 4, 13, 9).toISOString(), now, "locale")).toMatch(
       /Mon/,

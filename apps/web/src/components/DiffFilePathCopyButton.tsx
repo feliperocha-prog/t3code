@@ -8,6 +8,7 @@ import {
 } from "./ui/anchoredCopyToast";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { t } from "~/i18n";
 
 export function DiffFilePathCopyButton({ filePath }: { filePath: string }) {
   const ref = useRef<HTMLButtonElement>(null);
@@ -25,7 +26,7 @@ export function DiffFilePathCopyButton({ filePath }: { filePath: string }) {
             ref={ref}
             size="icon-micro"
             variant="ghost-muted"
-            aria-label="Copy file path"
+            aria-label={t("Copy file path")}
             onClick={() => copyToClipboard(filePath, undefined)}
           />
         }
@@ -33,7 +34,7 @@ export function DiffFilePathCopyButton({ filePath }: { filePath: string }) {
         {isCopied ? <CheckIcon className="size-3 text-success" /> : <CopyIcon className="size-3" />}
       </TooltipTrigger>
       <TooltipPopup>
-        <p>{isCopied ? "Copied" : "Copy path"}</p>
+        <p>{isCopied ? t("Copied") : t("Copy path")}</p>
       </TooltipPopup>
     </Tooltip>
   );
