@@ -7,6 +7,7 @@ import {
   ThreadArchiveBlockedError,
 } from "./useThreadActions";
 import { toastManager } from "../components/ui/toast";
+import { t } from "~/i18n";
 
 describe("navigateAfterThreadDeletion", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -21,7 +22,7 @@ describe("navigateAfterThreadDeletion", () => {
     expect(addToast).toHaveBeenCalledOnce();
     expect(addToast).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "Thread deleted, but navigation failed",
+        title: t("Thread deleted, but navigation failed"),
         description: "route unavailable",
       }),
     );
@@ -47,7 +48,7 @@ describe("ThreadArchiveBlockedError", () => {
       environmentId: "environment-1",
       threadId: "thread-1",
     });
-    expect(error.message).toBe("Cannot archive a running thread.");
+    expect(error.message).toBe(t("Cannot archive a running thread."));
   });
 });
 
@@ -89,7 +90,10 @@ describe("requestThreadUnpinConfirmation", () => {
     });
 
     expect(message).toBe(
-      'Unpin thread "Release prep"?\nThis will move the thread out of your pinned section.',
+      [
+        t('Unpin thread "{title}"?', { title: "Release prep" }),
+        t("This will move the thread out of your pinned section."),
+      ].join("\n"),
     );
     expect(result).toMatchObject({ _tag: "Success", value: false });
   });

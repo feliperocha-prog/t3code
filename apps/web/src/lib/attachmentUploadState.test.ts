@@ -5,6 +5,7 @@ import {
   attachmentUploadBlockReason,
   formatAttachmentUploadProgress,
 } from "./attachmentUploadState";
+import { t } from "~/i18n";
 
 const environmentId = EnvironmentId.make("environment-1");
 
@@ -34,7 +35,7 @@ describe("attachmentUploadBlockReason", () => {
           "image-1": { status: "uploading", environmentId, progress: 0.5 },
         },
       }),
-    ).toBe("Attachments still uploading");
+    ).toBe(t("Attachments still uploading"));
   });
 
   it("asks the user to retry or remove failed uploads", () => {
@@ -46,7 +47,7 @@ describe("attachmentUploadBlockReason", () => {
           "image-1": { status: "failed", environmentId, reason: "Upload failed" },
         },
       }),
-    ).toBe("Retry or remove the failed attachment");
+    ).toBe(t("Retry or remove the failed attachment"));
   });
 
   it("does not accept an upload from another environment", () => {
@@ -62,7 +63,7 @@ describe("attachmentUploadBlockReason", () => {
           },
         },
       }),
-    ).toBe("Attachment still uploading");
+    ).toBe(t("Attachment still uploading"));
   });
 });
 

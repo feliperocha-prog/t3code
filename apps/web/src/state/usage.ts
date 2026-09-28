@@ -22,6 +22,7 @@ import { mergeUsage, type EnvironmentUsage, type MergedUsage } from "@t3tools/sh
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { environmentPresentations } from "./presentation";
 import { serverEnvironment } from "./server";
+import { t } from "~/i18n";
 
 export interface EnvironmentUsageStatus {
   readonly environmentId: EnvironmentId;
@@ -50,7 +51,7 @@ const usageByWindowAtom = Atom.family((windowKey: string) =>
         environmentId,
         label: presentation.entry.target.label,
         isPending: result.waiting,
-        error: result._tag === "Failure" ? "This environment could not report usage." : null,
+        error: result._tag === "Failure" ? t("This environment could not report usage.") : null,
         summary: Option.getOrNull(AsyncResult.value(result)),
       });
     }

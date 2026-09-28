@@ -1,5 +1,6 @@
 import type { DeviceHubAccess } from "@t3tools/client-runtime/state/deviceHubAccess";
 import { withDeviceHubQuery } from "@t3tools/client-runtime/state/deviceHubAccess";
+import { t } from "~/i18n";
 
 export type AndroidFoldPosture = "closed" | "opened";
 
@@ -14,7 +15,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const parseFold = (payload: unknown): AndroidFoldState => {
   if (!isRecord(payload) || payload.ok !== true || !isRecord(payload.fold)) {
-    throw new Error("Unexpected Android fold response.");
+    throw new Error(t("Unexpected Android fold response."));
   }
   const { supported, posture, hingeAngle } = payload.fold;
   if (
@@ -27,7 +28,7 @@ const parseFold = (payload: unknown): AndroidFoldState => {
       posture !== "tent") ||
     (hingeAngle !== null && (typeof hingeAngle !== "number" || !Number.isFinite(hingeAngle)))
   ) {
-    throw new Error("Unexpected Android fold response.");
+    throw new Error(t("Unexpected Android fold response."));
   }
   return { supported, posture, hingeAngle };
 };
@@ -55,7 +56,9 @@ const foldRequest = async (
     const payload: unknown = await response.json().catch(() => null);
     const error = isRecord(payload) ? payload.error : null;
     throw new Error(
-      typeof error === "string" ? error : `Fold command failed (${response.status}).`,
+      typeof error === "string"
+        ? error
+        : t("Fold command failed ({status}).", { status: response.status }),
     );
   }
   return parseFold(await response.json());

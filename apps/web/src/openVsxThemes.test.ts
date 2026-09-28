@@ -8,6 +8,7 @@ import {
   type OpenVsxThemeExtension,
 } from "./openVsxThemes";
 import { getThemeColorsForMode, themeColorToHex } from "./themePalette";
+import { t } from "~/i18n";
 
 const ASSET_ROOT = "https://open-vsx.org/api/demo/theme/1.0.0/file";
 
@@ -201,7 +202,7 @@ describe("Open VSX themes", () => {
     );
 
     await expect(searchOpenVsxThemes("nord")).rejects.toThrow(
-      "Open VSX returned an unreadable search response.",
+      t("Open VSX returned an unreadable search response."),
     );
   });
 
@@ -220,7 +221,7 @@ describe("Open VSX themes", () => {
     );
 
     await expect(searchOpenVsxThemes("dracula")).rejects.toThrow(
-      "Open VSX theme details are unavailable",
+      t("Open VSX theme details are unavailable right now."),
     );
   });
 
@@ -239,7 +240,7 @@ describe("Open VSX themes", () => {
     );
 
     await expect(searchOpenVsxThemes("dracula")).rejects.toThrow(
-      "Open VSX theme details are unavailable",
+      t("Open VSX theme details are unavailable right now."),
     );
   });
 
@@ -283,7 +284,7 @@ describe("Open VSX themes", () => {
     );
 
     const search = expect(searchOpenVsxThemes("dracula")).rejects.toThrow(
-      "Open VSX took too long to respond",
+      t("Open VSX took too long to respond."),
     );
     await vi.advanceTimersByTimeAsync(10_000);
 
@@ -436,20 +437,20 @@ describe("Open VSX themes", () => {
     packagedManifest.contributes.themes[2]!.path = "./themes/missing.json";
     await rebuildPackage();
     await expect(importOpenVsxThemeExtension(extension)).rejects.toThrow(
-      "could not be imported safely",
+      t("One or more color themes in that extension could not be imported safely."),
     );
     packagedManifest.contributes.themes[2]!.path = "./themes/demo.json";
 
     packagedManifest.license = "Proprietary";
     await rebuildPackage();
     await expect(importOpenVsxThemeExtension(extension)).rejects.toThrow(
-      "does not match its advertised license",
+      t("That extension package does not match its advertised license."),
     );
 
     Reflect.deleteProperty(packagedManifest, "license");
     await rebuildPackage();
     await expect(importOpenVsxThemeExtension(extension)).rejects.toThrow(
-      "does not match its advertised license",
+      t("That extension package does not match its advertised license."),
     );
   });
 
@@ -526,6 +527,8 @@ describe("Open VSX themes", () => {
       }),
     );
 
-    await expect(importOpenVsxThemeExtension(extension)).rejects.toThrow("integrity check");
+    await expect(importOpenVsxThemeExtension(extension)).rejects.toThrow(
+      t("That Open VSX theme failed its integrity check."),
+    );
   });
 });

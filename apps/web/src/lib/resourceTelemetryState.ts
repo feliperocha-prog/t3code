@@ -10,6 +10,7 @@ import { usePrimaryEnvironment } from "../state/environments";
 import { useEnvironmentQuery } from "../state/query";
 import { serverEnvironment } from "../state/server";
 import { useAtomCommand } from "../state/use-atom-command";
+import { t } from "~/i18n";
 
 export interface ResourceTelemetryState {
   readonly data: ResourceTelemetrySnapshot | null;
@@ -37,7 +38,7 @@ export function useResourceTelemetry(
   });
   const retry = useCallback(async () => {
     if (environmentId === null) {
-      throw new Error("No environment is selected.");
+      throw new Error(t("No environment is selected."));
     }
     const result = await retryCommand({ environmentId, input: {} });
     if (result._tag === "Failure") {

@@ -5,6 +5,7 @@ import {
   type DesktopBridge,
 } from "@t3tools/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { t } from "~/i18n";
 
 const showContextMenuFallbackMock =
   vi.fn<
@@ -117,7 +118,7 @@ describe("LocalApi", () => {
     const { createLocalApi } = await import("./localApi");
 
     await expect(createLocalApi().shell.openSystemSettings("full-disk-access")).rejects.toThrow(
-      "Unable to open System Settings.",
+      t("Unable to open System Settings."),
     );
   });
 

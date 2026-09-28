@@ -41,6 +41,7 @@ import {
   THEME_FILE_VERSION,
   singleAppearanceOf,
 } from "./themePalette";
+import { t } from "~/i18n";
 
 function asHex(value: string): string {
   const hex = themeColorToHex(value);
@@ -285,7 +286,7 @@ describe("theme files", () => {
         appearance: "light",
         colors: { background: "#ffffff" },
       }),
-    ).toThrow('"background" is not a supported theme color role.');
+    ).toThrow(t('"{role}" is not a supported theme color role.', { role: "background" }));
 
     expect(() =>
       parseThemeFile({
@@ -294,7 +295,11 @@ describe("theme files", () => {
         appearance: "light",
         colors: { accent: "var(--danger)" },
       }),
-    ).toThrow('The color for "accent" must be a literal CSS color');
+    ).toThrow(
+      t('The color for "{role}" must be a literal CSS color such as oklch(0.62 0.2 280).', {
+        role: "accent",
+      }),
+    );
   });
 
   it("canonicalizes the explicitly exported theme", () => {
@@ -493,7 +498,11 @@ describe("theme files", () => {
         colors: { canvas: "#f8fbff" },
         variants: { light: { canvas: "#101827" } },
       }),
-    ).toThrow('Theme variants must not repeat the base appearance "light".');
+    ).toThrow(
+      t('Theme variants must not repeat the base appearance "{appearance}".', {
+        appearance: "light",
+      }),
+    );
   });
 
   it("keeps a single-mode theme on its only palette", () => {
@@ -924,7 +933,7 @@ describe("theme files", () => {
           colors: { accent: "#5b6cff" },
         }),
       ),
-    ).toThrow('A theme named "Aurora" is already installed.');
+    ).toThrow(t('A theme named "{label}" is already installed.', { label: "Aurora" }));
     expect(setItem).not.toHaveBeenCalled();
 
     vi.unstubAllGlobals();

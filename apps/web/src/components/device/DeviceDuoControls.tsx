@@ -7,6 +7,7 @@ import type { DeviceScreenSize } from "@t3tools/client-runtime/device/stream";
 import { DeviceDuoGlyph } from "./DeviceDuoGlyph";
 import { Button } from "~/components/ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
+import { t } from "~/i18n";
 
 /** Physical presets live beside the device. Pinching supplies continuous hinge control. */
 export function DeviceDuoControls(props: {
@@ -20,12 +21,12 @@ export function DeviceDuoControls(props: {
   const selected = (id: (typeof DUO_POSES)[number]["id"]) =>
     id === "laptop" || id === "tent" ? props.screen.hingePose === id : fold === id;
   return (
-    <div aria-label="iPhone Duo stands" className="flex flex-col items-center gap-2">
+    <div aria-label={t("iPhone Duo stands")} className="flex flex-col items-center gap-2">
       {([DUO_POSES.slice(0, 3), DUO_POSES.slice(3)] as const).map((poses, index) => (
         <div
           key={poses[0]?.id}
           role="group"
-          aria-label={index === 0 ? "Fold shape" : "Device stance"}
+          aria-label={index === 0 ? t("Fold shape") : t("Device stance")}
           className="pointer-events-auto flex shrink-0 flex-col items-center gap-1 rounded-full border border-border/50 bg-background/80 p-1 shadow-sm"
         >
           {poses.map((pose) => (

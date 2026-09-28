@@ -10,6 +10,7 @@ import {
   getRelativeTimeState,
   resolveTimestampLocale,
 } from "./timestampFormat";
+import { t } from "~/i18n";
 
 describe("resolveTimestampLocale", () => {
   it("defers to the runtime default when the host reports no locale", () => {
@@ -108,21 +109,31 @@ describe("formatExpiresInLabel", () => {
   });
 
   it("returns Expired when the instant is in the past", () => {
-    expect(formatExpiresInLabel("2026-04-07T11:59:00.000Z")).toBe("Expired");
+    expect(formatExpiresInLabel("2026-04-07T11:59:00.000Z")).toBe(t("Expired"));
   });
 
   it("uses sub-minute second count", () => {
-    expect(formatExpiresInLabel("2026-04-07T12:00:45.000Z")).toBe("Expires in 45s");
+    expect(formatExpiresInLabel("2026-04-07T12:00:45.000Z")).toBe(
+      t("Expires in {duration}", { duration: "45s" }),
+    );
   });
 
   it("uses minutes and seconds under one hour", () => {
-    expect(formatExpiresInLabel("2026-04-07T12:04:12.000Z")).toBe("Expires in 4m 12s");
-    expect(formatExpiresInLabel("2026-04-07T12:15:00.000Z")).toBe("Expires in 15m");
+    expect(formatExpiresInLabel("2026-04-07T12:04:12.000Z")).toBe(
+      t("Expires in {duration}", { duration: "4m 12s" }),
+    );
+    expect(formatExpiresInLabel("2026-04-07T12:15:00.000Z")).toBe(
+      t("Expires in {duration}", { duration: "15m" }),
+    );
   });
 
   it("uses hours with minute and second remainder", () => {
-    expect(formatExpiresInLabel("2026-04-07T14:02:03.000Z")).toBe("Expires in 2h 2m 3s");
-    expect(formatExpiresInLabel("2026-04-07T18:00:00.000Z")).toBe("Expires in 6h");
+    expect(formatExpiresInLabel("2026-04-07T14:02:03.000Z")).toBe(
+      t("Expires in {duration}", { duration: "2h 2m 3s" }),
+    );
+    expect(formatExpiresInLabel("2026-04-07T18:00:00.000Z")).toBe(
+      t("Expires in {duration}", { duration: "6h" }),
+    );
   });
 });
 
@@ -143,7 +154,7 @@ describe("formatDayAwareTimestamp", () => {
     const messageAt = iso(2026, 7, 13, 23, 30);
     const justPastMidnight = new Date(2026, 7, 14, 0, 30).getTime();
     expect(formatDayAwareTimestamp(messageAt, "12-hour", justPastMidnight)).toBe(
-      `yesterday at ${time(messageAt)}`,
+      t("yesterday at {time}", { time: time(messageAt) }),
     );
   });
 
@@ -243,8 +254,8 @@ describe("formatElapsedDurationLabel", () => {
   });
 
   it("returns just now when the instant is current or in the future", () => {
-    expect(formatElapsedDurationLabel("2026-04-07T12:00:00.000Z")).toBe("just now");
-    expect(formatElapsedDurationLabel("2026-04-07T12:01:00.000Z")).toBe("just now");
+    expect(formatElapsedDurationLabel("2026-04-07T12:00:00.000Z")).toBe(t("just now"));
+    expect(formatElapsedDurationLabel("2026-04-07T12:01:00.000Z")).toBe(t("just now"));
   });
 
   it("formats seconds, minutes, hours, and days", () => {

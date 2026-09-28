@@ -20,6 +20,7 @@ import {
   allEnvironmentShellsBootstrappedAtom,
 } from "./shell";
 import { environmentThreadDetails, environmentThreadShells } from "./threads";
+import { t } from "~/i18n";
 
 const EMPTY_THREAD_REFS: ReadonlyArray<ScopedThreadRef> = Object.freeze([]);
 
@@ -166,7 +167,7 @@ export function waitForProject(
     let unsubscribe: (() => void) | null = null;
     const timeout = setTimeout(() => {
       unsubscribe?.();
-      reject(new Error("The project did not appear in the desktop app."));
+      reject(new Error(t("The project did not appear in the desktop app.")));
     }, timeoutMs);
     const finish = (project: EnvironmentProject | null) => {
       if (project === null) return;

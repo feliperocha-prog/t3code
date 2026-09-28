@@ -6,6 +6,7 @@ import { AsyncResult } from "effect/unstable/reactivity";
 import { act, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { t } from "~/i18n";
 
 type DiscoveredEnvironments = Discovery.RelayEnvironmentDiscoveryState["environments"];
 
@@ -175,7 +176,7 @@ describe("cloud onboarding discovery", () => {
       finishDiscovery(linkedMachines);
     });
     expect(onDiscoveryReady).toHaveBeenCalledTimes(1);
-    expect(renderer!.root.findByType("button").children).toEqual(["Add"]);
+    expect(renderer!.root.findByType("button").children).toEqual([t("Add")]);
   });
 
   it("keeps incompatible discoveries unselected until the user enables a compatible server", async () => {
@@ -235,7 +236,7 @@ describe("cloud onboarding discovery", () => {
     expect(renderer!.root.findByType("input").props.checked).toBe(false);
     expect(renderer!.root.findByType("input").props.disabled).toBe(true);
     expect(renderer!.root.findAllByType("span").flatMap((span) => span.children)).toContain(
-      "Client not supported",
+      t("Client not supported"),
     );
     await act(async () => {
       await renderer!.root.findByType("input").props.onChange({ target: { checked: true } });
@@ -310,7 +311,7 @@ describe("cloud onboarding discovery", () => {
     expect(renderer!.root.findAllByType("p").map((node) => node.children)).toContainEqual([
       "Work laptop",
     ]);
-    expect(renderer!.root.findByType("button").children).toEqual(["Add"]);
+    expect(renderer!.root.findByType("button").children).toEqual([t("Add")]);
     await advance(30_000);
     expect(discovery.listEnvironments).toHaveBeenCalledTimes(2);
   });
@@ -318,7 +319,7 @@ describe("cloud onboarding discovery", () => {
   it("keeps a discovered computer visible when it is added to the browser", async () => {
     discovery.listEnvironments.mockResolvedValue(linkedMachines);
     await mount();
-    expect(renderer!.root.findByType("button").children).toEqual(["Add"]);
+    expect(renderer!.root.findByType("button").children).toEqual([t("Add")]);
     await act(async () => {
       renderer!.update(
         <CloudEnvironmentConnectRows
@@ -337,7 +338,7 @@ describe("cloud onboarding discovery", () => {
     expect(renderer!.root.findAllByType("p").map((node) => node.children)).toContainEqual([
       "Work laptop",
     ]);
-    expect(renderer!.root.findByType("button").children).toEqual(["Connected"]);
+    expect(renderer!.root.findByType("button").children).toEqual([t("Connected")]);
   });
 
   it("waits while hidden and refreshes immediately when visible again", async () => {

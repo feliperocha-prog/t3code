@@ -14,6 +14,7 @@ import {
   writePrimaryEnvironmentDescriptor,
 } from ".";
 import { installEnvironmentHttpTest } from "../../../test/environmentHttpTest";
+import { t } from "~/i18n";
 
 const BASE_ENVIRONMENT = {
   environmentId: EnvironmentId.make("environment-local"),
@@ -269,7 +270,7 @@ describe("environmentBootstrap", () => {
     expect(readPrimaryEnvironmentTarget()).toBeNull();
     expect(getPrimaryKnownEnvironment()).toBeNull();
     expect(() => resolvePrimaryEnvironmentHttpUrl("/api/auth/session")).toThrow(
-      "The local environment is disabled.",
+      t("The local environment is disabled."),
     );
   });
 
