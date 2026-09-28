@@ -8,6 +8,7 @@ import type { DeviceShapeProfile } from "@t3tools/client-runtime/device/shape-pr
 import { createPhoneInteraction } from "@t3tools/client-runtime/device/phone-interaction";
 import type { DeviceScreenSize, DeviceStreamClient } from "@t3tools/client-runtime/device/stream";
 import { bindPhoneTrackpad } from "./phoneTrackpad";
+import { t } from "~/i18n";
 
 const loadPhoneViewer = () => import("@t3tools/client-runtime/device/phone-viewer");
 
@@ -136,7 +137,9 @@ export function DevicePhoneViewport(props: {
         />
         <canvas
           ref={canvasRef}
-          aria-label="Interactive 3D device. Drag the screen to interact. Drag outside it or swipe with two fingers to turn."
+          aria-label={t(
+            "Interactive 3D device. Drag the screen to interact. Drag outside it or swipe with two fingers to turn.",
+          )}
           className="size-full touch-none"
           onPointerDown={(event) => {
             if (event.button !== 0) return;

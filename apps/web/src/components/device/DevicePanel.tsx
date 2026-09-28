@@ -23,9 +23,10 @@ import { DeviceLoadingView } from "./DeviceLoadingView";
 import { DeviceSetup } from "./DeviceSetup";
 import { DeviceWorkspace } from "./DeviceWorkspace";
 import { PreviewPanelShell, type PreviewPanelMode } from "../preview/PreviewPanelShell";
+import { t } from "~/i18n";
 
 const platformLabel = (platform: DevicePlatform) =>
-  platform === "ios" ? "iOS Simulators" : "Android Emulators";
+  platform === "ios" ? t("iOS Simulators") : t("Android Emulators");
 
 const deviceKey = (device: Pick<DeviceSummary, "hostId" | "id">) =>
   `${device.hostId}\u0000${device.id}`;
@@ -190,7 +191,7 @@ export function DevicePanel(props: {
           <Button
             size="icon-xs"
             variant="ghost"
-            aria-label="Dismiss device error"
+            aria-label={t("Dismiss device error")}
             onClick={() => setOperationError(null)}
           >
             <X className="size-3" />
@@ -204,7 +205,7 @@ export function DevicePanel(props: {
             environmentId={environmentId}
             device={activeDevice}
             hostLabel={
-              state.hosts.find((host) => host.id === activeDevice.hostId)?.label ?? "Device host"
+              state.hosts.find((host) => host.id === activeDevice.hostId)?.label ?? t("Device host")
             }
             hostDiagnostics={state.hostStatusDetail}
             visible={props.visible}
@@ -214,21 +215,21 @@ export function DevicePanel(props: {
           />
         ) : pendingDevice || hostBusy || !loaded ? (
           <DeviceLoadingView
-            name={pendingDevice?.name ?? "Devices"}
+            name={pendingDevice?.name ?? t("Devices")}
             description={
               pendingDevice
-                ? `${state.hosts.find((host) => host.id === pendingDevice.hostId)?.label ?? "Device host"} · ${pendingDevice.version}`
+                ? `${state.hosts.find((host) => host.id === pendingDevice.hostId)?.label ?? t("Device host")} · ${pendingDevice.version}`
                 : ""
             }
             stage="opening"
             message={
               pendingDevice
                 ? pendingDevice.booted
-                  ? "Opening device…"
-                  : "Starting device…"
+                  ? t("Opening device…")
+                  : t("Starting device…")
                 : state.hostStatus === "installing"
-                  ? (state.hostStatusDetail ?? "Installing device support…")
-                  : "Finding devices…"
+                  ? (state.hostStatusDetail ?? t("Installing device support…"))
+                  : t("Finding devices…")
             }
           />
         ) : (
@@ -244,8 +245,8 @@ export function DevicePanel(props: {
                   <Smartphone className="size-6 opacity-60" />
                   <p className="max-w-sm">
                     {state.hostStatus === "failed"
-                      ? (state.hostStatusDetail ?? "The device hub failed to start.")
-                      : "No simulators or emulators were found on this environment."}
+                      ? (state.hostStatusDetail ?? t("The device hub failed to start."))
+                      : t("No simulators or emulators were found on this environment.")}
                   </p>
                 </>
               ) : null}
@@ -267,16 +268,20 @@ export function DevicePanel(props: {
                               </span>
                             }
                             title={device.name}
-                            description={`${state.hosts.find((host) => host.id === device.hostId)?.label} · ${device.version} · ${device.booted ? "Running" : "Stopped"}`}
+                            description={`${state.hosts.find((host) => host.id === device.hostId)?.label} · ${device.version} · ${device.booted ? t("Running") : t("Stopped")}`}
                             disabled={pendingDeviceKey !== null}
-                            aria-label={`${device.booted ? "Open" : "Start"} ${device.name}`}
+                            aria-label={
+                              device.booted
+                                ? t("Open {name}", { name: device.name })
+                                : t("Start {name}", { name: device.name })
+                            }
                             onClick={() => void selectDevice(deviceKey(device))}
                             action={
                               pendingDeviceKey === deviceKey(device) ? (
                                 <Spinner size="xs" />
                               ) : (
                                 <span className="text-xs text-muted-foreground">
-                                  {device.booted ? "Open" : "Start"}
+                                  {device.booted ? t("Open") : t("Start")}
                                 </span>
                               )
                             }
@@ -291,8 +296,9 @@ export function DevicePanel(props: {
               !state.devices.some((device) => device.platform === "android") &&
               !unavailablePlatforms.some((platform) => platform.platform === "android") ? (
                 <p className="max-w-sm text-xs">
-                  No Android virtual devices found. Create one in Android Studio's Device Manager,
-                  then refresh.
+                  {t(
+                    "No Android virtual devices found. Create one in Android Studio's Device Manager, then refresh.",
+                  )}
                 </p>
               ) : null}
               {loaded && !hostBusy ? (
@@ -302,7 +308,7 @@ export function DevicePanel(props: {
                   size="sm"
                   onClick={() => void list({ environmentId, input: {} })}
                 >
-                  Refresh devices
+                  {t("Refresh devices")}
                 </Button>
               ) : null}
             </div>

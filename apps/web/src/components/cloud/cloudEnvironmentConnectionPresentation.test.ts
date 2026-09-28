@@ -2,6 +2,7 @@ import type { EnvironmentConnectionPresentation } from "@t3tools/client-runtime/
 import { describe, expect, it } from "vite-plus/test";
 
 import { presentSavedCloudEnvironmentConnection } from "./cloudEnvironmentConnectionPresentation";
+import { t } from "~/i18n";
 
 function connection(
   phase: EnvironmentConnectionPresentation["phase"],
@@ -13,13 +14,13 @@ function connection(
 describe("saved cloud environment connection presentation", () => {
   it("only labels a live connection as connected", () => {
     expect(presentSavedCloudEnvironmentConnection(connection("connected"))).toEqual({
-      buttonLabel: "Connected",
+      buttonLabel: t("Connected"),
       statusText: "Connected",
       tone: "connected",
     });
 
     expect(presentSavedCloudEnvironmentConnection(connection("connecting"))).toEqual({
-      buttonLabel: "Connecting…",
+      buttonLabel: t("Connecting…"),
       statusText: "Connecting...",
       tone: "connecting",
     });
@@ -31,7 +32,7 @@ describe("saved cloud environment connection presentation", () => {
         connection("reconnecting", "Relay environment endpoint is unavailable."),
       ),
     ).toEqual({
-      buttonLabel: "Reconnecting…",
+      buttonLabel: t("Reconnecting…"),
       statusText:
         "Failed to connect. Reconnecting... Reason: Relay environment endpoint is unavailable.",
       tone: "connecting",
@@ -39,10 +40,10 @@ describe("saved cloud environment connection presentation", () => {
   });
 
   it.each([
-    ["error", "Connection failed", "Connection failed. Reason: Access denied.", "error"],
-    ["unsupported", "Client not supported", "Client not supported", "idle"],
-    ["offline", "Offline", "Offline", "idle"],
-    ["available", "Not connected", "Available", "idle"],
+    ["error", t("Connection failed"), "Connection failed. Reason: Access denied.", "error"],
+    ["unsupported", t("Client not supported"), "Client not supported", "idle"],
+    ["offline", t("Offline"), "Offline", "idle"],
+    ["available", t("Not connected"), "Available", "idle"],
   ] as const)(
     "presents %s without claiming the environment is connected",
     (phase, buttonLabel, statusText, tone) => {

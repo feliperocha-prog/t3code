@@ -24,6 +24,7 @@ import {
   setSnapShotAnimationDestination,
   scheduleSnapShotAnimationDestination,
 } from "../../lib/snapShotAnimation";
+import { t } from "~/i18n";
 
 const storage = vi.hoisted(() => {
   const values = new Map<string, string>();
@@ -331,7 +332,7 @@ describe("durable snapshot delivery", () => {
           void store.syncPersistedAttachments(target, [capture]);
         }
         await expect(deliverSnapShot(bridge, capture, target)).rejects.toThrow(
-          "could not be saved",
+          t("The captured window could not be saved to the draft."),
         );
         expect(acknowledgeSnapShot).not.toHaveBeenCalled();
         expect(

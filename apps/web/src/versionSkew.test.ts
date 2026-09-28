@@ -1,6 +1,7 @@
 import { EnvironmentId } from "@t3tools/contracts";
 import type { ServerUpdateState } from "@t3tools/client-runtime/state/server";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { t } from "~/i18n";
 
 // Pinned so the direction cases below read as fixed versions instead of
 // arithmetic on whatever version this checkout happens to be at.
@@ -21,8 +22,9 @@ import {
   supportsDesktopAppUpdate,
 } from "./versionSkew";
 
-const MISMATCH_HINT =
-  "Version mismatch. Try syncing the client and server to the same T3 Code version.";
+const MISMATCH_HINT = t(
+  "Version mismatch. Try syncing the client and server to the same T3 Code version.",
+);
 
 describe("versionSkew", () => {
   beforeEach(() => {
@@ -215,7 +217,7 @@ describe("versionSkew", () => {
   });
 
   it("matches version-drift guidance to the advertised update path", () => {
-    expect(serverUpdateGuidance("respawn")).toBe("Update to stay in sync");
-    expect(serverUpdateGuidance("desktop-managed")).toBe("Update the desktop app");
+    expect(serverUpdateGuidance("respawn")).toBe(t("Update to stay in sync"));
+    expect(serverUpdateGuidance("desktop-managed")).toBe(t("Update the desktop app"));
   });
 });

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { t } from "~/i18n";
 
 const { confirmMock, readLocalApiMock } = vi.hoisted(() => {
   const confirmMock = vi.fn<(message: string, options?: unknown) => Promise<boolean>>();
@@ -62,8 +63,10 @@ describe("terminal close confirmation", () => {
     await expect(confirmTerminalClose(["Terminal 1", "Development server"])).resolves.toBe(true);
     expect(confirmMock).toHaveBeenCalledWith(
       [
-        "Close 2 terminals?",
-        'This stops their running processes and clears their histories: "Terminal 1", "Development server".',
+        t("Close {count} terminals?", { count: 2 }),
+        t("This stops their running processes and clears their histories: {labels}.", {
+          labels: '"Terminal 1", "Development server"',
+        }),
       ].join("\n"),
       { variant: "destructive" },
     );

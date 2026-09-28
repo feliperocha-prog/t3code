@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 /** Shows startup failures before React can replace the boot splash. */
 export function showBootError(error: unknown) {
   console.error("T3 Code failed to start.", error);
@@ -9,7 +10,7 @@ export function showBootError(error: unknown) {
   content.setAttribute("role", "alert");
 
   const message = document.createElement("p");
-  message.textContent = "T3 Code could not load.";
+  message.textContent = t("T3 Code could not load.");
   content.append(message);
 
   if (import.meta.env.DEV && error instanceof Error) {
@@ -20,7 +21,7 @@ export function showBootError(error: unknown) {
 
   const reload = document.createElement("button");
   reload.type = "button";
-  reload.textContent = "Reload";
+  reload.textContent = t("Reload");
   reload.addEventListener("click", () => window.location.reload());
   content.append(reload);
   bootShell.replaceChildren(content);

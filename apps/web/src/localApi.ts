@@ -3,6 +3,7 @@ import type { ConfirmDialogOptions, ContextMenuItem, LocalApi } from "@t3tools/c
 import { requestConfirmDialog } from "./confirmDialog";
 import { dismissContextMenu, showContextMenuFallback } from "./contextMenuFallback";
 import { readBrowserClientSettings, writeBrowserClientSettings } from "./clientPersistenceStorage";
+import { t } from "~/i18n";
 
 let cachedApi: LocalApi | undefined;
 
@@ -22,7 +23,7 @@ function createBrowserLocalApi(): LocalApi {
         if (window.desktopBridge) {
           const opened = await window.desktopBridge.openExternal(url);
           if (!opened) {
-            throw new Error("Unable to open link.");
+            throw new Error(t("Unable to open link."));
           }
           return;
         }
@@ -33,11 +34,11 @@ function createBrowserLocalApi(): LocalApi {
       // desktop shells that predate this method) have nothing to open.
       openSystemSettings: async (pane) => {
         if (!window.desktopBridge?.openSystemSettings) {
-          throw new Error("Unable to open System Settings.");
+          throw new Error(t("Unable to open System Settings."));
         }
         const opened = await window.desktopBridge.openSystemSettings(pane);
         if (!opened) {
-          throw new Error("Unable to open System Settings.");
+          throw new Error(t("Unable to open System Settings."));
         }
       },
     },

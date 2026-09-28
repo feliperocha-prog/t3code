@@ -502,28 +502,28 @@ function summarizeGitActionResult(
 } {
   if (result.pr.status === "created" || result.pr.status === "opened_existing") {
     const prNumber = result.pr.number ? ` #${result.pr.number}` : "";
-    const title = `${result.pr.status === "created" ? "Created" : "Opened"} ${terms.shortLabel}${prNumber}`;
+    const title = `${terms.shortLabel}${prNumber} ${result.pr.status === "created" ? "criado" : "aberto"}`;
     return withDescription(title, truncateText(result.pr.title));
   }
 
   if (result.push.status === "pushed") {
     const shortSha = shortenSha(result.commit.commitSha);
     const branch = result.push.upstreamBranch ?? result.push.branch;
-    const pushedCommitPart = shortSha ? ` ${shortSha}` : "";
-    const branchPart = branch ? ` to ${branch}` : "";
+    const pushedCommitPart = shortSha ? ` de ${shortSha}` : "";
+    const branchPart = branch ? ` para ${branch}` : "";
     return withDescription(
-      `Pushed${pushedCommitPart}${branchPart}`,
+      `Push${pushedCommitPart}${branchPart} concluído`,
       truncateText(result.commit.subject),
     );
   }
 
   if (result.commit.status === "created") {
     const shortSha = shortenSha(result.commit.commitSha);
-    const title = shortSha ? `Committed ${shortSha}` : "Committed changes";
+    const title = shortSha ? `Commit ${shortSha} criado` : "Alterações commitadas";
     return withDescription(title, truncateText(result.commit.subject));
   }
 
-  return { title: "Done" };
+  return { title: "Concluído" };
 }
 
 function sanitizeCommitMessage(generated: {
@@ -1755,7 +1755,7 @@ export const make = Effect.gen(function* () {
               result.pr.status === "opened_existing")
           ? {
               kind: "open_pr" as const,
-              label: `View ${terms.shortLabel}`,
+              label: `Ver ${terms.shortLabel}`,
               url: openPr.url,
             }
           : (result.action === "push" || result.action === "commit_push") &&
@@ -1763,7 +1763,7 @@ export const make = Effect.gen(function* () {
               !currentBranchIsDefault
             ? {
                 kind: "run_action" as const,
-                label: `Create ${terms.shortLabel}`,
+                label: `Criar ${terms.shortLabel}`,
                 action: { kind: "create_pr" as const },
               }
             : {
@@ -1916,7 +1916,7 @@ export const make = Effect.gen(function* () {
         yield* emit({
           kind: "phase_started",
           phase: "commit",
-          label: "Generating commit message...",
+          label: "Gerando mensagem de commit...",
         });
       }
       suggestion = yield* resolveCommitAndBranchSuggestion({
@@ -1934,7 +1934,7 @@ export const make = Effect.gen(function* () {
     yield* emit({
       kind: "phase_started",
       phase: "commit",
-      label: "Committing...",
+      label: "Fazendo commit...",
     });
 
     let currentHookName: string | null = null;
@@ -2047,7 +2047,7 @@ export const make = Effect.gen(function* () {
     yield* emit({
       kind: "phase_started",
       phase: "pr",
-      label: `Generating ${terms.shortLabel} content...`,
+      label: `Gerando conteúdo do ${terms.shortLabel}...`,
     });
     const baseRangeRef = yield* resolveBaseRangeRef(cwd, baseBranch);
     const rangeContext = yield* gitCore.readRangeContext(cwd, baseRangeRef);
@@ -2087,7 +2087,7 @@ export const make = Effect.gen(function* () {
     yield* emit({
       kind: "phase_started",
       phase: "pr",
-      label: `Creating ${terms.singular}...`,
+      label: `Criando ${terms.singular}...`,
     });
     yield* provider
       .createChangeRequest({
@@ -2736,7 +2736,7 @@ export const make = Effect.gen(function* () {
           yield* progress.emit({
             kind: "phase_started",
             phase: "branch",
-            label: "Preparing feature branch...",
+            label: "Preparando branch de feature...",
           });
           const result = yield* runFeatureBranchStep(
             textGenerationSettings,
@@ -2784,7 +2784,7 @@ export const make = Effect.gen(function* () {
               .emit({
                 kind: "phase_started",
                 phase: "push",
-                label: "Pushing...",
+                label: "Fazendo push...",
               })
               .pipe(
                 Effect.tap(() => Ref.set(currentPhase, Option.some("push"))),
@@ -2797,7 +2797,7 @@ export const make = Effect.gen(function* () {
               .emit({
                 kind: "phase_started",
                 phase: "pr",
-                label: `Preparing ${changeRequestTerms?.shortLabel ?? "PR"}...`,
+                label: `Preparando ${changeRequestTerms?.shortLabel ?? "PR"}...`,
               })
               .pipe(
                 Effect.tap(() => Ref.set(currentPhase, Option.some("pr"))),

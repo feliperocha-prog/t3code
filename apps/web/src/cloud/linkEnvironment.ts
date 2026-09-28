@@ -31,6 +31,7 @@ import {
   reportRelayClientInstallProgress,
   requestRelayClientInstallConfirmation,
 } from "./relayClientInstallDialog";
+import { t } from "~/i18n";
 
 function relayUrl(): string | null {
   return resolveCloudPublicConfig().relayUrl;
@@ -55,21 +56,24 @@ function ensureRelayClientAvailable(
     const registry = yield* EnvironmentRegistry;
     const status = yield* registry
       .run(environmentId, request(WS_METHODS.cloudGetRelayClientStatus, {}))
-      .pipe(Effect.mapError(relayClientRpcError("Could not check relay client availability.")));
+      .pipe(Effect.mapError(relayClientRpcError(t("Could not check relay client availability."))));
     if (status.status === "available") return;
     if (status.status === "unsupported") {
       return yield* new CloudEnvironmentLinkError({
-        message: `T3 Code cannot install the relay client automatically on ${status.platform}-${status.arch}.`,
+        message: t("T3 Code cannot install the relay client automatically on {platform}-{arch}.", {
+          platform: status.platform,
+          arch: status.arch,
+        }),
       });
     }
 
     const confirmed = yield* Effect.tryPromise({
       try: () => requestRelayClientInstallConfirmation(status.version),
-      catch: relayClientRpcError("Could not confirm relay client installation."),
+      catch: relayClientRpcError(t("Could not confirm relay client installation.")),
     });
     if (!confirmed) {
       return yield* new CloudEnvironmentLinkError({
-        message: "Relay client installation was cancelled.",
+        message: t("Relay client installation was cancelled."),
       });
     }
 
@@ -82,12 +86,12 @@ function ensureRelayClientAvailable(
       )
       .pipe(
         Stream.runLast,
-        Effect.mapError(relayClientRpcError("Could not install the relay client.")),
+        Effect.mapError(relayClientRpcError(t("Could not install the relay client."))),
         Effect.ensuring(Effect.sync(finishRelayClientInstall)),
       );
     if (Option.isNone(installed) || installed.value.type !== "complete") {
       return yield* new CloudEnvironmentLinkError({
-        message: "The relay client install completed without a final status.",
+        message: t("The relay client install completed without a final status."),
       });
     }
     const installedStatus = installed.value.status;
@@ -95,8 +99,11 @@ function ensureRelayClientAvailable(
       return yield* new CloudEnvironmentLinkError({
         message:
           installedStatus.status === "unsupported"
-            ? `T3 Code cannot install the relay client automatically on ${installedStatus.platform}-${installedStatus.arch}.`
-            : "The relay client is still unavailable after installation.",
+            ? t("T3 Code cannot install the relay client automatically on {platform}-{arch}.", {
+                platform: installedStatus.platform,
+                arch: installedStatus.arch,
+              })
+            : t("The relay client is still unavailable after installation."),
       });
     }
   });
@@ -165,12 +172,12 @@ function ensureLinkedEnvironmentMatches(input: {
 }): Effect.Effect<void, CloudEnvironmentLinkError> {
   if (input.link.environmentId !== input.expectedEnvironmentId) {
     return new CloudEnvironmentLinkError({
-      message: "Relay returned credentials for a different environment.",
+      message: t("Relay returned credentials for a different environment."),
     });
   }
   if (input.link.endpoint.providerKind !== input.expectedProviderKind) {
     return new CloudEnvironmentLinkError({
-      message: "Relay returned credentials for a different endpoint provider.",
+      message: t("Relay returned credentials for a different endpoint provider."),
     });
   }
   return Effect.void;
@@ -192,7 +199,9 @@ export function readPrimaryCloudLinkState(input: {
     const client = yield* makeEnvironmentHttpApiClient(input.target.httpBaseUrl);
     return yield* client.connect
       .linkState({ headers: {} })
-      .pipe(Effect.mapError(environmentApiError("Could not read environment cloud link state.")));
+      .pipe(
+        Effect.mapError(environmentApiError(t("Could not read environment cloud link state."))),
+      );
   }).pipe(Effect.provide(primaryEnvironmentHttpLayer));
 }
 
@@ -208,7 +217,7 @@ export function updatePrimaryCloudPreferences(input: {
         payload: input,
       })
       .pipe(
-        Effect.mapError(environmentApiError("Could not update environment cloud preferences.")),
+        Effect.mapError(environmentApiError(t("Could not update environment cloud preferences."))),
       );
   }).pipe(Effect.provide(primaryEnvironmentHttpLayer));
 }
@@ -225,7 +234,9 @@ export function unlinkPrimaryEnvironmentFromCloud(input: {
     const client = yield* makeEnvironmentHttpApiClient(input.target.httpBaseUrl);
     yield* client.connect
       .unlink({ headers: {} })
-      .pipe(Effect.mapError(environmentApiError("Could not unlink the environment from cloud.")));
+      .pipe(
+        Effect.mapError(environmentApiError(t("Could not unlink the environment from cloud."))),
+      );
 
     const configuredRelayUrl = relayUrl();
     if (configuredRelayUrl && input.clerkToken) {
@@ -309,7 +320,7 @@ export function linkPrimaryEnvironmentToCloud(input: {
           origin: endpointOrigin(input.target.httpBaseUrl),
         },
       })
-      .pipe(Effect.mapError(environmentApiError("Could not obtain environment link proof.")));
+      .pipe(Effect.mapError(environmentApiError(t("Could not obtain environment link proof."))));
     const link = yield* relayClient
       .linkEnvironment({
         clerkToken: input.clerkToken,
@@ -343,6 +354,8 @@ export function linkPrimaryEnvironmentToCloud(input: {
           endpointRuntime: link.endpointRuntime,
         },
       })
-      .pipe(Effect.mapError(environmentApiError("Could not configure environment relay access.")));
+      .pipe(
+        Effect.mapError(environmentApiError(t("Could not configure environment relay access."))),
+      );
   }).pipe(Effect.provide(primaryEnvironmentHttpLayer));
 }

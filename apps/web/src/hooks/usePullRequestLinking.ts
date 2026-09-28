@@ -27,6 +27,7 @@ import {
 import { useProjects, useServerConfigs } from "~/state/entities";
 import { threadEnvironment } from "~/state/threads";
 import { useAtomCommand } from "~/state/use-atom-command";
+import { t } from "~/i18n";
 
 /** Routes link actions through the command advertised by this environment. */
 export function usePullRequestLinking(environmentId: EnvironmentId | null | undefined) {
@@ -76,7 +77,7 @@ export function usePullRequestLinking(environmentId: EnvironmentId | null | unde
     const changeLink = async (threadRef: ScopedThreadRef, url: string, linked: boolean) => {
       const parsed = parseChangeRequestUrl(url);
       if (parsed === null || threadRef.environmentId !== environmentId || (linked && !canLink(url)))
-        throw new Error("The pull request is not available in this environment.");
+        throw new Error(t("The pull request is not available in this environment."));
       const legacyProject = findProjectForChangeRequest(environmentProjects, parsed);
       const mutation = planThreadPullRequestMutation({
         capabilities,
@@ -88,14 +89,14 @@ export function usePullRequestLinking(environmentId: EnvironmentId | null | unde
         linked,
       });
       if (mutation === null)
-        throw new Error("This environment does not support linking this pull request.");
+        throw new Error(t("This environment does not support linking this pull request."));
       const result = await (mutation.type === "thread.meta.update"
         ? updateMetadata({ environmentId: threadRef.environmentId, input: mutation.input })
         : mutation.type === "thread.pull-request.link"
           ? link({ environmentId: threadRef.environmentId, input: mutation.input })
           : unlink({ environmentId: threadRef.environmentId, input: mutation.input }));
       if (result._tag === "Failure") {
-        if (isAtomCommandInterrupted(result)) throw new Error("Link update interrupted.");
+        if (isAtomCommandInterrupted(result)) throw new Error(t("Link update interrupted."));
         throw squashAtomCommandFailure(result);
       }
     };

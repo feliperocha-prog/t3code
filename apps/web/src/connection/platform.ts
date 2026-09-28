@@ -61,6 +61,7 @@ import {
 } from "./desktopLocal";
 import { connectionStorageLayer } from "./storage";
 import { clientPresentationMetadata } from "./clientMetadata";
+import { t } from "~/i18n";
 
 let nextObservedRpcRequestId = 0;
 
@@ -139,7 +140,7 @@ function sshPreparationError(cause: unknown) {
   }
   return new ConnectionTransientError({
     reason: "remote-unavailable",
-    detail: `Could not prepare the SSH environment: ${message}`,
+    detail: t("Could not prepare the SSH environment: {message}", { message }),
   });
 }
 
@@ -157,7 +158,7 @@ export const provisionDesktopSshEnvironment = Effect.fn(
   if (pairingToken === null) {
     return yield* new ConnectionBlockedError({
       reason: "authentication",
-      detail: "The SSH environment did not issue a pairing credential.",
+      detail: t("The SSH environment did not issue a pairing credential."),
     });
   }
   const descriptor = yield* Effect.tryPromise({
@@ -191,7 +192,7 @@ const capabilitiesLayer = Layer.effectContext(
         if (session === null) {
           return yield* new ConnectionBlockedError({
             reason: "authentication",
-            detail: "Sign in to T3 Connect to connect this environment.",
+            detail: t("Sign in to T3 Connect to connect this environment."),
           });
         }
         const token = yield* session.readClerkToken().pipe(
@@ -206,7 +207,7 @@ const capabilitiesLayer = Layer.effectContext(
         if (token === null) {
           return yield* new ConnectionBlockedError({
             reason: "authentication",
-            detail: "The T3 Connect session is unavailable.",
+            detail: t("The T3 Connect session is unavailable."),
           });
         }
         return token;
@@ -221,7 +222,9 @@ const capabilitiesLayer = Layer.effectContext(
         catch: (cause) =>
           new ConnectionTransientError({
             reason: "remote-unavailable",
-            detail: `Could not load the desktop primary credential: ${String(cause)}`,
+            detail: t("Could not load the desktop primary credential: {cause}", {
+              cause: String(cause),
+            }),
           }),
       }).pipe(Effect.map(Option.fromNullishOr)),
     });
@@ -231,7 +234,7 @@ const capabilitiesLayer = Layer.effectContext(
         if (bridge === undefined) {
           return yield* new ConnectionBlockedError({
             reason: "unsupported",
-            detail: "SSH environments are only available in the desktop app.",
+            detail: t("SSH environments are only available in the desktop app."),
           });
         }
         return yield* provisionDesktopSshEnvironment(bridge, target);
@@ -241,7 +244,7 @@ const capabilitiesLayer = Layer.effectContext(
         if (bridge === undefined) {
           return yield* new ConnectionBlockedError({
             reason: "unsupported",
-            detail: "SSH environments are only available in the desktop app.",
+            detail: t("SSH environments are only available in the desktop app."),
           });
         }
         const bootstrap = yield* Effect.tryPromise({
@@ -254,7 +257,7 @@ const capabilitiesLayer = Layer.effectContext(
         if (bootstrap.pairingToken === null) {
           return yield* new ConnectionBlockedError({
             reason: "authentication",
-            detail: "The SSH environment did not issue a pairing credential.",
+            detail: t("The SSH environment did not issue a pairing credential."),
           });
         }
         const access = yield* Effect.tryPromise({
@@ -277,7 +280,9 @@ const capabilitiesLayer = Layer.effectContext(
           catch: (cause) =>
             new ConnectionTransientError({
               reason: "remote-unavailable",
-              detail: `Could not disconnect the SSH environment: ${String(cause)}`,
+              detail: t("Could not disconnect the SSH environment: {cause}", {
+                cause: String(cause),
+              }),
             }),
         });
       }),

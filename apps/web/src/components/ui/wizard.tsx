@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../../lib/utils";
 import { AnimatedHeight } from "../AnimatedHeight";
 import { DialogPopup, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./dialog";
+import { t } from "~/i18n";
 
 /** Compose a wizard from its header, panel, and footer; flow logic stays with the caller. */
 export function WizardPopup({
@@ -78,7 +79,7 @@ export function WizardSteps({
     <ol
       className="grid auto-cols-fr grid-flow-col gap-1 rounded-xl bg-zinc-25 p-1 ring-1 ring-black/5 dark:bg-white/4 dark:ring-white/5"
       role="list"
-      aria-label="Setup progress"
+      aria-label={t("Setup progress")}
     >
       {steps.map((step, index) => (
         <li key={step} className="min-w-0">

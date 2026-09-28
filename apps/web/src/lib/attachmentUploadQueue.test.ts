@@ -10,6 +10,7 @@ import {
   type ComposerFileAttachment,
   type ComposerImageAttachment,
 } from "../composerDraftStore";
+import { t } from "~/i18n";
 
 const mocks = vi.hoisted(() => ({
   connectionStateAtom: vi.fn(),
@@ -628,7 +629,7 @@ describe("attachmentUploadQueue", () => {
       await awaitAttachmentUploads([file.id]);
       expect(readAttachmentUpload(file.id)).toMatchObject({
         status: "failed",
-        reason: "Uploaded file could not be verified. Retry when the server reconnects.",
+        reason: t("Uploaded file could not be verified. Retry when the server reconnects."),
       });
       expect(useComposerDraftStore.getState().getComposerDraft(draftId)?.files).toMatchObject([
         {
@@ -820,7 +821,7 @@ describe("attachmentUploadQueue", () => {
     await settled;
     expect(readAttachmentUpload(image.id)).toMatchObject({
       status: "failed",
-      reason: "Upload rejected (500)",
+      reason: t("Upload rejected ({status})", { status: 500 }),
     });
 
     retryAttachmentUpload({ environmentId: firstEnvironment, image });
