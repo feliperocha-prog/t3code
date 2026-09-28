@@ -205,7 +205,7 @@ const dictionary: Readonly<Record<string, string>> = {
   "Copy command": "Copiar comando",
   "Delete instance {id}": "Excluir instância {id}",
   "Instance label": "Nome da instância",
-  Setup: "Configuração inicial",
+  "section title|Setup": "Configuração inicial",
   Runtime: "Execução",
   "This instance uses": "Esta instância usa",
   ", which is not available in this build. Its configuration is preserved.":
@@ -631,7 +631,6 @@ const dictionary: Readonly<Record<string, string>> = {
     "Capture uma janela e anexe ao seu rascunho atual.",
   "This desktop only provides a screenshot.": "Este desktop só oferece captura de tela.",
   "Update the desktop app to use snapshots.": "Atualize o app para desktop para usar snapshots.",
-  "Only available in the desktop app.": "Disponível só no app para desktop.",
   "Still unable to check access. See Advanced for help.":
     "Ainda não foi possível verificar o acesso. Veja Avançado para obter ajuda.",
   "Ready. You'll choose a window each time.": "Pronto. Você vai escolher uma janela a cada vez.",
@@ -903,7 +902,7 @@ const dictionary: Readonly<Record<string, string>> = {
   "Usage breakdown": "Detalhamento do uso",
   Hour: "Hora",
   Day: "Dia",
-  Share: "Parcela",
+  "usage table column|Share": "Parcela",
   "No activity in this window.": "Nenhuma atividade neste período.",
   Unpriced: "Sem preço",
   Total: "Total",

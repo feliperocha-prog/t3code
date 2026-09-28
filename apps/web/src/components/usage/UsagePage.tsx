@@ -1,5 +1,5 @@
 import { RefreshIcon } from "~/components/ui/refresh-icon";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 import { useAtomValue } from "@effect/atom-react";
 import {
   ProviderDriverKind,
@@ -625,7 +625,9 @@ export function UsagePage() {
                         <tr className="border-b border-border text-left text-xs text-muted-foreground">
                           <th className="py-2 font-normal">{t("Model")}</th>
                           <th className="py-2 text-right font-normal">{t("Cost")}</th>
-                          <th className="py-2 text-right font-normal">{t("Share")}</th>
+                          <th className="py-2 text-right font-normal">
+                            {tc("usage table column", "Share")}
+                          </th>
                           <th className="py-2 text-right font-normal">{t("Tokens")}</th>
                         </tr>
                       </thead>

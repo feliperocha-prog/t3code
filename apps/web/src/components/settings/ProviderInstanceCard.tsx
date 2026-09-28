@@ -1,7 +1,7 @@
 "use client";
 
 import { Spinner } from "~/components/ui/spinner";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 import {
   AlertTriangleIcon,
@@ -918,7 +918,9 @@ export function ProviderInstanceCard({
         />
       </SettingsSection>
 
-      {setup ? <SettingsSection title={t("Setup")}>{setup}</SettingsSection> : null}
+      {setup ? (
+        <SettingsSection title={tc("section title", "Setup")}>{setup}</SettingsSection>
+      ) : null}
 
       <SettingsSection
         title={t("Runtime")}
