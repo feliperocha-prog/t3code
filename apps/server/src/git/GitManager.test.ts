@@ -2844,7 +2844,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           },
         },
       });
-      expect(result.toast.title).toMatch(/^Committed [0-9a-f]{7}$/);
+      expect(result.toast.title).toMatch(/^Commit [0-9a-f]{7} criado$/);
       expect(
         yield* runGit(repoDir, ["log", "-1", "--pretty=%s"]).pipe(
           Effect.map((result) => result.stdout.trim()),
@@ -3076,14 +3076,14 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         description: "Implement stacked git actions",
         cta: {
           kind: "run_action",
-          label: "Create PR",
+          label: "Criar PR",
           action: {
             kind: "create_pr",
           },
         },
       });
       expect(result.toast.title).toMatch(
-        /^Pushed [0-9a-f]{7} to origin\/feature\/implement-stacked-git-actions$/,
+        /^Push de [0-9a-f]{7} para origin\/feature\/implement-stacked-git-actions concluído$/,
       );
       expect(
         yield* runGit(repoDir, ["rev-parse", "--abbrev-ref", "HEAD"]).pipe(
@@ -3523,11 +3523,11 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       expect(result.pr.status).toBe("opened_existing");
       expect(result.pr.number).toBe(42);
       expect(result.toast).toEqual({
-        title: "Opened PR #42",
+        title: "PR #42 aberto",
         description: "Existing PR",
         cta: {
           kind: "open_pr",
-          label: "View PR",
+          label: "Ver PR",
           url: "https://github.com/pingdotgg/codething-mvp/pull/42",
         },
       });
@@ -4183,11 +4183,11 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         expect(result.pr.status).toBe("created");
         expect(result.pr.number).toBe(188);
         expect(result.toast).toEqual({
-          title: "Created PR #188",
+          title: "PR #188 criado",
           description: "Add stacked git actions",
           cta: {
             kind: "open_pr",
-            label: "View PR",
+            label: "Ver PR",
             url: "https://github.com/pingdotgg/codething-mvp/pull/188",
           },
         });
@@ -5889,17 +5889,17 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         expect.objectContaining({
           kind: "phase_started",
           phase: "pr",
-          label: "Preparing PR...",
+          label: "Preparando PR...",
         }),
         expect.objectContaining({
           kind: "phase_started",
           phase: "pr",
-          label: "Generating PR content...",
+          label: "Gerando conteúdo do PR...",
         }),
         expect.objectContaining({
           kind: "phase_started",
           phase: "pr",
-          label: "Creating pull request...",
+          label: "Criando pull request...",
         }),
       ]);
     }),
