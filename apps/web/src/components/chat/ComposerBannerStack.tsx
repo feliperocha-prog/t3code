@@ -5,6 +5,7 @@ import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { ComposerBanner, type ComposerBannerVariant } from "./ComposerBanner";
+import { t } from "~/i18n";
 
 // Match the duration-220 exit transition before removing a dismissed notice.
 const DISMISS_TRANSITION_MS = 220;
@@ -180,7 +181,7 @@ export function ComposerBannerStack({ className, items }: ComposerBannerStackPro
               <ComposerBanner.Peek
                 ref={peekRef}
                 variant={firstStackedItem.variant}
-                aria-label="Show other notices"
+                aria-label={t("Show other notices")}
                 aria-expanded={stackExpanded}
                 aria-controls={expandedItemsId}
                 aria-hidden={stackExpanded || undefined}
@@ -197,7 +198,7 @@ export function ComposerBannerStack({ className, items }: ComposerBannerStackPro
               id={expandedItemsId}
               ref={expandedItemsRef}
               role="group"
-              aria-label="Other notices"
+              aria-label={t("Other notices")}
               tabIndex={-1}
               data-composer-banner-stack-expanded-items="true"
               className={cn(
@@ -295,7 +296,7 @@ function NoticeDescription({ children, compact }: { children: ReactNode; compact
                 ref={detailsRef}
                 size="icon-xs"
                 variant="ghost-muted"
-                aria-label="Show notice details"
+                aria-label={t("Show notice details")}
                 className="flex-none"
               />
             }
@@ -303,7 +304,7 @@ function NoticeDescription({ children, compact }: { children: ReactNode; compact
             <InfoIcon />
           </PopoverTrigger>
           <PopoverPopup
-            aria-label="Notice details"
+            aria-label={t("Notice details")}
             tooltipStyle
             side="top"
             className="max-w-80 whitespace-normal wrap-anywhere"
@@ -364,7 +365,7 @@ function ComposerBannerStackAlert({
             {item.actions}
             {item.onDismiss ? (
               <ComposerBanner.Dismiss
-                aria-label={item.dismissLabel ?? "Dismiss warning"}
+                aria-label={item.dismissLabel ?? t("Dismiss warning")}
                 disabled={exiting}
                 onClick={onDismissRequest}
               />

@@ -9,6 +9,7 @@ import {
   shouldOfferResumeCompaction,
   shouldReserveContextWindowMeter,
 } from "./ContextWindowMeter.logic";
+import { t } from "~/i18n";
 
 function claudeProvider(input: {
   instanceId: string;
@@ -122,19 +123,19 @@ describe("resolveContextWindowModelDisplayName", () => {
 describe("formatContextWindowCompactionMessage", () => {
   it("describes compaction in terms of the selected model", () => {
     expect(formatContextWindowCompactionMessage("GPT-5.6 Sol")).toBe(
-      "Context for GPT-5.6 Sol compacts automatically when needed.",
+      t("Context for {model} compacts automatically when needed.", { model: "GPT-5.6 Sol" }),
     );
   });
 
   it("uses neutral copy when the model is unavailable", () => {
     expect(formatContextWindowCompactionMessage(null)).toBe(
-      "Context compacts automatically when needed.",
+      t("Context compacts automatically when needed."),
     );
   });
 
   it("shows the configured auto-compaction threshold", () => {
     expect(formatContextWindowCompactionMessage("Claude Sonnet 5", 300_000)).toBe(
-      "Compacts automatically at 300,000 tokens.",
+      t("Compacts automatically at {count} tokens.", { count: "300,000" }),
     );
   });
 });

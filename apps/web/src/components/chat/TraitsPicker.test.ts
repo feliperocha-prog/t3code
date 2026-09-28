@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { ProviderDriverKind, type ProviderOptionDescriptor } from "@t3tools/contracts";
 import { buildTraitsTriggerDisplay, buildUnavailableModelOptionDescriptors } from "./TraitsPicker";
+import { t } from "~/i18n";
 
 function selectDescriptor(
   id: string,
@@ -112,18 +113,18 @@ describe("buildTraitsTriggerDisplay", () => {
       currentValue: true,
     };
     expect(display([EFFORT, thinking])).toEqual({
-      label: "High · Thinking On",
+      label: `High · Thinking ${t("On")}`,
       showFastModeIcon: false,
     });
   });
 
   it("falls back to a text label when fast mode is the only trait", () => {
     expect(display([fastModeDescriptor(true)])).toEqual({
-      label: "Fast",
+      label: t("Fast"),
       showFastModeIcon: false,
     });
     expect(display([fastModeDescriptor(false)])).toEqual({
-      label: "Normal",
+      label: t("Normal"),
       showFastModeIcon: false,
     });
   });
@@ -167,14 +168,14 @@ describe("buildUnavailableModelOptionDescriptors", () => {
     ).toEqual([
       {
         id: "variant",
-        label: "Reasoning",
+        label: t("Reasoning"),
         type: "select",
         options: [{ id: "max", label: "max" }],
         currentValue: "max",
       },
       {
         id: "agent",
-        label: "Agent",
+        label: t("Agent"),
         type: "select",
         options: [{ id: "build", label: "build" }],
         currentValue: "build",

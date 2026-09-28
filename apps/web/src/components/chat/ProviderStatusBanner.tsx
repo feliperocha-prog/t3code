@@ -5,6 +5,7 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
 import { Button, InlineButton } from "../ui/button";
 import { formatProviderDriverKindLabel } from "../../providerModels";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { t } from "~/i18n";
 
 /** Unsupported and broken versions fail mid-turn, so they warn even when ready. */
 function getIncompatibleVersion(status: ServerProvider) {
@@ -58,21 +59,23 @@ export function getProviderStatusMessage(status: ServerProvider): string {
   if (status.message) return status.message;
   const providerName = status.displayName?.trim() || formatProviderDriverKindLabel(status.driver);
   if (!status.installed && hasProviderSetup(status)) {
-    return `Open provider setup to install ${formatProviderDriverKindLabel(status.driver)} on this environment.`;
+    return t("Open provider setup to install {provider} on this environment.", {
+      provider: formatProviderDriverKindLabel(status.driver),
+    });
   }
   if (status.auth.status === "unauthenticated") {
     if (hasProviderSetup(status)) {
       return status.driver === "antigravity"
-        ? "Open provider setup to sign in with Google."
-        : "Open provider setup to sign in.";
+        ? t("Open provider setup to sign in with Google.")
+        : t("Open provider setup to sign in.");
     }
-    return "Sign in via the CLI to authenticate again.";
+    return t("Sign in via the CLI to authenticate again.");
   }
   return status.status === "ready"
-    ? "No models are available for this provider."
+    ? t("No models are available for this provider.")
     : status.status === "error"
-      ? `${providerName} provider is unavailable.`
-      : `${providerName} provider has limited availability.`;
+      ? t("{provider} provider is unavailable.", { provider: providerName })
+      : t("{provider} provider has limited availability.", { provider: providerName });
 }
 
 export const ProviderStatusBanner = memo(function ProviderStatusBanner({
@@ -92,10 +95,18 @@ export const ProviderStatusBanner = memo(function ProviderStatusBanner({
   const isUnauthenticated = status.status === "error" && status.auth.status === "unauthenticated";
   const incompatible = status.status === "ready" ? getIncompatibleVersion(status) : null;
   const title = isUnauthenticated
-    ? `${providerName} is unauthenticated`
+    ? t("{provider} is unauthenticated", { provider: providerName })
     : incompatible
-      ? `${providerName} ${status.version ?? ""} is ${incompatible.status === "broken" ? "known to be broken" : "unsupported"}`
-      : `${providerName} provider status`;
+      ? incompatible.status === "broken"
+        ? t("{provider} {version} is known to be broken", {
+            provider: providerName,
+            version: status.version ?? "",
+          })
+        : t("{provider} {version} is unsupported", {
+            provider: providerName,
+            version: status.version ?? "",
+          })
+      : t("{provider} provider status", { provider: providerName });
   const message = incompatible?.message ?? getProviderStatusMessage(status);
   const isWarning = status.status === "warning" || incompatible !== null;
 
@@ -118,13 +129,22 @@ export const ProviderStatusBanner = memo(function ProviderStatusBanner({
           </Tooltip>
           {onOpenProviderSetup && hasProviderSetup(status) ? (
             <InlineButton onClick={() => onOpenProviderSetup(status.instanceId)}>
-              Open provider setup
+              {t("Open provider setup")}
             </InlineButton>
           ) : null}
         </AlertDescription>
         <AlertAction>
           <Button
-            aria-label={`Dismiss ${providerName} provider ${status.status}`}
+            aria-label={
+              status.status === "error"
+                ? t("Dismiss {provider} provider error", { provider: providerName })
+                : status.status === "warning"
+                  ? t("Dismiss {provider} provider warning", { provider: providerName })
+                  : t("Dismiss {provider} provider {status}", {
+                      provider: providerName,
+                      status: status.status,
+                    })
+            }
             onClick={onDismiss}
             size="icon-xs"
             variant="ghost-muted"

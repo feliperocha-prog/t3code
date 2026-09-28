@@ -28,6 +28,7 @@ import { cn } from "~/lib/utils";
 import { orchestrationEnvironment } from "~/state/orchestration";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Button } from "~/components/ui/button";
+import { t } from "~/i18n";
 
 /**
  * In-flight states all present as Working (one steady state, per the
@@ -36,16 +37,16 @@ import { Button } from "~/components/ui/button";
  * user problem). Only settled states differentiate.
  */
 const STATUS_VISUALS: Record<RuntimeSubagent["status"], { dotClass: string; label: string }> = {
-  pending: { dotClass: "bg-info", label: "Working" },
-  running: { dotClass: "bg-info", label: "Working" },
-  waiting: { dotClass: "bg-info", label: "Working" },
+  pending: { dotClass: "bg-info", label: t("Working") },
+  running: { dotClass: "bg-info", label: t("Working") },
+  waiting: { dotClass: "bg-info", label: t("Working") },
   // Idle reads as settled (muted, not sky): a resting Codex child looks done
   // unless resumed — live-test: sky idle dots read as stuck in-progress.
-  idle: { dotClass: "bg-muted-foreground/50", label: "Idle · resumable" },
-  completed: { dotClass: "bg-success", label: "Completed" },
-  failed: { dotClass: "bg-destructive", label: "Failed" },
-  cancelled: { dotClass: "bg-muted-foreground/60", label: "Stopped" },
-  interrupted: { dotClass: "bg-muted-foreground/60", label: "Stopped" },
+  idle: { dotClass: "bg-muted-foreground/50", label: t("Idle · resumable") },
+  completed: { dotClass: "bg-success", label: t("Completed") },
+  failed: { dotClass: "bg-destructive", label: t("Failed") },
+  cancelled: { dotClass: "bg-muted-foreground/60", label: t("Stopped") },
+  interrupted: { dotClass: "bg-muted-foreground/60", label: t("Stopped") },
 };
 
 function StatusDot({ status }: { status: RuntimeSubagent["status"] }) {
@@ -140,7 +141,7 @@ function agentActivityText(agent: RuntimeSubagent): string | null {
 function AgentRow({ agent }: { agent: RuntimeSubagent }) {
   const visuals = STATUS_VISUALS[agent.status];
   const statusLabel =
-    agent.kind === "subagent_batch" && agent.status === "idle" ? "Idle" : visuals.label;
+    agent.kind === "subagent_batch" && agent.status === "idle" ? t("Idle") : visuals.label;
   const activity = agentActivityText(agent);
   const modelLabel = formatSubagentModelLabel(agent.model, agent.effort);
   const role =
@@ -150,8 +151,10 @@ function AgentRow({ agent }: { agent: RuntimeSubagent }) {
   const metadata = [
     modelLabel,
     agent.usage ? `${formatSubagentTokenCount(agent.usage.totalTokens)} tok` : "— tok",
-    agent.usage?.toolUses !== undefined ? `${agent.usage.toolUses} tools` : null,
-    agent.activationCount > 1 ? `run ${agent.activationCount}` : null,
+    agent.usage?.toolUses !== undefined
+      ? t("{count} tools", { count: agent.usage.toolUses })
+      : null,
+    agent.activationCount > 1 ? t("run {count}", { count: agent.activationCount }) : null,
   ].filter((value): value is string => value !== null);
 
   return (
@@ -288,7 +291,7 @@ function WorkflowScriptView({
           size="icon-micro"
           variant="ghost-muted"
           onClick={onClose}
-          aria-label="Close script"
+          aria-label={t("Close script")}
           className="ml-auto"
         >
           <X aria-hidden className="size-3" />
@@ -298,12 +301,12 @@ function WorkflowScriptView({
         {result._tag === "Success" ? (
           <pre className="whitespace-pre-wrap break-words font-mono text-2xs leading-relaxed text-foreground/90">
             {result.value.contents}
-            {result.value.truncated ? "\n… (truncated)" : ""}
+            {result.value.truncated ? `\n${t("… (truncated)")}` : ""}
           </pre>
         ) : result._tag === "Failure" ? (
-          <p className="text-xs text-destructive-foreground">Could not load the script.</p>
+          <p className="text-xs text-destructive-foreground">{t("Could not load the script.")}</p>
         ) : (
-          <p className="text-xs text-muted-foreground">Loading…</p>
+          <p className="text-xs text-muted-foreground">{t("Loading…")}</p>
         )}
       </div>
     </div>
@@ -356,10 +359,13 @@ function PhaseSection({
         <span>{phase.title}</span>
         <span className="font-normal normal-case text-muted-foreground/70">
           {phase.state === "pending" && phase.members.length === 0
-            ? "pending"
+            ? t("pending")
             : phase.state === "done"
-              ? `${phase.settledCount} done`
-              : `${phase.activeCount} active · ${phase.settledCount} done`}
+              ? t("{count} done", { count: phase.settledCount })
+              : t("{active} active · {done} done", {
+                  active: phase.activeCount,
+                  done: phase.settledCount,
+                })}
         </span>
         {!open && phase.members.length > 0 ? (
           <span className="ml-auto flex items-center gap-0.5">
@@ -418,13 +424,13 @@ function ExpandedWorkflowSection({
           </button>
         ) : null}
         <span className="ml-auto font-mono normal-case text-muted-foreground/80">
-          {settled}/{members.length} settled
+          {t("{settled}/{total} settled", { settled, total: members.length })}
         </span>
         <Button
           size="icon-micro"
           variant="ghost-muted"
           onClick={onCollapse}
-          aria-label="Collapse workflow"
+          aria-label={t("Collapse workflow")}
         >
           <ChevronDown aria-hidden className="size-3" />
         </Button>
@@ -487,8 +493,12 @@ function CollapsedWorkflowSection({
           {group.workflow.workflowName ?? group.workflow.title}
         </span>
         <span className="ml-auto flex items-center gap-1.5 font-mono text-2xs text-muted-foreground/80">
-          {failed > 0 ? <span className="text-destructive-foreground">{failed} failed</span> : null}
-          <span>{members.length} agents</span>
+          {failed > 0 ? (
+            <span className="text-destructive-foreground">
+              {t("{count} failed", { count: failed })}
+            </span>
+          ) : null}
+          <span>{t("{count} agents", { count: members.length })}</span>
           <span className="tabular-nums">· {formatSubagentTokenCount(totalTokens)} tok</span>
           {elapsed ? <span className="tabular-nums">· {elapsed}</span> : null}
           <ChevronRight aria-hidden className="size-3" />
@@ -534,10 +544,11 @@ export function AgentsPanel({
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
         <Bot aria-hidden className="size-6 text-muted-foreground/60" />
-        <p className="text-sm font-medium">No agents yet</p>
+        <p className="text-sm font-medium">{t("No agents yet")}</p>
         <p className="max-w-56 text-xs text-muted-foreground">
-          When this thread spawns subagents or runs a workflow, they show up here with live status,
-          activity, and token usage.
+          {t(
+            "When this thread spawns subagents or runs a workflow, they show up here with live status, activity, and token usage.",
+          )}
         </p>
       </div>
     );
@@ -558,7 +569,7 @@ export function AgentsPanel({
           {model.directAgents.length > 0 ? (
             <section>
               <div className="px-1.5 pt-1 text-3xs font-medium uppercase tracking-wider text-muted-foreground">
-                Direct spawns
+                {t("Direct spawns")}
               </div>
               {model.directAgents.map((agent) => (
                 <AgentRow key={agent.id} agent={agent} />
@@ -571,11 +582,15 @@ export function AgentsPanel({
         <span className="flex items-center gap-2">
           {model.runningCount + model.waitingCount > 0 ? (
             <span className="text-info-foreground">
-              ● {model.runningCount + model.waitingCount} working
+              ● {t("{count} working", { count: model.runningCount + model.waitingCount })}
             </span>
           ) : null}
-          {model.idleCount > 0 ? <span>{model.idleCount} idle</span> : null}
-          {model.settledCount > 0 ? <span>{model.settledCount} settled</span> : null}
+          {model.idleCount > 0 ? (
+            <span>{t("{count} idle", { count: model.idleCount })}</span>
+          ) : null}
+          {model.settledCount > 0 ? (
+            <span>{t("{count} settled", { count: model.settledCount })}</span>
+          ) : null}
         </span>
         <span className="tabular-nums">Σ {formatSubagentTokenCount(model.totalTokens)} tok</span>
       </footer>

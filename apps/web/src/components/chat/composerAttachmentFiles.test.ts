@@ -14,6 +14,7 @@ import {
   normalizeComposerImageFileMimeType,
   shouldHandleComposerAttachmentPaste,
 } from "./composerAttachmentFiles";
+import { t } from "~/i18n";
 
 describe("composer attachment files", () => {
   it("keeps inline non-media files out of the legacy attachment row", () => {
@@ -157,12 +158,13 @@ describe("composer attachment files", () => {
         supportsAttachmentUploads: false,
         maxFileAttachmentBytes: null,
       }),
-    ).toBe("Waiting for the server before file attachments can send");
+    ).toBe(t("Waiting for the server before file attachments can send"));
   });
 
   it("rejects local staging and send when known config has no file support", () => {
-    const unsupportedReason =
-      "This server does not accept file attachments right now. Remove the files to send.";
+    const unsupportedReason = t(
+      "This server does not accept file attachments right now. Remove the files to send.",
+    );
     expect(
       fileAttachmentStagingLimit({
         attachmentUploadsCapabilityKnown: true,

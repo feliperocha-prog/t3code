@@ -25,6 +25,7 @@ import {
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { ZoomableImage, type ZoomableImageHandle } from "./ZoomableImage";
 import { composerFloatingLayerProps } from "./composerEventScope";
+import { t } from "~/i18n";
 
 interface ExpandedImageDialogProps {
   preview: ExpandedImagePreview;
@@ -152,7 +153,6 @@ export const ExpandedImageDialog = memo(function ExpandedImageDialog({
   }, [onClose]);
 
   if (!item) return null;
-  const mediaLabel = item.type === "video" ? "video" : "image";
   const openOriginalLink =
     item.originalUrl && resolveExternalWebLinkHost(item.originalUrl) !== null ? (
       <OpenMediaLink originalUrl={item.originalUrl} />
@@ -161,10 +161,10 @@ export const ExpandedImageDialog = memo(function ExpandedImageDialog({
   const showingAccessibilityDetails =
     Boolean(accessibilityDetails) && accessibilityDetailsSrc === item.src;
   const contentsLabel = showingAccessibilityDetails
-    ? "Show screenshot"
+    ? t("Show screenshot")
     : accessibilityDetails?.format === "json"
-      ? "Show accessibility JSON"
-      : "Show extracted text";
+      ? t("Show accessibility JSON")
+      : t("Show extracted text");
   const ContentsIcon = showingAccessibilityDetails ? ImageIcon : TextIcon;
 
   return (
@@ -187,14 +187,16 @@ export const ExpandedImageDialog = memo(function ExpandedImageDialog({
           if (event.target === event.currentTarget) onClose();
         }}
       >
-        <DialogTitle className="sr-only">Expanded {mediaLabel} preview</DialogTitle>
+        <DialogTitle className="sr-only">
+          {item.type === "video" ? t("Expanded video preview") : t("Expanded image preview")}
+        </DialogTitle>
         {preview.images.length > 1 && (
           <Button
             type="button"
             size="icon"
             variant="media-navigation"
             className="left-0 top-auto -bottom-12 translate-y-0 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2"
-            aria-label="Previous media"
+            aria-label={t("Previous media")}
             onClick={() => navigateImage(-1)}
           >
             <ChevronLeftIcon className="size-5" />
@@ -209,7 +211,9 @@ export const ExpandedImageDialog = memo(function ExpandedImageDialog({
               variant="media-close"
               className="absolute right-0 -top-10 z-20"
               onClick={onClose}
-              aria-label={`Close ${mediaLabel} preview`}
+              aria-label={
+                item.type === "video" ? t("Close video preview") : t("Close image preview")
+              }
             >
               <XIcon />
             </Button>
@@ -226,8 +230,8 @@ export const ExpandedImageDialog = memo(function ExpandedImageDialog({
               <ExpandedMediaFailure>
                 <p>
                   {openOriginalLink
-                    ? "This image could not be loaded."
-                    : "Image unavailable. The file may have been moved or deleted."}
+                    ? t("This image could not be loaded.")
+                    : t("Image unavailable. The file may have been moved or deleted.")}
                 </p>
                 {openOriginalLink}
               </ExpandedMediaFailure>
@@ -276,7 +280,7 @@ export const ExpandedImageDialog = memo(function ExpandedImageDialog({
             size="icon"
             variant="media-navigation"
             className="right-0 top-auto -bottom-12 translate-y-0 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2"
-            aria-label="Next media"
+            aria-label={t("Next media")}
             onClick={() => navigateImage(1)}
           >
             <ChevronRightIcon className="size-5" />

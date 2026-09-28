@@ -46,6 +46,7 @@ import {
   PullRequestChip,
   UnresolvedChip,
 } from "./contextChipParts";
+import { t } from "~/i18n";
 
 /**
  * Draft-side payload behind a context reference chip. Each kind keeps its existing draft
@@ -160,7 +161,7 @@ function ContextChip(props: {
 
 function uploadStatusSuffix(upload: AttachmentUploadState | undefined): string | null {
   if (upload?.status === "uploading") return formatAttachmentUploadProgress(upload.progress);
-  if (upload?.status === "failed") return "upload failed";
+  if (upload?.status === "failed") return t("upload failed");
   return null;
 }
 
@@ -205,7 +206,7 @@ function FileContextChip(props: {
   const actions = use(ComposerContextActionsContext);
   const { resolvedTheme } = useTheme();
   const needsReattach = composerFileNeedsReattach(props.record);
-  const suffix = needsReattach ? "attach again" : uploadStatusSuffix(props.upload);
+  const suffix = needsReattach ? t("attach again") : uploadStatusSuffix(props.upload);
   const size = formatAttachmentSize(props.record.sizeBytes);
   const isVideo = videoMimeType(props.record) !== null;
   return (
@@ -217,7 +218,11 @@ function FileContextChip(props: {
       error={props.upload?.status === "failed"}
       unresolved={needsReattach}
       suffix={suffix}
-      accessibleLabel={`${isVideo && !needsReattach ? "Preview video" : "File"} attachment, ${props.record.name}, ${size}`}
+      accessibleLabel={
+        isVideo && !needsReattach
+          ? t("Preview video attachment, {name}, {size}", { name: props.record.name, size })
+          : t("File attachment, {name}, {size}", { name: props.record.name, size })
+      }
       onOpen={
         !needsReattach
           ? () =>
@@ -226,7 +231,9 @@ function FileContextChip(props: {
       }
       tooltip={
         needsReattach
-          ? `${props.record.name} was not saved with this draft. Attach it again to send it.`
+          ? t("{name} was not saved with this draft. Attach it again to send it.", {
+              name: props.record.name,
+            })
           : attachmentTooltip(props.record, props.upload)
       }
     />
@@ -253,12 +260,37 @@ function previewAnnotationTooltip(annotation: PreviewAnnotationPayload): string 
   const lines = [annotation.pageTitle?.trim() || annotation.pageUrl];
   if (annotation.comment.trim()) lines.push("", annotation.comment.trim());
   const targets: string[] = [];
-  const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? "" : "s"}`;
-  if (annotation.elements.length > 0) targets.push(plural(annotation.elements.length, "element"));
-  if (annotation.regions.length > 0) targets.push(plural(annotation.regions.length, "region"));
-  if (annotation.strokes.length > 0) targets.push(plural(annotation.strokes.length, "drawing"));
-  if (annotation.styleChanges.length > 0) {
-    targets.push(plural(annotation.styleChanges.length, "style change"));
+  const elements = annotation.elements.length;
+  const regions = annotation.regions.length;
+  const strokes = annotation.strokes.length;
+  const styleChanges = annotation.styleChanges.length;
+  if (elements > 0) {
+    targets.push(
+      elements === 1
+        ? t("{count} element", { count: elements })
+        : t("{count} elements", { count: elements }),
+    );
+  }
+  if (regions > 0) {
+    targets.push(
+      regions === 1
+        ? t("{count} region", { count: regions })
+        : t("{count} regions", { count: regions }),
+    );
+  }
+  if (strokes > 0) {
+    targets.push(
+      strokes === 1
+        ? t("{count} drawing", { count: strokes })
+        : t("{count} drawings", { count: strokes }),
+    );
+  }
+  if (styleChanges > 0) {
+    targets.push(
+      styleChanges === 1
+        ? t("{count} style change", { count: styleChanges })
+        : t("{count} style changes", { count: styleChanges }),
+    );
   }
   if (targets.length > 0) lines.push("", targets.join(", "));
   return lines.join("\n");
@@ -294,12 +326,12 @@ function ComposerPreviewAnnotationDetails({
       {annotation.screenshot?.dataUrl ? (
         <img
           src={annotation.screenshot.dataUrl}
-          alt="Annotated preview crop"
+          alt={t("Annotated preview crop")}
           className="max-h-64 w-full border-border/70 border-b bg-muted object-contain"
         />
       ) : (
         <div className="border-border/70 border-b bg-muted/40 px-3 py-2 text-secondary-label text-xs">
-          Screenshot unavailable
+          {t("Screenshot unavailable")}
         </div>
       )}
       <div className="whitespace-pre-wrap wrap-break-word px-3 py-2.5 text-sm text-foreground">
@@ -313,7 +345,7 @@ function UnresolvedContextChip(props: { label: string }) {
   return (
     <UnresolvedChip
       label={props.label}
-      tooltip="This context is no longer available. Remove it or attach it again."
+      tooltip={t("This context is no longer available. Remove it or attach it again.")}
     />
   );
 }
@@ -383,7 +415,9 @@ const composerContextPresentationRegistry = createContextPresentationRegistry<
           <ContextChip
             icon={isPullRequest ? <PullRequestGlyph.pullRequest /> : <MessageCircleIcon />}
             label={reviewCommentContextLabel(entry.record)}
-            kindLabel={isPullRequest ? pullRequestContextKindLabel(entry.record) : "Review comment"}
+            kindLabel={
+              isPullRequest ? pullRequestContextKindLabel(entry.record) : t("Review comment")
+            }
             details={<ComposerReviewCommentDetails comment={entry.record} />}
             detailsMode={definition.capabilities.details}
             kind={isPullRequest ? PULL_REQUEST_CHIP_KINDS[pullRequestState] : "review-comment"}
@@ -399,7 +433,7 @@ const composerContextPresentationRegistry = createContextPresentationRegistry<
           <ContextChip
             icon={<MousePointerClickIcon />}
             label={previewAnnotationContextLabel(entry.record)}
-            kindLabel="Preview annotation"
+            kindLabel={t("Preview annotation")}
             details={<ComposerPreviewAnnotationDetails annotation={entry.record} />}
             detailsMode={definition.capabilities.details}
             kind="preview-annotation"

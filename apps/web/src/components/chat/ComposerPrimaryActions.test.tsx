@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { t } from "~/i18n";
 
 const stageArtworkState = vi.hoisted(() => ({
   mode: "none" as "artwork" | "none",
@@ -100,11 +101,11 @@ describe("ComposerPrimaryActions", () => {
   });
 
   it("offers Stop generation while a running turn is waiting for user input", () => {
-    expect(renderPendingActions(true)).toContain('aria-label="Stop generation"');
+    expect(renderPendingActions(true)).toContain(`aria-label="${t("Stop generation")}"`);
   });
 
   it("does not offer Stop generation for a pending request without a running turn", () => {
-    expect(renderPendingActions(false)).not.toContain('aria-label="Stop generation"');
+    expect(renderPendingActions(false)).not.toContain(`aria-label="${t("Stop generation")}"`);
   });
 
   it("renders stage artwork inside the send button when artwork identification is active", () => {
@@ -127,15 +128,15 @@ describe("ComposerPrimaryActions", () => {
   it("renders a queue action alongside stop while running with a sendable draft", () => {
     const markup = renderRunningActions(true);
 
-    expect(markup).toContain('aria-label="Stop generation"');
-    expect(markup).toContain('aria-label="Queue message"');
+    expect(markup).toContain(`aria-label="${t("Stop generation")}"`);
+    expect(markup).toContain(`aria-label="${t("Queue message")}"`);
     expect(markup).toContain('type="submit"');
   });
 
   it("keeps stop as the only action while running with an empty composer", () => {
     const markup = renderRunningActions(false);
 
-    expect(markup).toContain('aria-label="Stop generation"');
-    expect(markup).not.toContain('aria-label="Queue message"');
+    expect(markup).toContain(`aria-label="${t("Stop generation")}"`);
+    expect(markup).not.toContain(`aria-label="${t("Queue message")}"`);
   });
 });

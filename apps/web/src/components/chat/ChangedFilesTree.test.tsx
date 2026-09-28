@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
 
 import { ChangedFilesCard, ChangedFilesTree } from "./ChangedFilesTree";
+import { t } from "~/i18n";
 
 describe("ChangedFilesCard", () => {
   it("keeps its compact header sticky while preserving singular labels", () => {
@@ -18,10 +19,12 @@ describe("ChangedFilesCard", () => {
     );
 
     expect(markup).toContain('data-changed-files-state="tree"');
-    expect(markup).toContain('aria-label="Open diff"');
-    expect(markup).toContain('role="group" aria-label="2 additions, 1 deletions"');
-    expect(markup).toContain("1 changed file");
-    expect(markup).not.toContain("1 changed files");
+    expect(markup).toContain(`aria-label="${t("Open diff")}"`);
+    expect(markup).toContain(
+      `role="group" aria-label="${t("{additions} additions, {deletions} deletions", { additions: 2, deletions: 1 })}"`,
+    );
+    expect(markup).toContain(t("{count} changed file", { count: 1 }));
+    expect(markup).not.toContain(t("{count} changed files", { count: 1 }));
   });
 
   it("shows collapsed folders and root files together", () => {
@@ -70,7 +73,7 @@ describe("ChangedFilesCard", () => {
     );
 
     expect(markup).toContain('data-changed-files-state="tree"');
-    expect(markup).toContain("1 changed file");
+    expect(markup).toContain(t("{count} changed file", { count: 1 }));
     expect(markup).toContain("apps/web/src");
     expect(markup).not.toContain("Show all");
     expect(markup).not.toContain("App.tsx");

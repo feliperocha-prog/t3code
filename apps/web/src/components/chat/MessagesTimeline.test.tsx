@@ -13,6 +13,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import type { LegendListRef, MaintainScrollAtEndOptions } from "@legendapp/list/react";
 import { shouldUseRestingComposerLayout } from "../composerFooterLayout";
 import { useComposerFocusState } from "./useComposerFocusState";
+import { t } from "~/i18n";
 
 vi.mock("@legendapp/list/react", async () => {
   const legendListTestId = "legend-list";
@@ -284,6 +285,9 @@ function buildSnapShotTimelineEntry(previewUrl?: string) {
   };
 }
 
+// The failure suffix of the "{label}, tool call failed" screen-reader label, in the active locale.
+const toolCallFailedSuffix = t("{label}, tool call failed", { label: "" }).replace(/^, /, "");
+
 describe("MessagesTimeline", () => {
   it("renders previous and next controls with the minimap", () => {
     const first = buildUserTimelineEntry("First turn");
@@ -300,8 +304,8 @@ describe("MessagesTimeline", () => {
       <MessagesTimeline {...buildProps()} timelineEntries={[first, second]} />,
     );
 
-    expect(markup).toContain('aria-label="Previous turn"');
-    expect(markup).toContain('aria-label="Next turn"');
+    expect(markup).toContain(`aria-label="${t("Previous turn")}"`);
+    expect(markup).toContain(`aria-label="${t("Next turn")}"`);
   });
 
   // Expanding history uses this suite's existing test renderer, deprecated in
@@ -508,7 +512,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Worked for 8.0s");
+    expect(markup).toContain(t("Worked for {duration}", { duration: "8.0s" }));
   });
 
   it("keeps assistant changed-files headers sticky below the thread header", () => {
@@ -557,9 +561,9 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("self-start");
     expect(markup).toContain("whitespace-nowrap");
     expect(markup).toContain("size-3");
-    expect(markup).not.toContain('aria-label="Collapse all folders"');
-    expect(markup).toContain('aria-label="Open diff"');
-    expect(markup).toContain("1 changed file");
+    expect(markup).not.toContain(`aria-label="${t("Collapse all folders")}"`);
+    expect(markup).toContain(`aria-label="${t("Open diff")}"`);
+    expect(markup).toContain(t("{count} changed file", { count: 1 }));
   });
 
   it("treats only the strict list end as the live edge", async () => {
@@ -772,8 +776,8 @@ describe("MessagesTimeline", () => {
       <MessagesTimeline {...buildProps()} timelineEntries={[entry]} />,
     );
 
-    expect(markup).toContain('aria-label="Preview report.pdf"');
-    expect(markup).toContain('aria-label="Download report.pdf"');
+    expect(markup).toContain(`aria-label="${t("Preview {name}", { name: "report.pdf" })}"`);
+    expect(markup).toContain(`aria-label="${t("Download {name}", { name: "report.pdf" })}"`);
     expect(markup).not.toContain('download="report.pdf"');
     expect(markup).not.toContain('alt="report.pdf"');
   });
@@ -851,8 +855,8 @@ describe("MessagesTimeline", () => {
       <MessagesTimeline {...buildProps()} timelineEntries={[entry]} />,
     );
 
-    expect(markup).toContain('aria-label="Preview archive.zip"');
-    expect(markup).toContain('aria-label="Download archive.zip"');
+    expect(markup).toContain(`aria-label="${t("Preview {name}", { name: "archive.zip" })}"`);
+    expect(markup).toContain(`aria-label="${t("Download {name}", { name: "archive.zip" })}"`);
     expect(markup).not.toContain("<a href=");
   });
 
@@ -879,7 +883,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("report.pdf");
-    expect(markup).not.toContain('aria-label="Download report.pdf"');
+    expect(markup).not.toContain(`aria-label="${t("Download {name}", { name: "report.pdf" })}"`);
   });
 
   it("renders unknown attachment types as inert rows instead of crashing", () => {
@@ -906,7 +910,9 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("voice-memo.ogg");
-    expect(markup).not.toContain('aria-label="Download voice-memo.ogg"');
+    expect(markup).not.toContain(
+      `aria-label="${t("Download {name}", { name: "voice-memo.ogg" })}"`,
+    );
     expect(markup).not.toContain('alt="voice-memo.ogg"');
     expect(markup).not.toContain("<a href=");
   });
@@ -1099,7 +1105,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Show full message");
+    expect(markup).toContain(t("Show full message"));
     expect(markup).toContain('data-maintain-scroll-at-end="enabled"');
     expect(markup).toContain('data-maintain-scroll-at-end-animated="false"');
     expect(markup).toContain('data-maintain-scroll-at-end-data-change="true"');
@@ -1119,7 +1125,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).not.toContain("Show full message");
+    expect(markup).not.toContain(t("Show full message"));
     expect(markup).toContain('data-user-message-collapsible="false"');
     expect(markup).toContain("rounded-2xl bg-message p-3");
   });
@@ -1283,7 +1289,7 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain("lucide-terminal");
     expect(markup).toContain("yoo what&#x27;s");
     expect(markup).not.toContain("terminal_context");
-    expect(markup).toContain("Show full message");
+    expect(markup).toContain(t("Show full message"));
   }, 20_000);
 
   it("renders chips for standalone element-pick context messages", () => {
@@ -1320,7 +1326,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain('aria-label="Copy message"');
+    expect(markup).toContain(`aria-label="${t("Copy message")}"`);
     expect(markup).toContain('data-user-message-collapsed="true"');
     expect(markup).toContain('data-user-message-footer="true"');
   });
@@ -1453,7 +1459,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("lucide-x");
     expect(markup).not.toContain("text-destructive");
     // The failure stays discoverable for screen readers.
-    expect(markup).toContain("tool call failed");
+    expect(markup).toContain(toolCallFailedSuffix);
   });
 
   it("renders trailing tool calls as part of the terminal assistant block", () => {
@@ -1597,8 +1603,8 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Working for");
-    expect(markup).toContain("Running pnpm");
+    expect(markup).toContain(t("Working for"));
+    expect(markup).toContain(t("Running {program}", { program: "pnpm" }));
   });
 
   it("scopes a live row failure to the tool named by the row", () => {
@@ -1652,8 +1658,8 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Running pnpm");
-    expect(markup).not.toContain("tool call failed");
+    expect(markup).toContain(t("Running {program}", { program: "pnpm" }));
+    expect(markup).not.toContain(toolCallFailedSuffix);
   });
 
   it.each(
@@ -1668,8 +1674,8 @@ describe("MessagesTimeline", () => {
         ["- first\n- second", "first second", 0],
         ["first  \nsecond", "first second", 0],
         ["![image description](image.png)", "image description", 0],
-        ["![](image.png)", "Thought", 0],
-        ["---", "Thought", 0],
+        ["![](image.png)", t("Thought"), 0],
+        ["---", t("Thought"), 0],
       ] as const
     ).flatMap(([markdown, expected, strongCount]) =>
       [false, true].map((streaming) => ({
@@ -1731,7 +1737,9 @@ describe("MessagesTimeline", () => {
             .filter((child) => typeof child === "string")
             .join(""),
         ).toBe(
-          (streaming && expected === "Thought" ? "Thinking" : expected).repeat(streaming ? 2 : 1),
+          (streaming && expected === t("Thought") ? t("Thinking") : expected).repeat(
+            streaming ? 2 : 1,
+          ),
         );
         expect(
           preview.findAll((node) =>
@@ -1766,7 +1774,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Thinking");
+    expect(markup).toContain(t("Thinking"));
     expect(markup).toContain("lucide-brain");
     expect(markup).toContain('data-timeline-row-id="live-activity-row"');
   });
@@ -1806,10 +1814,10 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Running pnpm");
+    expect(markup).toContain(t("Running {program}", { program: "pnpm" }));
     expect(markup).toContain("lucide-terminal");
-    expect(markup).not.toContain("Ran pnpm");
-    expect(markup).not.toContain("Thinking");
+    expect(markup).not.toContain(t("Ran {program}", { program: "pnpm" }));
+    expect(markup).not.toContain(t("Thinking"));
     expect(markup).not.toContain('data-timeline-row-kind="thinking"');
   });
 
@@ -1960,12 +1968,16 @@ describe("MessagesTimeline", () => {
     );
 
     // Images report their size like every other attachment chip.
-    expect(markup).toContain('aria-label="Image attachment, shot.png, 1 KB"');
+    expect(markup).toContain(
+      `aria-label="${t("Image attachment, {name}, {size}", { name: "shot.png", size: "1 KB" })}"`,
+    );
     // Selection copy re-emits chips as their canonical links.
     expect(markup).toContain('data-markdown-copy="![shot.png](t3-context://v1/image/img-1)"');
-    expect(markup).toContain('aria-label="File attachment, notes.txt, 1 KB"');
+    expect(markup).toContain(
+      `aria-label="${t("File attachment, {name}, {size}", { name: "notes.txt", size: "1 KB" })}"`,
+    );
     expect(markup).toContain(">1 KB</span>");
-    expect(markup).not.toContain('aria-label="Download notes.txt"');
+    expect(markup).not.toContain(`aria-label="${t("Download {name}", { name: "notes.txt" })}"`);
     expect(markup).toContain("legacy.txt");
     expect(markup).not.toContain('href="t3-context://');
     // A picture keeps its tile even though it also has a chip: the chip names it, the tile is
@@ -2122,7 +2134,9 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain('aria-label="Received 1 update and used 1 tool, tool call failed"');
+    expect(markup).toContain(
+      `aria-label="${t("{label}, tool call failed", { label: "Received 1 update and used 1 tool" })}"`,
+    );
     // Ordinary tool failures do not use destructive row styling.
     expect(markup).not.toContain("text-destructive");
   });

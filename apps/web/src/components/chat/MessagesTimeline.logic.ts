@@ -1,4 +1,5 @@
 import { worktreeSetupAgentStarted } from "@t3tools/client-runtime/worktree-setup";
+import { t } from "~/i18n";
 export { worktreeSetupAgentStarted } from "@t3tools/client-runtime/worktree-setup";
 import * as Equal from "effect/Equal";
 import { shallow } from "zustand/vanilla/shallow";
@@ -64,7 +65,7 @@ export function workEntryDisplayLabel(entry: WorkLogEntry, workspaceRoot: string
     const path = formatWorkspaceRelativePath(firstPath, workspaceRoot);
     return entry.changedFiles!.length === 1
       ? path
-      : `${path} +${entry.changedFiles!.length - 1} more`;
+      : t("{path} +{count} more", { path, count: entry.changedFiles!.length - 1 });
   }
   const heading = normalizeCompactToolLabel(entry.toolTitle || entry.label);
   return `${heading.charAt(0).toUpperCase()}${heading.slice(1)}`;
@@ -83,17 +84,16 @@ export function liveWorkEntryLabel(
   if (toolPresentation) return toolPresentation.displayName;
   const command = entry.command?.trim();
   if (command) {
-    const verb =
-      status === "inProgress"
-        ? "Running"
-        : status === "failed"
-          ? "Failed"
-          : status === "declined"
-            ? "Declined"
-            : status === "stopped"
-              ? "Stopped"
-              : "Ran";
-    return `${verb} ${commandProgramName(command) ?? "command"}`;
+    const program = commandProgramName(command) ?? t("command");
+    return status === "inProgress"
+      ? t("Running {program}", { program })
+      : status === "failed"
+        ? t("Failed {program}", { program })
+        : status === "declined"
+          ? t("Declined {program}", { program })
+          : status === "stopped"
+            ? t("Stopped {program}", { program })
+            : t("Ran {program}", { program });
   }
   return workEntryDisplayLabel(entry, workspaceRoot);
 }
@@ -786,11 +786,11 @@ function deriveTurnFolds(input: {
     const duration = elapsedMs !== null ? formatDuration(elapsedMs) : null;
     const label = isLatestInterruptedTurn
       ? duration
-        ? `You stopped after ${duration}`
-        : "You stopped this response"
+        ? t("You stopped after {duration}", { duration })
+        : t("You stopped this response")
       : duration
-        ? `Worked for ${duration}`
-        : "Worked";
+        ? t("Worked for {duration}", { duration })
+        : t("Worked");
 
     foldsByAnchorEntryId.set(firstHiddenEntry.id, {
       turnId,

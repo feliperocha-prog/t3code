@@ -20,6 +20,7 @@ import { PierreEntryIcon } from "./PierreEntryIcon";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { MiddleTruncate } from "../ui/middle-truncate";
+import { t } from "~/i18n";
 
 const EMPTY_DIRECTORY_OVERRIDES: Record<string, boolean> = {};
 
@@ -58,7 +59,9 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
       >
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-foreground">
           <span>
-            {files.length} changed file{files.length === 1 ? "" : "s"}
+            {files.length === 1
+              ? t("{count} changed file", { count: files.length })
+              : t("{count} changed files", { count: files.length })}
           </span>
           {hasNonZeroStat(summaryStat) && (
             <DiffStatLabel
@@ -79,7 +82,7 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
                     size="icon-xs"
                     variant="ghost-muted"
                     aria-label={
-                      allDirectoriesExpanded ? "Collapse all folders" : "Expand all folders"
+                      allDirectoriesExpanded ? t("Collapse all folders") : t("Expand all folders")
                     }
                     data-scroll-anchor-ignore
                     onClick={onToggleAllDirectories}
@@ -93,7 +96,7 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
                 )}
               </TooltipTrigger>
               <TooltipPopup side="top">
-                {allDirectoriesExpanded ? "Collapse all folders" : "Expand all folders"}
+                {allDirectoriesExpanded ? t("Collapse all folders") : t("Expand all folders")}
               </TooltipPopup>
             </Tooltip>
           )}
@@ -104,15 +107,15 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
                   type="button"
                   size="xs"
                   variant="ghost-muted"
-                  aria-label="Open diff"
+                  aria-label={t("Open diff")}
                   onClick={() => onOpenTurnDiff(turnId, files[0]?.path)}
                 />
               }
             >
               <FileDiffIcon className="size-3" />
-              <span className="hidden @[24rem]/changed-files:inline">Open diff</span>
+              <span className="hidden @[24rem]/changed-files:inline">{t("Open diff")}</span>
             </TooltipTrigger>
-            <TooltipPopup side="top">Open the full diff</TooltipPopup>
+            <TooltipPopup side="top">{t("Open the full diff")}</TooltipPopup>
           </Tooltip>
         </div>
       </div>

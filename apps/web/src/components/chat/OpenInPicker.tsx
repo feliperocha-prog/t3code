@@ -59,6 +59,7 @@ import {
 import { cn, isMacPlatform, isWindowsPlatform } from "~/lib/utils";
 import { shellEnvironment } from "~/state/shell";
 import { useAtomCommand } from "~/state/use-atom-command";
+import { t } from "~/i18n";
 
 type OpenInOption = {
   label: string;
@@ -213,7 +214,7 @@ export const OpenInPicker = memo(function OpenInPicker({
   const remote = useRemoteOpenState(environmentId);
   const remoteCapableEditors = useRemoteCapableEditors();
   const [remoteHintSeen, markRemoteHintSeen] = useRemoteOpenHint();
-  const environmentLabel = useEnvironment(environmentId)?.label ?? "this machine";
+  const environmentLabel = useEnvironment(environmentId)?.label ?? t("this machine");
   // Remote mode ignores the server's PATH probe: what matters is what runs on
   // the viewing machine, which only the desktop app can probe.
   const effectiveEditors = remote.mode === "local-exec" ? availableEditors : remoteCapableEditors;
@@ -290,13 +291,13 @@ export const OpenInPicker = memo(function OpenInPicker({
     <>
       {remote.mode === "remote-unavailable" ? (
         <MenuItem density={presentation === "menu" ? "touch" : "default"} disabled>
-          No SSH route to {environmentLabel}
+          {t("No SSH route to {environment}", { environment: environmentLabel })}
         </MenuItem>
       ) : (
         <>
           {options.length === 0 && (
             <MenuItem density={presentation === "menu" ? "touch" : "default"} disabled>
-              No installed editors found
+              {t("No installed editors found")}
             </MenuItem>
           )}
           {options.map(({ label, Icon, value, kind }) => (
@@ -314,7 +315,9 @@ export const OpenInPicker = memo(function OpenInPicker({
           ))}
           {remote.mode === "remote-links" && !remoteHintSeen && (
             <MenuItem density={presentation === "menu" ? "touch" : "default"} disabled>
-              Opens over SSH. Needs your key on {environmentLabel}
+              {t("Opens over SSH. Needs your key on {environment}", {
+                environment: environmentLabel,
+              })}
             </MenuItem>
           )}
         </>
@@ -332,7 +335,7 @@ export const OpenInPicker = memo(function OpenInPicker({
             onClick={() => openInEditor(preferredEditor)}
           >
             <primaryOption.Icon className={cn("size-4", getOpenInIconClass(primaryOption.kind))} />
-            <MenuItemLabel>Open in {primaryOption.label}</MenuItemLabel>
+            <MenuItemLabel>{t("Open in {editor}", { editor: primaryOption.label })}</MenuItemLabel>
             {openFavoriteEditorShortcutLabel && (
               <MenuShortcut>{openFavoriteEditorShortcutLabel}</MenuShortcut>
             )}
@@ -341,7 +344,7 @@ export const OpenInPicker = memo(function OpenInPicker({
         <MenuSub>
           <MenuSubTrigger density="touch">
             <SquareArrowOutUpRightIcon className="size-4" />
-            <MenuItemLabel>Open in…</MenuItemLabel>
+            <MenuItemLabel>{t("Open in…")}</MenuItemLabel>
           </MenuSubTrigger>
           <MenuSubPopup>{editorItems}</MenuSubPopup>
         </MenuSub>
@@ -350,9 +353,9 @@ export const OpenInPicker = memo(function OpenInPicker({
   }
 
   return (
-    <Group aria-label="Open in editor">
+    <Group aria-label={t("Open in editor")}>
       <Button
-        aria-label={compact ? "Open file in preferred editor" : undefined}
+        aria-label={compact ? t("Open file in preferred editor") : undefined}
         size="xs"
         variant="outline"
         disabled={!preferredEditor || !openInCwd || remote.mode === "remote-unavailable"}
@@ -371,13 +374,13 @@ export const OpenInPicker = memo(function OpenInPicker({
               : "sr-only @3xl/header-actions:not-sr-only @3xl/header-actions:ml-0.5"
           }
         >
-          Open
+          {t("Open")}
         </span>
       </Button>
       <GroupSeparator {...(!compact ? { className: "hidden @3xl/header-actions:block" } : {})} />
       <Menu>
         <MenuTrigger
-          render={<Button aria-label="Choose editor" size="icon-xs" variant="outline" />}
+          render={<Button aria-label={t("Choose editor")} size="icon-xs" variant="outline" />}
         >
           <ChevronDownIcon aria-hidden="true" className="size-4" />
         </MenuTrigger>

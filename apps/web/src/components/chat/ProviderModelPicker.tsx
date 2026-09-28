@@ -24,6 +24,7 @@ import {
 } from "./ComposerControl";
 import { useComposerMenuProps } from "./composerEventScope";
 import { shortcutLabelForCommand } from "../../keybindings";
+import { t } from "~/i18n";
 
 export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   /**
@@ -85,10 +86,10 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   const triggerTitle = selectedModel
     ? getTriggerDisplayModelName(selectedModel)
     : props.model === ANTIGRAVITY_DEFAULT_MODEL
-      ? "Choose model"
-      : props.model || "Choose model";
+      ? t("Choose model")
+      : props.model || t("Choose model");
   const triggerLabel = selectedModel
-    ? `${getTriggerDisplayModelLabel(selectedModel)}${selectedModel.isUnavailable ? " (Unavailable)" : ""}`
+    ? `${getTriggerDisplayModelLabel(selectedModel)}${selectedModel.isUnavailable ? ` (${t("Unavailable")})` : ""}`
     : triggerTitle;
   const showInstanceBadge =
     activeEntry !== null && shouldShowInstanceBadge(activeEntry, props.instanceEntries);
@@ -170,20 +171,22 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
       ...selection,
       entry,
       label: model
-        ? `${getTriggerDisplayModelName(model)}${model.isUnavailable ? " (Unavailable)" : ""}`
+        ? `${getTriggerDisplayModelName(model)}${model.isUnavailable ? ` (${t("Unavailable")})` : ""}`
         : selection.model,
     };
   });
   const multipleLabel = selectedEntries
     ? selectedEntries.length === 0
-      ? "Choose models"
+      ? t("Choose models")
       : `${selectedEntries
           .slice(0, 2)
           .map((selection) => selection.label)
-          .join(", ")}${selectedEntries.length > 2 ? `, ${selectedEntries.length - 2} more` : ""}`
+          .join(
+            ", ",
+          )}${selectedEntries.length > 2 ? t(", {count} more", { count: selectedEntries.length - 2 }) : ""}`
     : undefined;
   const allModelNames = selectedEntries
-    ? selectedEntries.map((selection) => selection.label).join(", ") || "Choose models"
+    ? selectedEntries.map((selection) => selection.label).join(", ") || t("Choose models")
     : undefined;
   const triggerTooltipContent = shortcutLabel
     ? `${props.triggerLabel ?? allModelNames ?? triggerLabel} · ${shortcutLabel}`
@@ -270,7 +273,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
           </Tooltip>
           {selectedModel?.isUnavailable && !selectedEntries && props.triggerLabel === undefined ? (
             <Badge variant="outline" size="sm">
-              Unavailable
+              {t("Unavailable")}
             </Badge>
           ) : null}
         </span>

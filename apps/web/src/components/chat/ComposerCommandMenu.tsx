@@ -27,6 +27,7 @@ import { Command, CommandGroup, CommandItem, CommandList } from "../ui/command";
 import { PierreEntryIcon } from "./PierreEntryIcon";
 import { ComposerBanner } from "./ComposerBanner";
 import { resolvePullRequestState } from "../pullRequest/pullRequestPresentation";
+import { t } from "~/i18n";
 
 export type ComposerCommandItem =
   | {
@@ -124,16 +125,16 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
             <p className="text-secondary-label text-xs">
               {props.isLoading
                 ? props.triggerKind === "skill"
-                  ? "Searching workspace skills..."
+                  ? t("Searching workspace skills...")
                   : props.triggerKind === "pull-request"
-                    ? "Finding pull request..."
-                    : "Searching workspace files..."
+                    ? t("Finding pull request...")
+                    : t("Searching workspace files...")
                 : (props.emptyStateText ??
                   (props.triggerKind === "skill"
-                    ? "No skills found. Try / to browse provider commands."
+                    ? t("No skills found. Try / to browse provider commands.")
                     : props.triggerKind === "path"
-                      ? "No matching files or folders."
-                      : "No matching command."))}
+                      ? t("No matching files or folders.")
+                      : t("No matching command.")))}
             </p>
           </div>
         )}
@@ -221,12 +222,12 @@ const SKILL_SOURCE_ICON_BY_KIND: Record<ProviderSkillSourceKind, LucideIcon> = {
 };
 
 const SKILL_SOURCE_LABEL_BY_KIND: Record<ProviderSkillSourceKind, string> = {
-  app: "App",
-  repo: "Repo",
-  project: "Project",
-  personal: "Personal",
-  system: "System",
-  other: "Provider",
+  app: t("App"),
+  repo: t("Repo"),
+  project: t("Project"),
+  personal: t("Personal"),
+  system: t("System"),
+  other: t("Provider"),
 };
 
 function SkillSourceBadge(props: { kind: ProviderSkillSourceKind; showSkillSuffix: boolean }) {
@@ -234,8 +235,9 @@ function SkillSourceBadge(props: { kind: ProviderSkillSourceKind; showSkillSuffi
   return (
     <Badge className="ms-auto" variant="secondary">
       <Icon aria-hidden="true" className="text-current" />
-      {SKILL_SOURCE_LABEL_BY_KIND[props.kind]}
-      {props.showSkillSuffix ? " Skill" : null}
+      {props.showSkillSuffix
+        ? t("{source} skill", { source: SKILL_SOURCE_LABEL_BY_KIND[props.kind] })
+        : SKILL_SOURCE_LABEL_BY_KIND[props.kind]}
     </Badge>
   );
 }

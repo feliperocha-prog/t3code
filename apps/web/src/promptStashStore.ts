@@ -7,6 +7,7 @@ import {
   PersistedComposerImageAttachment,
 } from "./composerDraftStore";
 import { createMemoryStorage, type StateStorage } from "./lib/storage";
+import { t } from "~/i18n";
 
 export const PROMPT_STASH_STORAGE_KEY = "t3code:prompt-stash:v2";
 /**
@@ -93,9 +94,8 @@ function clearOrphanedPendingImages(
       pendingImageCount: 0,
       unreadableImageNames: [
         ...(entry.unreadableImageNames ?? []),
-        ...Array.from(
-          { length: lostCount },
-          (_, index) => `image ${index + 1} (not saved before reload)`,
+        ...Array.from({ length: lostCount }, (_, index) =>
+          t("image {index} (not saved before reload)", { index: index + 1 }),
         ),
       ],
     };

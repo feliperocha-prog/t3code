@@ -15,6 +15,7 @@ import {
   CommandShortcut,
 } from "./ui/command";
 import { ThreadSearchMatchExcerpt } from "./ThreadSearchMatch";
+import { t } from "~/i18n";
 
 interface CommandPaletteResultsProps {
   emptyStateMessage?: string;
@@ -31,8 +32,8 @@ export function CommandPaletteResults(props: CommandPaletteResultsProps) {
       <div className="py-10 text-center text-sm text-muted-foreground">
         {props.emptyStateMessage ??
           (props.isActionsOnly
-            ? "No matching actions."
-            : "No matching commands, projects, or threads.")}
+            ? t("No matching actions.")
+            : t("No matching commands, projects, or threads."))}
       </div>
     );
   }

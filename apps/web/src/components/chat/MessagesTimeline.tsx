@@ -45,6 +45,7 @@ import {
   isActiveSubagentStatus,
   isTerminalSubagentStatus,
 } from "@t3tools/client-runtime/state/subagentRuntime";
+import { t } from "~/i18n";
 
 const EMPTY_AGENT_PANEL_MODEL = emptyAgentPanelModel();
 const NOOP_OPEN_AGENTS = () => {};
@@ -353,7 +354,7 @@ function TimelineLoadEarlierHeader({
           disabled={loading}
           className="w-full py-1.5 text-xs text-muted-foreground/60 hover:text-foreground disabled:cursor-default"
         >
-          {loading ? "Loading earlier turns…" : "Load earlier turns"}
+          {loading ? t("Loading earlier turns…") : t("Load earlier turns")}
         </button>
       </div>
     </div>
@@ -1254,7 +1255,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     }
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-placeholder text-sm">Send a message to start the conversation.</p>
+        <p className="text-placeholder text-sm">{t("Send a message to start the conversation.")}</p>
       </div>
     );
   }
@@ -1490,7 +1491,9 @@ function TimelineMinimap({
             }}
           />
           <button
-            aria-label={`Jump to message: ${activeItem?.userText ?? "User message"}`}
+            aria-label={t("Jump to message: {text}", {
+              text: activeItem?.userText ?? t("User message"),
+            })}
             className="absolute inset-y-0 left-0 w-full cursor-pointer bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
             onBlur={() => setActiveIndex(null)}
             onClick={(event) => {
@@ -1579,7 +1582,7 @@ function TimelineMinimap({
               >
                 <span className="dropdown-glass block rounded-xl p-3 text-left text-popover-foreground shadow-xl shadow-black/25">
                   <span className="block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium leading-5">
-                    {activeItem.userText ?? "User message"}
+                    {activeItem.userText ?? t("User message")}
                   </span>
                   {activeItem.assistantText ? (
                     <span
@@ -1620,7 +1623,7 @@ function TimelineMinimapNavigationButton({
   onClick: () => void;
 }) {
   const previous = direction === "previous";
-  const label = previous ? "Previous turn" : "Next turn";
+  const label = previous ? t("Previous turn") : t("Next turn");
   const Icon = previous ? ChevronUpIcon : ChevronDownIcon;
 
   return (
@@ -1768,10 +1771,10 @@ function QueuedMessageTimelineRow({
     queuedMessage.reviewComments.length;
   const text = queuedMessage.prompt.trim();
   const statusLabel = queuedMessage.holdUntilUserAction
-    ? "Waits for Send now"
+    ? t("Waits for Send now")
     : row.isNext
-      ? "Sends after the next tool call or when the turn ends"
-      : "Sends after the messages above it";
+      ? t("Sends after the next tool call or when the turn ends")
+      : t("Sends after the messages above it");
   return (
     <div className="flex flex-col items-end" data-queued-message-id={queuedMessage.id}>
       <div className="max-w-[80%] rounded-2xl border border-dashed border-border p-3 text-message-foreground/80">
@@ -1782,10 +1785,14 @@ function QueuedMessageTimelineRow({
           <div className={cn("text-secondary-label text-xs", text.length > 0 && "mt-1.5")}>
             {[
               attachmentCount > 0
-                ? `${attachmentCount} attachment${attachmentCount === 1 ? "" : "s"}`
+                ? attachmentCount === 1
+                  ? t("{count} attachment", { count: attachmentCount })
+                  : t("{count} attachments", { count: attachmentCount })
                 : null,
               contextCount > 0
-                ? `${contextCount} context item${contextCount === 1 ? "" : "s"}`
+                ? contextCount === 1
+                  ? t("{count} context item", { count: contextCount })
+                  : t("{count} context items", { count: contextCount })
                 : null,
             ]
               .filter(Boolean)
@@ -1799,10 +1806,10 @@ function QueuedMessageTimelineRow({
           <Tooltip>
             <TooltipTrigger
               render={<span className="inline-flex h-6 items-center gap-1" />}
-              aria-label={`Queued. ${statusLabel}.`}
+              aria-label={t("Queued. {status}.", { status: statusLabel })}
             >
               <ClockIcon className="size-3.5" aria-hidden />
-              Queued
+              {t("Queued")}
             </TooltipTrigger>
             <TooltipPopup side="bottom">{statusLabel}</TooltipPopup>
           </Tooltip>
@@ -1816,14 +1823,14 @@ function QueuedMessageTimelineRow({
                     variant="ghost-muted"
                     onPointerDown={(event) => event.preventDefault()}
                     onClick={() => ctx.onSteerQueuedMessage(queuedMessage.id)}
-                    aria-label="Send now"
+                    aria-label={t("Send now")}
                   />
                 }
               >
                 <ArrowUpIcon className="size-3.5" aria-hidden />
               </TooltipTrigger>
               <TooltipPopup side="bottom">
-                Send now
+                {t("Send now")}
                 {row.isNext && ctx.steerQueuedMessageShortcutLabel
                   ? ` (${ctx.steerQueuedMessageShortcutLabel})`
                   : null}
@@ -1838,13 +1845,13 @@ function QueuedMessageTimelineRow({
                     variant="ghost-muted"
                     onPointerDown={(event) => event.preventDefault()}
                     onClick={() => ctx.onRemoveQueuedMessage(queuedMessage.id)}
-                    aria-label="Cancel and return to the composer"
+                    aria-label={t("Cancel and return to the composer")}
                   />
                 }
               >
                 <XIcon className="size-3.5" aria-hidden />
               </TooltipTrigger>
-              <TooltipPopup side="bottom">Cancel and return to the composer</TooltipPopup>
+              <TooltipPopup side="bottom">{t("Cancel and return to the composer")}</TooltipPopup>
             </Tooltip>
           </div>
         </div>
@@ -2086,7 +2093,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
   return (
     <div className="group flex flex-col items-end gap-1">
       <div className="relative max-w-[80%] rounded-2xl bg-message p-3 text-message-foreground">
-        <MessageAuthorHeading>You</MessageAuthorHeading>
+        <MessageAuthorHeading>{t("You")}</MessageAuthorHeading>
         {(regularImages.length > 0 || userVideos.length > 0) && (
           <div className="mb-2 grid max-w-[210px] grid-cols-2 gap-2">
             {regularImages.map((image) => (
@@ -2103,7 +2110,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
                   <button
                     type="button"
                     className="block h-full w-full cursor-zoom-in"
-                    aria-label={`Preview ${image.name}`}
+                    aria-label={t("Preview {name}", { name: image.name })}
                     onClick={() => {
                       const preview = buildExpandedImagePreview(regularImages, image.id);
                       if (!preview) return;
@@ -2145,7 +2152,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
                   <div key={file.id} className="flex min-w-0 items-center gap-1">
                     <button
                       type="button"
-                      aria-label={`Preview ${file.name}`}
+                      aria-label={t("Preview {name}", { name: file.name })}
                       onClick={() => ctx.onFileOpen(file)}
                       className="focus-visible:ring-ring/70 flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md py-1 text-left text-sm hover:underline focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                     >
@@ -2158,14 +2165,16 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
                           <Button
                             size="icon-xs"
                             variant="ghost-muted"
-                            aria-label={`Download ${file.name}`}
+                            aria-label={t("Download {name}", { name: file.name })}
                             onClick={() => ctx.onFileDownload(file)}
                           />
                         }
                       >
                         <DownloadIcon />
                       </TooltipTrigger>
-                      <TooltipPopup side="top">Download {file.name}</TooltipPopup>
+                      <TooltipPopup side="top">
+                        {t("Download {name}", { name: file.name })}
+                      </TooltipPopup>
                     </Tooltip>
                   </div>
                 );
@@ -2280,13 +2289,13 @@ function RevertUserMessageButton({
             variant="ghost"
             disabled={activity.isRevertingCheckpoint || activity.isWorking}
             onClick={() => ctx.onRevertToTurnCount(turnCount, messageId)}
-            aria-label="Edit from here"
+            aria-label={t("Edit from here")}
           />
         }
       >
         <Undo2Icon className="size-3" />
       </TooltipTrigger>
-      <TooltipPopup side="top">Edit from here</TooltipPopup>
+      <TooltipPopup side="top">{t("Edit from here")}</TooltipPopup>
     </Tooltip>
   );
 }
@@ -2355,7 +2364,7 @@ function TurnFoldTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "turn-
 
 function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" }> }) {
   const ctx = use(TimelineRowCtx);
-  const messageText = row.message.text || (row.message.streaming ? "" : "(empty response)");
+  const messageText = row.message.text || (row.message.streaming ? "" : t("(empty response)"));
 
   return (
     <>
@@ -2511,15 +2520,15 @@ function WorkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "workin
   // place instead of remounting the row.
   const shimmer = isPreparingWorktree || isCompacting;
   const label = isPreparingWorktree ? (
-    "Setting up worktree…"
+    t("Setting up worktree…")
   ) : isCompacting ? (
     <CompactingLabel />
   ) : row.createdAt ? (
     <>
-      Working for <WorkingTimer createdAt={row.createdAt} />
+      {t("Working for")} <WorkingTimer createdAt={row.createdAt} />
     </>
   ) : (
-    "Working..."
+    t("Working...")
   );
   return (
     <div className="border-b border-border/60 pb-2 pt-1">
@@ -2552,7 +2561,7 @@ function BackgroundWorktreeSetupChip({ snapshot }: { snapshot: WorktreeSetupSnap
     () => (openTerminal && terminalId ? () => openTerminal(terminalId) : null),
     [openTerminal, terminalId],
   );
-  const scriptName = snapshot.setupScript?.name ?? "Setup script";
+  const scriptName = snapshot.setupScript?.name ?? t("Setup script");
   return (
     <Popover>
       <PopoverTrigger
@@ -2561,7 +2570,7 @@ function BackgroundWorktreeSetupChip({ snapshot }: { snapshot: WorktreeSetupSnap
             variant="ghost-muted"
             size="micro"
             className="ml-auto min-w-0 shrink-0"
-            aria-label={`${scriptName} is still running. Show setup progress.`}
+            aria-label={t("{name} is still running. Show setup progress.", { name: scriptName })}
           />
         }
       >
@@ -2614,10 +2623,12 @@ function ActivityGroupTimelineRow({
   const label = row.active
     ? liveWork
       ? liveWorkEntryLabel(liveWork, ctx.workspaceRoot, true)
-      : "Thinking"
+      : t("Thinking")
     : work.length > 0
       ? summarizeToolGroup(work)
-      : `Thought${thoughtCount > 1 ? ` (×${thoughtCount})` : ""}`;
+      : thoughtCount > 1
+        ? t("Thought (×{count})", { count: thoughtCount })
+        : t("Thought");
   const details: ReactNode[] = [];
   if (row.expanded) {
     for (let index = 0; index < row.entries.length; index += 1) {
@@ -2660,7 +2671,7 @@ function ActivityGroupTimelineRow({
       <button
         type="button"
         className="group/live-work flex min-h-6 w-full max-w-full cursor-pointer items-center rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
-        aria-label={failed ? `${label}, tool call failed` : undefined}
+        aria-label={failed ? t("{label}, tool call failed", { label }) : undefined}
         aria-expanded={row.expanded}
         onClick={() => ctx.onToggleWorkGroup(row.groupId, row.id)}
       >
@@ -2684,7 +2695,7 @@ function ThinkingTimelineRow() {
   return (
     <div className="min-h-7">
       {isPreparingWorktree || isCompacting ? null : (
-        <LiveActivityRow label="Thinking" iconName="brain" active shimmer />
+        <LiveActivityRow label={t("Thinking")} iconName="brain" active shimmer />
       )}
     </div>
   );
@@ -2743,7 +2754,7 @@ function ReasoningTraceBlock({
   ) {
     return null;
   }
-  const label = streaming ? "Thinking" : "Thought";
+  const label = streaming ? t("Thinking") : t("Thought");
   const collapsedPreview = messages.find((message) => message.text.trim().length > 0)?.text.trim();
   const headerText = expanded ? (
     label
@@ -2839,7 +2850,7 @@ const ReasoningTimelineRow = memo(function ReasoningTimelineRow({
         </span>
         <span className="flex min-w-0 flex-1 items-center gap-1.5">
           <span className="relative min-w-0 flex-1 truncate text-secondary-label text-sm leading-relaxed">
-            Thought
+            {t("Thought")}
           </span>
           <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden>
             <ChevronRightIcon
@@ -2874,7 +2885,7 @@ function CompactingLabel() {
   return (
     <span className="inline-flex items-center gap-1.5">
       <Minimize2Icon aria-hidden="true" className="size-3" />
-      Compacting…
+      {t("Compacting…")}
     </span>
   );
 }
@@ -2950,7 +2961,7 @@ const WorkGroupSection = memo(function WorkGroupSection({
   }
 
   return (
-    <section className="-mx-1 space-y-0.5 px-1 py-0.5" aria-label="Activity">
+    <section className="-mx-1 space-y-0.5 px-1 py-0.5" aria-label={t("Activity")}>
       <div className="space-y-px">
         {nonEmptyEntries.map((workEntry) => (
           <SimpleWorkEntryRow
@@ -3098,7 +3109,7 @@ function ExpandedWorkGroupEntries({
         onLayout={updateScrollFades}
         tabIndex={0}
         role="region"
-        aria-label="Tool calls"
+        aria-label={t("Tool calls")}
         data-tool-group-scroll
         className={cn(
           "scrollbar-gutter-stable max-h-[min(18rem,50dvh)] scroll-py-6 overflow-x-hidden rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
@@ -3209,7 +3220,7 @@ function LiveActivityContent({
             failed ? failedToolIconClassName : highlighted ? "text-foreground" : "text-icon-muted",
           )}
           role={announceFailure ? "img" : undefined}
-          aria-label={announceFailure ? "Tool call failed" : undefined}
+          aria-label={announceFailure ? t("Tool call failed") : undefined}
         >
           <ToolActivityIconView
             icon={toolIcon}
@@ -3245,7 +3256,7 @@ function LiveWorkEntryTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "
     <button
       type="button"
       className="group/live-work flex min-h-6 w-full max-w-full cursor-pointer items-center rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
-      aria-label={failed ? `${label}, tool call failed` : undefined}
+      aria-label={failed ? t("{label}, tool call failed", { label }) : undefined}
       aria-expanded={row.expanded}
       onClick={() => ctx.onToggleWorkGroup(row.groupId, row.id)}
     >
@@ -3325,7 +3336,9 @@ function WorkGroupToggleTimelineRow({
     <button
       type="button"
       className="group/tool-group group/timeline-row relative flex min-h-6 w-full cursor-pointer items-center gap-1.5 rounded-md px-0.5 py-0.5 text-left text-sm leading-relaxed transition-colors duration-150 hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
-      aria-label={row.hasFailure ? `${row.summary}, tool call failed` : undefined}
+      aria-label={
+        row.hasFailure ? t("{label}, tool call failed", { label: row.summary }) : undefined
+      }
       aria-expanded={row.expanded}
       onClick={() => ctx.onToggleWorkGroup(row.groupId, row.id)}
     >
@@ -3450,7 +3463,7 @@ function UserMessageMentionChip(props: {
           <ContextChip
             kind="mention"
             render={<button type="button" />}
-            aria-label={`Preview ${props.record.path}`}
+            aria-label={t("Preview {name}", { name: props.record.path })}
             data-markdown-copy={props.copyMarkdown}
             onClick={() => {
               if (ctx.threadRef)
@@ -3524,7 +3537,7 @@ function UserMessagePreviewAnnotationDetails(props: {
         <button
           type="button"
           className="block max-h-64 w-full cursor-zoom-in overflow-hidden border-b border-border/70 bg-muted"
-          aria-label={`Preview ${props.image.name}`}
+          aria-label={t("Preview {name}", { name: props.image.name })}
           onClick={() => {
             if (!props.image) return;
             const preview = buildExpandedImagePreview([props.image], props.image.id);
@@ -3533,18 +3546,18 @@ function UserMessagePreviewAnnotationDetails(props: {
         >
           <img
             src={props.image.previewUrl}
-            alt="Annotated preview crop"
+            alt={t("Annotated preview crop")}
             className="max-h-64 w-full object-contain"
           />
         </button>
       ) : (
         <div className="border-b border-border/70 bg-muted/40 px-3 py-2 text-secondary-label text-xs">
-          Screenshot unavailable
+          {t("Screenshot unavailable")}
         </div>
       )}
       <div className="min-w-0 px-3 py-2.5">
         <div className="text-message-foreground text-xs font-medium">
-          {props.record.pageTitle?.trim() || props.record.pageUrl || "Preview annotation"}
+          {props.record.pageTitle?.trim() || props.record.pageUrl || t("Preview annotation")}
         </div>
         {props.record.comment ? (
           <div className="mt-1 whitespace-pre-wrap wrap-break-word text-sm">
@@ -3592,8 +3605,9 @@ function UserMessagePreviewAnnotationDetails(props: {
             })}
             {(props.record.elements?.length ?? 0) > visibleElements.length ? (
               <div className="text-secondary-label text-3xs">
-                {(props.record.elements?.length ?? 0) - visibleElements.length} more selected
-                elements
+                {t("{count} more selected elements", {
+                  count: (props.record.elements?.length ?? 0) - visibleElements.length,
+                })}
               </div>
             ) : null}
           </div>
@@ -3659,7 +3673,7 @@ function UnavailableUserMessageContextChip(props: UserMessageContextRenderContex
     <UnresolvedChip
       label={props.reference.label}
       copyMarkdown={props.copyMarkdown}
-      tooltip="This context is no longer available."
+      tooltip={t("This context is no longer available.")}
     />
   );
 }
@@ -3689,7 +3703,7 @@ const userMessageContextPresentationRegistry = createContextPresentationRegistry
           <UserMessageContextChip
             icon={<SkillChipIcon />}
             label={record.label || record.name}
-            kindLabel="Skill"
+            kindLabel={t("Skill")}
             tooltip={`$${record.name}`}
             copyMarkdown={context.copyMarkdown}
             kind="skill"
@@ -3750,7 +3764,11 @@ const userMessageContextPresentationRegistry = createContextPresentationRegistry
             isVideo={isVideo}
             theme={context.resolvedTheme}
             disabled={disabled}
-            accessibleLabel={`${isVideo ? "Video" : "File"} attachment, ${record.name}, ${size}`}
+            accessibleLabel={
+              isVideo
+                ? t("Video attachment, {name}, {size}", { name: record.name, size })
+                : t("File attachment, {name}, {size}", { name: record.name, size })
+            }
             copyMarkdown={context.copyMarkdown}
             onOpen={() =>
               isVideo ? context.onExpandVideo(attachment) : context.onOpenFile(attachment)
@@ -3786,7 +3804,7 @@ const userMessageContextPresentationRegistry = createContextPresentationRegistry
         record.kind === "element" ? (
           <UserMessageContextPopover
             copyMarkdown={context.copyMarkdown}
-            accessibleLabel={`Browser element, ${record.label}`}
+            accessibleLabel={t("Browser element, {label}", { label: record.label })}
             kind="element"
             icon={<MousePointerClickIcon />}
             label={record.label}
@@ -3806,7 +3824,7 @@ const userMessageContextPresentationRegistry = createContextPresentationRegistry
         }
         const isPullRequest = isPullRequestSummaryContext(record);
         const label = reviewCommentContextLabel(record);
-        const kindLabel = isPullRequest ? pullRequestContextKindLabel(record) : "Review comment";
+        const kindLabel = isPullRequest ? pullRequestContextKindLabel(record) : t("Review comment");
         const pullRequestState = pullRequestContextDisplayState(record) ?? "unknown";
         if (isPullRequest && record.pullRequest !== undefined) {
           return (
@@ -3853,7 +3871,7 @@ const userMessageContextPresentationRegistry = createContextPresentationRegistry
         record.kind === "preview-annotation" ? (
           <UserMessageContextPopover
             copyMarkdown={context.copyMarkdown}
-            accessibleLabel={`Preview annotation, ${record.label}`}
+            accessibleLabel={t("Preview annotation, {label}", { label: record.label })}
             kind="preview-annotation"
             icon={<MousePointerClickIcon />}
             label={record.label}
@@ -3968,7 +3986,7 @@ const CollapsibleUserMessageBody = memo(function CollapsibleUserMessageBody(prop
               onClick={() => setExpanded((value) => !value)}
               className="-ml-1"
             >
-              {expanded ? "Show less" : "Show full message"}
+              {expanded ? t("Show less") : t("Show full message")}
             </Button>
           ) : null}
           {props.footer ? (
@@ -4401,7 +4419,7 @@ function buildToolCallExpandedBody(
     blocks.push(text);
   };
   if (workEntry.itemType === "mcp_tool_call" && workEntry.toolData !== undefined) {
-    addBlock(`MCP call\n${JSON.stringify(workEntry.toolData, null, 2)}`);
+    addBlock(`${t("MCP call")}\n${JSON.stringify(workEntry.toolData, null, 2)}`);
   }
   const command = workEntry.command?.trim();
   const raw = workEntryRawCommand(workEntry);
@@ -4547,7 +4565,7 @@ const AgentSpawnRow = memo(function AgentSpawnRow(props: {
             onClick={onOpenAgents}
             className="mt-1 self-start rounded-sm px-1 text-xs text-muted-foreground hover:text-foreground"
           >
-            Open Agents panel ›
+            {t("Open Agents panel ›")}
           </button>
         </div>
       ) : null}
@@ -4556,14 +4574,14 @@ const AgentSpawnRow = memo(function AgentSpawnRow(props: {
 });
 
 const AGENT_MEMBER_STATUS_LABEL: Record<RuntimeSubagent["status"], string> = {
-  pending: "Working",
-  running: "Working",
-  waiting: "Working",
-  idle: "Idle",
-  completed: "Completed",
-  failed: "Failed",
-  cancelled: "Stopped",
-  interrupted: "Stopped",
+  pending: t("Working"),
+  running: t("Working"),
+  waiting: t("Working"),
+  idle: t("Idle"),
+  completed: t("Completed"),
+  failed: t("Failed"),
+  cancelled: t("Stopped"),
+  interrupted: t("Stopped"),
 };
 
 function AgentSpawnMemberRow({
@@ -4789,7 +4807,7 @@ const PlainWorkEntryRow = memo(function PlainWorkEntryRow(props: {
         : "text-foreground/80";
   const accessiblePreview = [previewText, answerPreview].filter(Boolean).join(": ");
   const accessibleDisplayText = showFailedIndicator
-    ? `${accessiblePreview}, tool call failed`
+    ? t("{label}, tool call failed", { label: accessiblePreview })
     : accessiblePreview;
   const rowToggleProps = canExpand
     ? {
@@ -4822,7 +4840,7 @@ const PlainWorkEntryRow = memo(function PlainWorkEntryRow(props: {
         <span
           className={iconWrapperClass}
           role={showFailedIndicator ? "img" : undefined}
-          aria-label={showFailedIndicator ? "Tool call failed" : undefined}
+          aria-label={showFailedIndicator ? t("Tool call failed") : undefined}
         >
           <ToolActivityIconView
             icon={entryToolIcon}

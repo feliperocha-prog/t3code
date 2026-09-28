@@ -3,6 +3,7 @@ import { ProviderDriverKind } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { ComposerCommandMenu } from "./ComposerCommandMenu";
+import { t } from "~/i18n";
 
 describe("ComposerCommandMenu", () => {
   it("renders slash commands with their descriptions", () => {
@@ -59,7 +60,7 @@ describe("ComposerCommandMenu", () => {
 
     expect(markup).toContain("Browser");
     expect(markup).toContain('data-slot="badge"');
-    expect(markup).toContain(">App Skill</span>");
+    expect(markup).toContain(`>${t("{source} skill", { source: t("App") })}</span>`);
     expect(markup).toContain("Open and control the in-app browser");
     expect(markup).toContain("<svg");
   });
@@ -95,7 +96,7 @@ describe("ComposerCommandMenu", () => {
     expect(markup).toContain('<span class="text-secondary-label">/skill:</span>Ask Matt');
     expect(markup).toContain('data-slot="badge"');
     expect(markup).toContain("lucide-folder");
-    expect(markup).toContain(">Repo</span>");
+    expect(markup).toContain(`>${t("Repo")}</span>`);
     expect(markup).toContain("Find the right skill or workflow");
   });
 });

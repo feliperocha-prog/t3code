@@ -39,14 +39,15 @@ import {
 } from "./ComposerControl";
 import { useComposerMenuProps } from "./composerEventScope";
 import { useComposerMenuState } from "./useComposerMenuState";
+import { t } from "~/i18n";
 
 type ProviderOptions = ReadonlyArray<ProviderOptionSelection>;
 
 const SAVED_OPTION_LABELS: Readonly<Record<string, string>> = {
-  agent: "Agent",
-  effort: "Effort",
-  reasoningEffort: "Reasoning effort",
-  variant: "Reasoning",
+  agent: t("Agent"),
+  effort: t("Effort"),
+  reasoningEffort: t("Reasoning effort"),
+  variant: t("Reasoning"),
 };
 
 function savedOptionLabel(id: string): string {
@@ -94,7 +95,7 @@ const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n";
 function DefaultBadge() {
   return (
     <Badge variant="outline" size="sm" className="min-w-0">
-      Default
+      {t("Default")}
     </Badge>
   );
 }
@@ -396,8 +397,12 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
               </div>
               {ultrathinkInBodyText && descriptor.id === primarySelectDescriptor?.id ? (
                 <div className="px-2 pb-1.5 text-muted-foreground/80 text-xs">
-                  Your prompt contains &quot;ultrathink&quot; in the text. Remove it to change this
-                  option.
+                  {t(
+                    "Your prompt contains {keyword} in the text. Remove it to change this option.",
+                    {
+                      keyword: '"ultrathink"',
+                    },
+                  )}
                 </div>
               ) : null}
               <MenuRadioGroup
@@ -460,7 +465,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
                 {(["on", "off"] as const).map((value) => (
                   <MenuRadioItem key={value} value={value} hideIndicator closeOnClick>
                     <span className="flex w-full min-w-0 items-center justify-between gap-3">
-                      <span>{value === "on" ? "On" : "Off"}</span>
+                      <span>{value === "on" ? t("On") : t("Off")}</span>
                     </span>
                   </MenuRadioItem>
                 ))}
@@ -493,7 +498,7 @@ export function buildTraitsTriggerDisplay(input: {
   for (const descriptor of input.descriptors) {
     if (descriptor.id === "fastMode" && descriptor.type === "boolean") {
       fastModeEnabled = descriptor.currentValue === true;
-      fastModeFallbackLabel = fastModeEnabled ? "Fast" : "Normal";
+      fastModeFallbackLabel = fastModeEnabled ? t("Fast") : t("Normal");
       continue;
     }
     if (
@@ -507,7 +512,7 @@ export function buildTraitsTriggerDisplay(input: {
         fastModeEnabled = currentValue === fastTier.id;
         fastModeFallbackLabel =
           descriptor.options.find(({ id }) => id === currentValue)?.label ??
-          (fastModeEnabled ? "Fast" : "Normal");
+          (fastModeEnabled ? t("Fast") : t("Normal"));
         continue;
       }
     }
@@ -515,7 +520,7 @@ export function buildTraitsTriggerDisplay(input: {
       input.ultrathinkPromptControlled && descriptor.id === input.primarySelectDescriptorId
         ? "Ultrathink"
         : descriptor.type === "boolean"
-          ? `${descriptor.label} ${descriptor.currentValue === true ? "On" : "Off"}`
+          ? `${descriptor.label} ${descriptor.currentValue === true ? t("On") : t("Off")}`
           : getProviderOptionCurrentLabel(descriptor);
     if (typeof label === "string" && label.length > 0) {
       labels.push(label);
@@ -583,7 +588,7 @@ export const TraitsPicker = memo(function TraitsPicker({
     primarySelectDescriptorId: primarySelectDescriptor?.id ?? null,
     ultrathinkPromptControlled,
   });
-  const accessibleLabel = showFastModeIcon ? `${triggerLabel}, Fast mode on` : triggerLabel;
+  const accessibleLabel = showFastModeIcon ? `${triggerLabel}, ${t("Fast mode on")}` : triggerLabel;
   const fastModeIcon = showFastModeIcon ? (
     <>
       <ComposerControlIcon
@@ -598,7 +603,7 @@ export const TraitsPicker = memo(function TraitsPicker({
               : "text-foreground",
         )}
       />
-      <span className="sr-only">Fast mode on</span>
+      <span className="sr-only">{t("Fast mode on")}</span>
     </>
   ) : null;
 

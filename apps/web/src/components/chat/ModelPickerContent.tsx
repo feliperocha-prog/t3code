@@ -46,6 +46,7 @@ import {
   type ProviderInstanceEntry,
 } from "../../providerInstances";
 import { providerModelKey, sortProviderModelItems } from "../../modelOrdering";
+import { t } from "~/i18n";
 
 type ModelPickerItem = {
   slug: string;
@@ -827,7 +828,10 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
               ? {
                   disabledInstanceIds: lockedDisabledInstanceIds,
                   getDisabledInstanceTooltip: (entry: ProviderInstanceEntry) =>
-                    `${entry.displayName} is unavailable in this thread. Start a new thread to switch providers.`,
+                    t(
+                      "{provider} is unavailable in this thread. Start a new thread to switch providers.",
+                      { provider: entry.displayName },
+                    ),
                 }
               : {})}
           />
@@ -884,7 +888,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
           >
             <ComboboxSearchInput
               ref={searchInputRef}
-              placeholder="Search models..."
+              placeholder={t("Search models...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -958,9 +962,11 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
                           className="group w-full cursor-pointer"
                         >
                           <div className="min-w-0 flex-1 text-left">
-                            <div className="text-xs font-medium leading-snug">Legacy models</div>
+                            <div className="text-xs font-medium leading-snug">
+                              {t("Legacy models")}
+                            </div>
                             <div className="mt-1 text-xs font-normal leading-snug text-muted-foreground/70">
-                              {legacySection.legacyModels.length} models
+                              {t("{count} models", { count: legacySection.legacyModels.length })}
                             </div>
                           </div>
                           <ChevronRightIcon
@@ -1039,14 +1045,14 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
                       }}
                     >
                       {providerSetupEntries.length > 1
-                        ? `Set up ${entry.displayName}`
-                        : "Open provider setup"}
+                        ? t("Set up {provider}", { provider: entry.displayName })
+                        : t("Open provider setup")}
                     </InlineButton>
                   </div>
                 ))}
               </div>
             ) : (
-              <ComboboxEmpty className="empty:h-0">No models found</ComboboxEmpty>
+              <ComboboxEmpty className="empty:h-0">{t("No models found")}</ComboboxEmpty>
             )}
           </div>
         </Combobox>

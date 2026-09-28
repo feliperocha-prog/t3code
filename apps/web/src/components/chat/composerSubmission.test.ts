@@ -12,6 +12,7 @@ import {
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import { submitComposerDraft } from "./composerSubmission";
+import { t } from "~/i18n";
 
 const assistantCitation = {
   version: 1 as const,
@@ -49,7 +50,10 @@ describe("submitComposerDraft", () => {
     expect(dispatchedDrafts).toEqual([]);
     expect(draft).toHaveLength(PROVIDER_SEND_TURN_MAX_INPUT_CHARS + 1);
     expect(validationMessage).toBe(
-      "Prompt is 1 character over the 120,000-character limit. Shorten or split it before sending.",
+      t(
+        "Prompt is {count} character over the {limit}-character limit. Shorten or split it before sending.",
+        { count: "1", limit: "120,000" },
+      ),
     );
     expect(preventDefault).toHaveBeenCalledOnce();
 
@@ -90,8 +94,10 @@ describe("submitComposerDraft", () => {
     });
 
     expect(result).toEqual({
-      validationMessage:
-        "Prompt is 18 characters over the 120,000-character limit. Shorten or split it before sending.",
+      validationMessage: t(
+        "Prompt is {count} characters over the {limit}-character limit. Shorten or split it before sending.",
+        { count: "18", limit: "120,000" },
+      ),
       didDispatch: false,
     });
     expect(draft).toHaveLength(PROVIDER_SEND_TURN_MAX_INPUT_CHARS);
@@ -161,8 +167,10 @@ describe("submitComposerDraft", () => {
       });
 
       expect(result).toEqual({
-        validationMessage:
-          "Prompt is 1 character over the 120,000-character limit. Shorten or split it before sending.",
+        validationMessage: t(
+          "Prompt is {count} character over the {limit}-character limit. Shorten or split it before sending.",
+          { count: "1", limit: "120,000" },
+        ),
         didDispatch: false,
       });
       expect(onSend).not.toHaveBeenCalled();
@@ -192,8 +200,10 @@ describe("submitComposerDraft", () => {
     });
 
     expect(result).toEqual({
-      validationMessage:
-        "Prompt is 1 character over the 120,000-character limit. Shorten or split it before sending.",
+      validationMessage: t(
+        "Prompt is {count} character over the {limit}-character limit. Shorten or split it before sending.",
+        { count: "1", limit: "120,000" },
+      ),
       didDispatch: false,
     });
     expect(onSend).not.toHaveBeenCalled();
@@ -235,7 +245,12 @@ describe("submitComposerDraft", () => {
     });
 
     expect(result.didDispatch).toBe(false);
-    expect(result.validationMessage).toContain("over the 120,000-character limit");
+    expect(result.validationMessage).toContain(
+      t(
+        "Prompt is {count} characters over the {limit}-character limit. Shorten or split it before sending.",
+        { count: "PLEASE IMPLEMENT THIS PLAN:\n".length, limit: "120,000" },
+      ),
+    );
     expect(onSend).not.toHaveBeenCalled();
   });
 
