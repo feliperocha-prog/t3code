@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
 import { Spinner } from "../ui/spinner";
 import { composerFloatingLayerProps } from "./composerEventScope";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 interface PendingActionState {
   questionIndex: number;
@@ -45,7 +45,7 @@ const formatPendingPrimaryActionLabel = (input: {
     return t("Submitting...");
   }
   if (input.compact) {
-    return input.isLastQuestion ? t("Submit") : t("Next");
+    return input.isLastQuestion ? t("Submit") : tc("next question", "Next");
   }
   if (!input.isLastQuestion) {
     return t("Next question");

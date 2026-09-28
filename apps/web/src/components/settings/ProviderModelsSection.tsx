@@ -9,7 +9,7 @@ import {
 } from "@t3tools/contracts";
 import { type CustomModelDefinition, normalizeCustomModelSlug } from "@t3tools/shared/model";
 
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 import { cn } from "../../lib/utils";
 import { sortModelsForProviderInstance } from "../../modelOrdering";
 import { MAX_CUSTOM_MODEL_LENGTH } from "../../modelSelection";
@@ -51,7 +51,8 @@ function describeModelCapabilities(model: ServerProviderModel): string[] {
         descriptor.options.some((option) => option.id === "fast" || option.label === "Fast")),
   );
   if (hasFastMode) labels.push(t("Fast mode"));
-  if (descriptors.some((descriptor) => descriptor.id === "thinking")) labels.push(t("Thinking"));
+  if (descriptors.some((descriptor) => descriptor.id === "thinking"))
+    labels.push(tc("model capability", "Thinking"));
   if (
     descriptors.some(
       (descriptor) =>

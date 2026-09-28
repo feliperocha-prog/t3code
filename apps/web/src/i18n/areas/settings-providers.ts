@@ -84,7 +84,7 @@ const dictionary: Readonly<Record<string, string>> = {
   Reasoning: "Raciocínio",
   Speed: "Velocidade",
   "Fast Mode": "Modo rápido",
-  Thinking: "Pensamento",
+  "model capability|Thinking": "Pensamento",
   Agent: "Agente",
 
   // Settings → Providers: provider status
@@ -852,7 +852,7 @@ const dictionary: Readonly<Record<string, string>> = {
 
   // Usage → pooled subscription limits
   "Account {initials}": "Conta {initials}",
-  Plan: "Plano",
+  "subscription|Plan": "Plano",
   "Signed in": "Logado em",
   Via: "Via",
   Left: "Restante",

@@ -127,7 +127,7 @@ const dictionary: Readonly<Record<string, string>> = {
   "Plan ready": "Plano pronto",
   "Submitting...": "Enviando...",
   Submit: "Enviar",
-  Next: "Próxima",
+  "next question|Next": "Próxima",
   "Next question": "Próxima pergunta",
   "Submit answers": "Enviar respostas",
   "Submit answer": "Enviar resposta",
@@ -230,7 +230,6 @@ const dictionary: Readonly<Record<string, string>> = {
   "Open in integrated browser": "Abrir no navegador integrado",
   "Open in system browser": "Abrir no navegador do sistema",
   "Copy Link": "Copiar link",
-  "Link to thread": "Vincular à thread",
   "Unlink from thread": "Desvincular da thread",
   "Copy message": "Copiar mensagem",
 
@@ -272,7 +271,6 @@ const dictionary: Readonly<Record<string, string>> = {
   "No installed editors found": "Nenhum editor instalado encontrado",
   "Opens over SSH. Needs your key on {environment}":
     "Abre via SSH. Precisa da sua chave em {environment}",
-  "Open in {editor}": "Abrir em {editor}",
   "Open in…": "Abrir em…",
   "Open in editor": "Abrir no editor",
   "Open file in preferred editor": "Abrir o arquivo no editor preferido",
@@ -407,7 +405,6 @@ const dictionary: Readonly<Record<string, string>> = {
   "{count} needs a manual update": "{count} precisa de atualização manual",
   "{count} need a manual update": "{count} precisam de atualização manual",
   Retry: "Tentar de novo",
-  "Update all": "Atualizar todas",
   "Update {count} machine": "Atualizar {count} máquina",
   "Update {count} machines": "Atualizar {count} máquinas",
   "Dismiss update notice": "Dispensar aviso de atualização",
@@ -796,9 +793,7 @@ const dictionary: Readonly<Record<string, string>> = {
     "Tente citar a seleção depois que a conexão ou a entrada pendente for resolvida.",
   "Cloning repository": "Clonando o repositório",
   "Repository not cloned": "Repositório não clonado",
-  "Failed to cancel clone": "Falha ao cancelar a clonagem",
   "Retry to bring in the repository.": "Tente de novo para trazer o repositório.",
-  "Failed to retry clone": "Falha ao tentar clonar de novo",
   "Could not reconnect environment": "Não foi possível reconectar o ambiente",
   "Failed to reconnect.": "Falha ao reconectar.",
   "Could not disconnect server": "Não foi possível desconectar o servidor",
@@ -810,7 +805,6 @@ const dictionary: Readonly<Record<string, string>> = {
   "Usage limits are unavailable for this provider":
     "Os limites de uso não estão disponíveis para este provedor",
   "The environment is not connected.": "O ambiente não está conectado.",
-  "The attachment is unavailable.": "O anexo não está disponível.",
   "Keep attachments on this machine": "Mantenha os anexos nesta máquina",
   "Remove attachments before choosing automatic routing, then attach them on the selected machine.":
     "Remova os anexos antes de escolher o roteamento automático e anexe-os de novo na máquina selecionada.",
@@ -823,15 +817,11 @@ const dictionary: Readonly<Record<string, string>> = {
   "Could not delete action": "Não foi possível excluir a ação",
   "An unexpected error occurred.": "Ocorreu um erro inesperado.",
   "Unable to open browser": "Não foi possível abrir o navegador",
-  "Failed to copy path": "Falha ao copiar o caminho",
   "Clipboard API unavailable.": "API da área de transferência indisponível.",
   "Path copied": "Caminho copiado",
   "PR link copied": "Link do PR copiado",
   "Failed to copy PR link": "Falha ao copiar o link do PR",
   "Thread ID copied": "ID da thread copiado",
-  "Failed to copy thread ID": "Falha ao copiar o ID da thread",
-  "Failed to un-settle thread": "Falha ao reabrir a thread",
-  "Failed to wake thread": "Falha ao retomar a thread",
   "Failed to switch checkout": "Falha ao trocar o checkout",
   "Checkout switched, but the thread could not be updated":
     "O checkout foi trocado, mas não foi possível atualizar a thread",
@@ -855,9 +845,6 @@ const dictionary: Readonly<Record<string, string>> = {
   "Restoring...": "Restaurando...",
   "Restore branch": "Restaurar branch",
   "Dismiss branch change notice": "Dispensar aviso de troca de branch",
-  "Failed to settle thread": "Falha ao concluir a thread",
-  "Failed to unpin thread": "Falha ao desafixar a thread",
-  "Failed to pin thread": "Falha ao fixar a thread",
   "This provider does not support reverting conversation history. Start a new thread instead.":
     "Este provedor não permite reverter o histórico da conversa. Comece uma nova thread.",
   "Interrupt the current turn before reverting checkpoints.":
@@ -927,7 +914,6 @@ const dictionary: Readonly<Record<string, string>> = {
   "{label} server": "servidor {label}",
   "Cloning {name}": "Clonando {name}",
   "Cancelled cloning {name}": "Clonagem de {name} cancelada",
-  "Failed to clone {name}": "Falha ao clonar {name}",
   "Remove project": "Remover projeto",
   "Hide this server's threads. Switch it on again in Connections.":
     "Oculta as threads deste servidor. Ative de novo em Conexões.",

@@ -1,4 +1,4 @@
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 import {
   ChevronsLeftRightEllipsisIcon,
   EllipsisIcon,
@@ -1377,7 +1377,7 @@ const AdvertisedEndpointListRow = memo(function AdvertisedEndpointListRow({
               onClick={() => onSetupTailscaleServe(endpoint)}
               disabled={isUpdatingTailscaleServe}
             >
-              {isUpdatingTailscaleServe ? t("Restarting…") : t("Setup")}
+              {isUpdatingTailscaleServe ? t("Restarting…") : tc("button", "Setup")}
             </Button>
           ) : null}
           {canDisableTailscaleServe ? (

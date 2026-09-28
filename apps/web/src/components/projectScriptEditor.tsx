@@ -55,14 +55,14 @@ import { Label } from "./ui/label";
 import { Popover, PopoverPopup, PopoverTrigger } from "./ui/popover";
 import { Switch } from "./ui/switch";
 import { Textarea } from "./ui/textarea";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 const SCRIPT_ICONS: Array<{ id: ProjectScriptIcon; label: string }> = [
   { id: "play", label: t("Play") },
   { id: "test", label: t("Test") },
   { id: "lint", label: t("Lint") },
   { id: "configure", label: t("Configure") },
-  { id: "build", label: t("Build") },
+  { id: "build", label: tc("project script", "Build") },
   { id: "debug", label: t("Debug") },
 ];
 

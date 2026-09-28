@@ -515,7 +515,7 @@ const dictionary: Readonly<Record<string, string>> = {
   Test: "Testar",
   Lint: "Lint",
   Configure: "Configurar",
-  Build: "Compilar",
+  "project script|Build": "Compilar",
   Debug: "Depurar",
   "Name is required.": "O nome é obrigatório.",
   "Command is required.": "O comando é obrigatório.",

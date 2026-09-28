@@ -559,7 +559,7 @@ const dictionary: Readonly<Record<string, string>> = {
 
   // Connections: network access, Tailscale and endpoints
   "Setup required": "Configuração necessária",
-  Setup: "Configurar",
+  "button|Setup": "Configurar",
   Disable: "Desativar",
   Enable: "Ativar",
   "Set as default": "Definir como padrão",
