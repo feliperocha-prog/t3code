@@ -24,6 +24,7 @@ import { AssistantCitationCommentEditor } from "./AssistantCitationCommentEditor
 import { resolveAssistantCitationCommentDismissal } from "./assistantCitationCommentDismissal";
 import { observeAssistantCitationCommentSource } from "./AssistantCitationSource";
 import { composerFloatingLayerProps } from "./composerEventScope";
+import { t } from "~/i18n";
 
 export function AssistantCitationChip({
   citation,
@@ -111,7 +112,7 @@ export function AssistantCitationChip({
     <Link
       {...sourceLinkProps}
       className="inline-flex h-full min-w-0 items-center gap-[0.33em] rounded-sm text-inherit no-underline focus-visible:outline-2 focus-visible:outline-foreground"
-      aria-label={`View cited assistant text: ${label}`}
+      aria-label={t("View cited assistant text: {label}", { label })}
     >
       <QuoteIcon aria-hidden="true" />
       <ContextChipLabel className="max-w-[16em]">{label}</ContextChipLabel>
@@ -121,7 +122,7 @@ export function AssistantCitationChip({
     <Link
       {...sourceLinkProps}
       className="inline-flex h-full min-w-0 items-center gap-[0.33em] rounded-sm text-inherit no-underline hover:bg-(--context-chip-accent)/17 focus-visible:outline-2 focus-visible:outline-foreground"
-      aria-label={`View cited assistant text: ${label}`}
+      aria-label={t("View cited assistant text: {label}", { label })}
     >
       <QuoteIcon aria-hidden="true" />
       <ContextChipLabel className="max-w-[16em]">{label}</ContextChipLabel>
@@ -139,7 +140,7 @@ export function AssistantCitationChip({
       ) : (
         <Tooltip>
           <TooltipTrigger render={chatSourceLink} />
-          <TooltipPopup side="top">View source</TooltipPopup>
+          <TooltipPopup side="top">{t("View source")}</TooltipPopup>
         </Tooltip>
       )}
       {commentEditor ? (
@@ -154,7 +155,9 @@ export function AssistantCitationChip({
           }}
         >
           <PopoverTrigger
-            aria-label={citation.comment ? "Edit citation comment" : "Add comment to citation"}
+            aria-label={
+              citation.comment ? t("Edit citation comment") : t("Add comment to citation")
+            }
             render={<ContextChipAction />}
           >
             <PencilIcon aria-hidden="true" />
@@ -169,7 +172,7 @@ export function AssistantCitationChip({
                 commentInputRef.current?.focus({ preventScroll: true });
                 return false;
               }}
-              aria-label="Edit citation comment"
+              aria-label={t("Edit citation comment")}
               width="md"
               padding="compact"
               onPointerDown={(event) => event.stopPropagation()}

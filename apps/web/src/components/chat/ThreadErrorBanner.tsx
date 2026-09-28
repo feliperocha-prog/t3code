@@ -3,6 +3,7 @@ import { Alert, AlertAction, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import { CircleAlertIcon, XIcon } from "lucide-react";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { t } from "~/i18n";
 
 export function getThreadErrorBannerKey(threadKey: string, error: string | null): string | null {
   return error === null ? null : `${threadKey}\u0000${error}`;
@@ -55,7 +56,12 @@ export const ThreadErrorBanner = memo(function ThreadErrorBanner({
         </AlertDescription>
         {onDismiss && (
           <AlertAction>
-            <Button variant="ghost" size="icon-xs" aria-label="Dismiss error" onClick={onDismiss}>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label={t("Dismiss error")}
+              onClick={onDismiss}
+            >
               <XIcon className="text-destructive" />
             </Button>
           </AlertAction>

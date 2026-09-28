@@ -3,6 +3,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 
 import { ComposerBannerStack } from "./ComposerBannerStack";
+import { t } from "~/i18n";
 
 vi.mock("../ui/popover", () => ({
   Popover: "popover",
@@ -52,7 +53,7 @@ it("only offers notice details when the description cannot fit", async () => {
     get clientWidth() {
       return (
         availableWidth -
-        (renderer?.root.findAllByProps({ "aria-label": "Show notice details" }).length ? 28 : 0)
+        (renderer?.root.findAllByProps({ "aria-label": t("Show notice details") }).length ? 28 : 0)
       );
     },
     scrollWidth: 80,
@@ -76,7 +77,7 @@ it("only offers notice details when the description cannot fit", async () => {
       },
     );
   });
-  const details = () => renderer.root.findAllByProps({ "aria-label": "Show notice details" });
+  const details = () => renderer.root.findAllByProps({ "aria-label": t("Show notice details") });
   expect(details()).toHaveLength(0);
   text.scrollWidth = 300;
   await act(() => resize());

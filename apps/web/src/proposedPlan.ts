@@ -1,3 +1,4 @@
+import { t } from "~/i18n";
 export function proposedPlanTitle(planMarkdown: string): string | null {
   const heading = planMarkdown.match(/^\s{0,3}#{1,6}\s+(.+)$/m)?.[1]?.trim();
   return heading && heading.length > 0 ? heading : null;
@@ -51,7 +52,7 @@ export function buildCollapsedProposedPlanPreviewMarkdown(
   }
 
   if (previewLines.length === 0) {
-    return proposedPlanTitle(planMarkdown) ?? "Plan preview unavailable.";
+    return proposedPlanTitle(planMarkdown) ?? t("Plan preview unavailable.");
   }
 
   if (hasMoreContent) {

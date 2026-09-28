@@ -57,6 +57,7 @@ import {
   resolveSelectableProviderInstanceEntry,
   type ProviderInstanceEntry,
 } from "../providerInstances";
+import { t } from "~/i18n";
 
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "t3code:last-invoked-script-by-project";
 export const MAX_HIDDEN_MOUNTED_TERMINAL_THREADS = 10;
@@ -78,13 +79,17 @@ export function agentControlledBrowserCloseConfirmation(
   if (activeBrowserCount === 0) return null;
   if (activeBrowserCount === 1) {
     return [
-      "Close browser while the agent is using it?",
-      "The agent is actively controlling this browser. Closing it may interrupt the current browser action.",
+      t("Close browser while the agent is using it?"),
+      t(
+        "The agent is actively controlling this browser. Closing it may interrupt the current browser action.",
+      ),
     ].join("\n");
   }
   return [
-    `Close ${activeBrowserCount} browsers while the agent is using them?`,
-    "The agent is actively controlling these browsers. Closing them may interrupt the current browser actions.",
+    t("Close {count} browsers while the agent is using them?", { count: activeBrowserCount }),
+    t(
+      "The agent is actively controlling these browsers. Closing them may interrupt the current browser actions.",
+    ),
   ].join("\n");
 }
 
@@ -475,7 +480,7 @@ export function buildLocalDraftThread(
     id: threadId,
     environmentId: draftThread.environmentId,
     projectId: draftThread.projectId,
-    title: "New thread",
+    title: t("New thread"),
     modelSelection: fallbackModelSelection,
     runtimeMode: draftThread.runtimeMode,
     interactionMode: draftThread.interactionMode,
@@ -619,18 +624,18 @@ export function getAntigravitySendBlockReason(
 ): string | null {
   if (provider?.driver !== "antigravity") return null;
   if (!provider.installed) {
-    return "Install Antigravity in provider settings before sending.";
+    return t("Install Antigravity in provider settings before sending.");
   }
   if (provider.auth.status === "unauthenticated") {
-    return "Sign in to Antigravity in provider settings before sending.";
+    return t("Sign in to Antigravity in provider settings before sending.");
   }
   const slug = model.trim();
-  if (slug.length === 0) return "Choose an Antigravity model before sending.";
+  if (slug.length === 0) return t("Choose an Antigravity model before sending.");
   // A restart clears the account status and catalog. Session startup checks
   // saved credentials and validates the model before sending the prompt.
   if (provider.auth.status === "unknown") return null;
   if (provider.models.length === 0) {
-    return "Refresh Antigravity models in provider settings before sending.";
+    return t("Refresh Antigravity models in provider settings before sending.");
   }
   // A saved model that left the catalog is kept in the picker as unavailable
   // so the user sees what the thread used. The server rejects it at turn
@@ -641,7 +646,7 @@ export function getAntigravitySendBlockReason(
     slug !== ANTIGRAVITY_DEFAULT_MODEL &&
     !provider.models.some((entry) => entry.slug === slug || entry.aliases?.includes(slug))
   ) {
-    return "That Antigravity model is no longer available. Choose another model.";
+    return t("That Antigravity model is no longer available. Choose another model.");
   }
   return null;
 }
@@ -718,7 +723,7 @@ export async function resolveFileAttachmentUrl(input: {
   });
   if (result._tag === "Failure") throw squashAtomCommandFailure(result);
   const url = resolveAssetUrl(input.httpBaseUrl, result.value.relativeUrl);
-  if (url === null) throw new Error("The environment returned an invalid attachment URL.");
+  if (url === null) throw new Error(t("The environment returned an invalid attachment URL."));
   return url;
 }
 
@@ -731,7 +736,7 @@ export async function prepareRevertedMessageAttachments(input: {
   return Promise.all(
     (input.message.attachments ?? []).map(async (attachment) => {
       if (attachment.type !== "image" && attachment.type !== "file") {
-        throw new Error("This message has an attachment that cannot be restored.");
+        throw new Error(t("This message has an attachment that cannot be restored."));
       }
       const result = await input.createAssetUrl({
         environmentId: input.environmentId,
@@ -746,9 +751,11 @@ export async function prepareRevertedMessageAttachments(input: {
       });
       if (result._tag === "Failure") throw squashAtomCommandFailure(result);
       const url = resolveAssetUrl(input.httpBaseUrl, result.value.relativeUrl);
-      if (url === null) throw new Error("The environment returned an invalid attachment URL.");
+      if (url === null) throw new Error(t("The environment returned an invalid attachment URL."));
       const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
-      if (!response.ok) throw new Error(`Could not restore attachment: ${attachment.name}`);
+      if (!response.ok) {
+        throw new Error(t("Could not restore attachment: {name}", { name: attachment.name }));
+      }
       return new File([await response.blob()], attachment.name, { type: attachment.mimeType });
     }),
   );
@@ -803,10 +810,10 @@ export function readFileAsDataUrl(file: File): Promise<string> {
         resolve(reader.result);
         return;
       }
-      reject(new Error("Could not read image data."));
+      reject(new Error(t("Could not read image data.")));
     });
     reader.addEventListener("error", () => {
-      reject(reader.error ?? new Error("Failed to read image."));
+      reject(reader.error ?? new Error(t("Failed to read image.")));
     });
     reader.readAsDataURL(file);
   });
@@ -891,16 +898,21 @@ export function buildExpiredTerminalContextToastCopy(
   variant: "omitted" | "empty",
 ): { title: string; description: string } {
   const count = Math.max(1, Math.floor(expiredTerminalContextCount));
-  const noun = count === 1 ? "Expired terminal context" : "Expired terminal contexts";
   if (variant === "empty") {
     return {
-      title: `${noun} won't be sent`,
-      description: "Remove it or re-add it to include terminal output.",
+      title:
+        count === 1
+          ? t("Expired terminal context won't be sent")
+          : t("Expired terminal contexts won't be sent"),
+      description: t("Remove it or re-add it to include terminal output."),
     };
   }
   return {
-    title: `${noun} omitted from message`,
-    description: "Re-add it if you want that terminal output included.",
+    title:
+      count === 1
+        ? t("Expired terminal context omitted from message")
+        : t("Expired terminal contexts omitted from message"),
+    description: t("Re-add it if you want that terminal output included."),
   };
 }
 
@@ -1072,8 +1084,10 @@ export function getStartedThreadModelChangeBlockReason(input: {
     return null;
   }
   return {
-    title: "Start a new chat to change models",
-    description: "This provider does not allow switching models after a conversation has started.",
+    title: t("Start a new chat to change models"),
+    description: t(
+      "This provider does not allow switching models after a conversation has started.",
+    ),
   };
 }
 
@@ -1132,7 +1146,7 @@ export async function waitForRevertedMessage(
   const threadAtom = environmentThreadDetails.detailAtom(threadRef);
   const initial = appAtomRegistry.get(threadAtom);
   if (!initial?.messages.some((message) => message.id === messageId)) {
-    throw new Error("The message to rewind is no longer available.");
+    throw new Error(t("The message to rewind is no longer available."));
   }
   const previousFailures = new Set(
     initial.activities
@@ -1186,7 +1200,7 @@ export async function waitForRevertedMessage(
     };
     unsubscribe = appAtomRegistry.subscribe(threadAtom, inspect);
     timeout = globalThis.setTimeout(() => {
-      finish(new Error("Timed out waiting for the thread to rewind."));
+      finish(new Error(t("Timed out waiting for the thread to rewind.")));
     }, timeoutMs);
     Promise.resolve()
       .then(revert)

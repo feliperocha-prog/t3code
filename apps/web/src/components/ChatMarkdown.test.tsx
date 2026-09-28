@@ -8,6 +8,7 @@ import { getSyntaxHighlighterPromise } from "../lib/syntaxHighlighting";
 import { GitHubIcon } from "./Icons";
 import { Button } from "./ui/button";
 import { setMarkdownTaskChecked } from "./files/filePreviewMode";
+import { t } from "~/i18n";
 
 vi.mock("@effect/atom-react", () => ({ useAtomValue: () => null }));
 vi.mock("../hooks/useTheme", () => ({ useTheme: () => ({ resolvedTheme: "dark" }) }));
@@ -199,14 +200,14 @@ describe("ChatMarkdown streaming", () => {
       expect(
         mounted.root
           .findAllByType(Button)
-          .some((button) => button.props["aria-label"] === "Run in terminal"),
+          .some((button) => button.props["aria-label"] === t("Run in terminal")),
       ).toBe(false);
 
       await act(async () => {
         mounted.update(message("```bash\necho hello\n```"));
       });
       await act(async () => {
-        codeButton(mounted, "Run in terminal").onClick?.({} as never);
+        codeButton(mounted, t("Run in terminal")).onClick?.({} as never);
       });
       expect(onRunShellCommand).toHaveBeenCalledExactlyOnceWith("echo hello");
 
@@ -218,7 +219,7 @@ describe("ChatMarkdown streaming", () => {
         await act(async () => {
           mounted.update(message(text));
         });
-        expect(codeButton(mounted, "Run in terminal")).toBeDefined();
+        expect(codeButton(mounted, t("Run in terminal"))).toBeDefined();
       }
 
       for (const text of [
@@ -239,7 +240,7 @@ describe("ChatMarkdown streaming", () => {
         expect(
           mounted.root
             .findAllByType(Button)
-            .some((button) => button.props["aria-label"] === "Run in terminal"),
+            .some((button) => button.props["aria-label"] === t("Run in terminal")),
         ).toBe(false);
       }
     } finally {
@@ -293,7 +294,7 @@ describe("ChatMarkdown streaming", () => {
       const mounted = renderer!;
       const codeBlock = mounted.root.findByProps({ "data-language": "text" });
       const initialWrap = codeBlock.props["data-wrap"] === "true";
-      const wrap = codeButton(mounted, initialWrap ? "Disable line wrap" : "Wrap lines");
+      const wrap = codeButton(mounted, initialWrap ? t("Disable line wrap") : t("Wrap lines"));
       await act(async () => {
         wrap.onClick?.({} as Parameters<NonNullable<typeof wrap.onClick>>[0]);
       });
@@ -344,8 +345,8 @@ describe("ChatMarkdown streaming", () => {
       const mounted = renderer!;
       const codeBlock = mounted.root.findByProps({ "data-language": "text" });
       const initialWrap = codeBlock.props["data-wrap"] === "true";
-      const wrap = codeButton(mounted, initialWrap ? "Disable line wrap" : "Wrap lines");
-      const copy = codeButton(mounted, "Copy code");
+      const wrap = codeButton(mounted, initialWrap ? t("Disable line wrap") : t("Wrap lines"));
+      const copy = codeButton(mounted, t("Copy code"));
       await act(async () => {
         wrap.onClick?.({} as Parameters<NonNullable<typeof wrap.onClick>>[0]);
         copy.onClick?.({} as Parameters<NonNullable<typeof copy.onClick>>[0]);
@@ -383,7 +384,7 @@ describe("ChatMarkdown streaming", () => {
           />,
         );
       });
-      const copyUpdated = codeButton(mounted, "Copied");
+      const copyUpdated = codeButton(mounted, t("Copied"));
       await act(async () => {
         copyUpdated.onClick?.({} as Parameters<NonNullable<typeof copyUpdated.onClick>>[0]);
       });
@@ -714,7 +715,7 @@ describe("ChatMarkdown artifact-template cards", () => {
     expect(html).toContain('data-skill-name="artifact-template-hello-world"');
     expect(html).toContain("Hello World");
     expect(html).toContain("Document template");
-    expect(html).toContain("Use template");
+    expect(html).toContain(t("Use template"));
     expect(html).not.toContain("<p><div");
   });
 
@@ -724,7 +725,7 @@ describe("ChatMarkdown artifact-template cards", () => {
     );
 
     expect(html).toContain("data-chat-markdown-artifact-template");
-    expect(html).not.toContain("Use template");
+    expect(html).not.toContain(t("Use template"));
   });
 
   it("leaves malformed and unfinished artifact-template directives literal", () => {

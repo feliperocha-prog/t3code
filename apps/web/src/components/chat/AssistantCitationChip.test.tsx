@@ -9,6 +9,7 @@ import { create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { AssistantCitationSourceAnchor } from "~/lib/assistantTextSelection";
+import { t } from "~/i18n";
 
 const mocks = vi.hoisted(() => ({ observeSource: vi.fn(), dispose: vi.fn() }));
 vi.mock("./AssistantCitationSource", () => ({
@@ -117,7 +118,7 @@ describe("citation comment source disappearance", () => {
     expect(mocks.observeSource).toHaveBeenCalledTimes(1);
 
     typeComment("shortened comment");
-    clickButton("Save");
+    clickButton(t("Save"));
     expect(onSave).toHaveBeenCalledWith("shortened comment");
     expect(renderer.root.findAllByType("textarea")).toHaveLength(0);
   });
@@ -131,7 +132,7 @@ describe("citation comment source disappearance", () => {
     expect(renderer.root.findByType("textarea").props.value).toBe("keep this draft");
     expect(renderer.root.findByType(PopoverPopup).props.anchor).toBeUndefined();
     onSave.mockReturnValue(true);
-    clickButton("Save");
+    clickButton(t("Save"));
     expect(onSave).toHaveBeenLastCalledWith("keep this draft");
     expect(renderer.root.findAllByType("textarea")).toHaveLength(0);
   });
@@ -141,7 +142,7 @@ describe("citation comment source disappearance", () => {
     typeComment("discard this draft");
     removeSource();
     onSave.mockClear();
-    clickButton("Cancel");
+    clickButton(t("Cancel"));
     expect(onSave).not.toHaveBeenCalled();
     expect(renderer.root.findAllByType("textarea")).toHaveLength(0);
   });

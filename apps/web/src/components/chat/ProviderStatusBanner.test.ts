@@ -5,6 +5,7 @@ import {
   getProviderStatusMessage,
   shouldShowProviderStatusBanner,
 } from "./ProviderStatusBanner";
+import { t } from "~/i18n";
 
 const provider: ServerProvider = {
   instanceId: ProviderInstanceId.make("codex-work"),
@@ -63,7 +64,7 @@ describe("compatibility banners", () => {
       auth: { status: "unauthenticated" },
     };
     expect(getProviderStatusMessage(unauthenticated)).toBe(
-      "Sign in via the CLI to authenticate again.",
+      t("Sign in via the CLI to authenticate again."),
     );
     expect(getProviderStatusMessage({ ...unauthenticated, message: "Credentials expired" })).toBe(
       "Credentials expired",

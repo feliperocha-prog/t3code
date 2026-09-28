@@ -10,6 +10,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { deriveProviderInstanceEntries } from "../../providerInstances";
 import { ProviderModelPicker } from "./ProviderModelPicker";
 import type { ModelEsque } from "./providerIconUtils";
+import { t } from "~/i18n";
 
 function providerEntry(instanceId: string, driver: string) {
   const provider: ServerProvider = {
@@ -75,7 +76,7 @@ describe("ProviderModelPicker", () => {
         options: [],
       });
 
-      expect(markup).toContain("Choose model");
+      expect(markup).toContain(t("Choose model"));
       expect(markup).not.toContain(ANTIGRAVITY_DEFAULT_MODEL);
     },
   );

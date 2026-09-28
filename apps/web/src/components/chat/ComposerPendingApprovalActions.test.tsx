@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
 
 import { ComposerPendingApprovalActions } from "./ComposerPendingApprovalActions";
+import { t } from "~/i18n";
 
 describe("ComposerPendingApprovalActions", () => {
   it("keeps the main decisions visible and secondary decisions in the menu", () => {
@@ -14,10 +15,10 @@ describe("ComposerPendingApprovalActions", () => {
       />,
     );
 
-    expect(markup).toContain(">Decline<");
-    expect(markup).toContain(">Approve<");
-    expect(markup).not.toContain(">Cancel<");
-    expect(markup).not.toContain("Always allow this session");
+    expect(markup).toContain(`>${t("Decline")}<`);
+    expect(markup).toContain(`>${t("Approve")}<`);
+    expect(markup).not.toContain(`>${t("Cancel")}<`);
+    expect(markup).not.toContain(t("Always allow this session"));
   });
 
   it("keeps secondary provider labels out of the compact action row", () => {
@@ -36,7 +37,7 @@ describe("ComposerPendingApprovalActions", () => {
 
     expect(markup).not.toContain("Always allow Safari");
     expect(markup).toContain(">Approve<");
-    expect(markup).not.toContain("Always allow this session");
+    expect(markup).not.toContain(t("Always allow this session"));
   });
 
   it("preserves provider labels for the main decisions", () => {
@@ -54,7 +55,7 @@ describe("ComposerPendingApprovalActions", () => {
 
     expect(markup).toContain("Allow once");
     expect(markup).toContain("Deny");
-    expect(markup).not.toContain(">Approve<");
-    expect(markup).not.toContain(">Decline<");
+    expect(markup).not.toContain(`>${t("Approve")}<`);
+    expect(markup).not.toContain(`>${t("Decline")}<`);
   });
 });

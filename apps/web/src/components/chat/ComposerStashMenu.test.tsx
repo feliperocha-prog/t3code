@@ -3,6 +3,7 @@ import { EnvironmentId } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { ComposerStashMenu } from "./ComposerStashMenu";
+import { t } from "~/i18n";
 
 describe("ComposerStashMenu", () => {
   it("shows saved image thumbnails and incomplete image states", () => {
@@ -44,8 +45,8 @@ describe("ComposerStashMenu", () => {
     );
 
     expect(markup).toContain('src="data:image/png;base64,AA=="');
-    expect(markup).toContain("1 image dropped");
-    expect(markup).toContain("saving 1 image");
+    expect(markup).toContain(t("{count} image dropped", { count: 1 }));
+    expect(markup).toContain(t("saving {count} image…", { count: 1 }));
   });
 
   it("labels mixed file and image stashes without treating images as files", () => {

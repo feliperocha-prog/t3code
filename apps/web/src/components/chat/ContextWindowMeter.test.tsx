@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { deriveLatestContextWindowSnapshot } from "~/lib/contextWindow";
 import { ContextWindowMeter } from "./ContextWindowMeter";
+import { t } from "~/i18n";
 
 vi.mock("../ui/popover", () => ({
   Popover: ({ children }: { children: ReactNode }) => children,
@@ -35,14 +36,14 @@ describe("ContextWindowMeter", () => {
     const markup = renderToStaticMarkup(<ContextWindowMeter usage={usage} onCompact={() => {}} />);
 
     expect(markup).toContain('data-close-delay="150"');
-    expect(markup).toContain("Compact context");
+    expect(markup).toContain(t("Compact context"));
   });
 
   it("closes an informational hover popover without delay", () => {
     const markup = renderToStaticMarkup(<ContextWindowMeter usage={usage} />);
 
     expect(markup).toContain('data-close-delay="0"');
-    expect(markup).not.toContain("Compact context");
+    expect(markup).not.toContain(t("Compact context"));
   });
 
   it("explains why the compact action is disabled", () => {

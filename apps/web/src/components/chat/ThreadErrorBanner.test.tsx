@@ -8,6 +8,7 @@ import {
   shouldShowThreadErrorBanner,
   ThreadErrorBanner,
 } from "./ThreadErrorBanner";
+import { t } from "~/i18n";
 
 describe("ThreadErrorBanner", () => {
   it("stays hidden after its current error is dismissed", () => {
@@ -78,7 +79,7 @@ describe("ThreadErrorBanner", () => {
     );
 
     expect(markup).toContain('role="alert"');
-    expect(markup).toContain('aria-label="Dismiss error"');
+    expect(markup).toContain(`aria-label="${t("Dismiss error")}"`);
     expect(markup).not.toContain("controlAlignment");
     expect(markup).toContain("flex gap-2 items-start");
     expect(markup).toContain("min-h-7 pt-1 sm:min-h-6 sm:pt-0.5");

@@ -89,6 +89,7 @@ import {
   waitForRevertedMessage,
   prepareRevertedMessageAttachments,
 } from "./ChatView.logic";
+import { t } from "~/i18n";
 
 describe("agent browser close confirmation", () => {
   const surfaces = [
@@ -111,8 +112,10 @@ describe("agent browser close confirmation", () => {
       }),
     ).toBe(
       [
-        "Close browser while the agent is using it?",
-        "The agent is actively controlling this browser. Closing it may interrupt the current browser action.",
+        t("Close browser while the agent is using it?"),
+        t(
+          "The agent is actively controlling this browser. Closing it may interrupt the current browser action.",
+        ),
       ].join("\n"),
     );
   });
@@ -123,7 +126,7 @@ describe("agent browser close confirmation", () => {
         "tab-1": { controller: "agent" },
         "tab-2": { controller: "agent" },
       }),
-    ).toContain("Close 2 browsers");
+    ).toContain(t("Close {count} browsers while the agent is using them?", { count: 2 }));
   });
 });
 
@@ -1271,7 +1274,7 @@ describe("resolveComposerProviderSelection", () => {
     expect(selection.selectedProviderEntry?.instanceId).toBe(signedOutEntry.instanceId);
     expect(
       getAntigravitySendBlockReason(selection.selectedProviderEntry?.snapshot, "gemini-pro"),
-    ).toBe("Sign in to Antigravity in provider settings before sending.");
+    ).toBe(t("Sign in to Antigravity in provider settings before sending."));
   });
 
   it("blocks sends until the selected Antigravity profile is installed", () => {
@@ -1281,7 +1284,7 @@ describe("resolveComposerProviderSelection", () => {
     }).snapshot;
 
     expect(getAntigravitySendBlockReason(provider, "gemini-pro")).toBe(
-      "Install Antigravity in provider settings before sending.",
+      t("Install Antigravity in provider settings before sending."),
     );
   });
 
@@ -1298,13 +1301,13 @@ describe("resolveComposerProviderSelection", () => {
       getAntigravitySendBlockReason({ ...provider, models: catalogModels }, "gemini-pro"),
     ).toBeNull();
     expect(getAntigravitySendBlockReason(provider, "")).toBe(
-      "Choose an Antigravity model before sending.",
+      t("Choose an Antigravity model before sending."),
     );
   });
 
   it("blocks saved model sends until Antigravity loads its account catalog", () => {
     expect(getAntigravitySendBlockReason(entry("antigravity").snapshot, "gemini-pro")).toBe(
-      "Refresh Antigravity models in provider settings before sending.",
+      t("Refresh Antigravity models in provider settings before sending."),
     );
   });
 
@@ -1312,7 +1315,7 @@ describe("resolveComposerProviderSelection", () => {
     const provider = entry("antigravity", "google_work", { models: catalogModels }).snapshot;
 
     expect(getAntigravitySendBlockReason(provider, "")).toBe(
-      "Choose an Antigravity model before sending.",
+      t("Choose an Antigravity model before sending."),
     );
   });
 
@@ -1323,7 +1326,7 @@ describe("resolveComposerProviderSelection", () => {
     }).snapshot;
 
     expect(getAntigravitySendBlockReason(provider, "saved-model-not-in-current-catalog")).toBe(
-      "That Antigravity model is no longer available. Choose another model.",
+      t("That Antigravity model is no longer available. Choose another model."),
     );
     expect(getAntigravitySendBlockReason(provider, "gemini-pro")).toBeNull();
   });
@@ -1546,12 +1549,12 @@ describe("deriveComposerSendState", () => {
 describe("buildExpiredTerminalContextToastCopy", () => {
   it("formats empty and omission guidance", () => {
     expect(buildExpiredTerminalContextToastCopy(1, "empty")).toEqual({
-      title: "Expired terminal context won't be sent",
-      description: "Remove it or re-add it to include terminal output.",
+      title: t("Expired terminal context won't be sent"),
+      description: t("Remove it or re-add it to include terminal output."),
     });
     expect(buildExpiredTerminalContextToastCopy(2, "omitted")).toEqual({
-      title: "Expired terminal contexts omitted from message",
-      description: "Re-add it if you want that terminal output included.",
+      title: t("Expired terminal contexts omitted from message"),
+      description: t("Re-add it if you want that terminal output included."),
     });
   });
 });
@@ -1616,9 +1619,10 @@ describe("getStartedThreadModelChangeBlockReason", () => {
         },
       }),
     ).toEqual({
-      title: "Start a new chat to change models",
-      description:
+      title: t("Start a new chat to change models"),
+      description: t(
         "This provider does not allow switching models after a conversation has started.",
+      ),
     });
   });
 });
@@ -2225,7 +2229,9 @@ describe("rewind draft recovery", () => {
     const timeoutIndex = setTimeoutSpy.mock.calls.findIndex(([, delay]) => delay === 20);
     const rewindTimeout = setTimeoutSpy.mock.results[timeoutIndex]?.value;
     expect(rewindTimeout).toBeDefined();
-    const rejection = expect(result).rejects.toThrow("Timed out waiting");
+    const rejection = expect(result).rejects.toThrow(
+      t("Timed out waiting for the thread to rewind."),
+    );
     await vi.advanceTimersByTimeAsync(20);
     await rejection;
     expect(clearTimeoutSpy).toHaveBeenCalledWith(rewindTimeout);
