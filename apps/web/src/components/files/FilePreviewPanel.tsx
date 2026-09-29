@@ -21,6 +21,7 @@ import {
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
 import { mediaFileReference } from "@t3tools/client-runtime/media-reference";
+import { scopedThreadKey } from "@t3tools/client-runtime/environment";
 import { Code2, Eye, FolderTree, Globe2, Table2, WrapTextIcon } from "lucide-react";
 import * as Schema from "effect/Schema";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -35,6 +36,7 @@ import { useClientSettings, useUpdateClientSettings } from "~/hooks/useSettings"
 import { useTheme } from "~/hooks/useTheme";
 import { getLocalStorageItem, setLocalStorageItem, useLocalStorage } from "~/hooks/useLocalStorage";
 import { useWorkspaceMutationRefresh } from "~/hooks/useWorkspaceMutationRefresh";
+import { resolveShortcutCommand } from "~/keybindings";
 import { resolveDiffThemeName } from "~/lib/diffRendering";
 import { PREFERRED_HIGHLIGHTER } from "~/lib/syntaxHighlighting";
 import { cn } from "~/lib/utils";
@@ -43,7 +45,7 @@ import { isAbsolutePath, resolvePathLinkTarget } from "~/terminal-links";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
 import { type DraftId, useComposerDraftStore } from "~/composerDraftStore";
-import { buildFileReviewComment } from "~/reviewCommentContext";
+import { buildFileReviewComment, type ReviewCommentContext } from "~/reviewCommentContext";
 import { assetEnvironment } from "~/state/assets";
 import { useEnvironmentHttpBaseUrl, usePrimaryEnvironmentId } from "~/state/environments";
 import { previewEnvironment } from "~/state/preview";
@@ -62,12 +64,20 @@ import {
   type FileCommentAnnotationGroup,
   type FileCommentLineAnnotation,
   formatFileCommentRange,
+  markFileCommentDraftAsRequest,
   nextFileCommentId,
   normalizeFileCommentRange,
   remapFileCommentAnnotations,
 } from "./fileCommentAnnotations";
-import { installFileEditorDismissal } from "./fileEditorDismissal";
+import { installFileEditorDismissal, isFileEditorFocused } from "./fileEditorDismissal";
 import {
+  type FileAgentChangeRange,
+  fileAgentChangeRanges,
+  isLineInFileAgentChangeRanges,
+} from "./fileAgentChanges";
+import { fileAgentChangeKey, useFileAgentChangeStore } from "./fileAgentChangeStore";
+import {
+  FILE_AGENT_CHANGE_ATTRIBUTE,
   FILE_LINK_REVEAL_ATTRIBUTE,
   FILE_LINK_REVEAL_UNSAFE_CSS,
   FILE_SURFACE_SUBHEADER_CLASS,
@@ -108,6 +118,8 @@ interface FilePreviewPanelProps {
   onPendingChange: (relativePath: string, pending: boolean) => void;
   selectedFilePending: boolean;
   workspaceMutationId: string | null;
+  /** Sends a request-change comment as its own message to the thread. */
+  onSendFileRequest: (comment: ReviewCommentContext) => void;
 }
 
 const FILE_EXPLORER_STORAGE_KEY = "t3code.fileExplorerOpen";
@@ -356,6 +368,24 @@ function updateFileLinkReveal(fileContainer: HTMLElement, line: number | null): 
     ?.setAttribute(FILE_LINK_REVEAL_ATTRIBUTE, "");
 }
 
+/** Tints the rendered rows and line numbers the agent changed since the last request. */
+function updateFileAgentChanges(
+  fileContainer: HTMLElement,
+  ranges: ReadonlyArray<FileAgentChangeRange>,
+): void {
+  const root = fileContainer.shadowRoot ?? fileContainer;
+  for (const element of root.querySelectorAll<HTMLElement>(`[${FILE_AGENT_CHANGE_ATTRIBUTE}]`)) {
+    element.removeAttribute(FILE_AGENT_CHANGE_ATTRIBUTE);
+  }
+  if (ranges.length === 0) return;
+  for (const element of root.querySelectorAll<HTMLElement>("[data-line], [data-column-number]")) {
+    const line = Number(element.dataset.line ?? element.dataset.columnNumber);
+    if (isLineInFileAgentChangeRanges(ranges, line)) {
+      element.setAttribute(FILE_AGENT_CHANGE_ATTRIBUTE, "");
+    }
+  }
+}
+
 /**
  * Frames to keep retrying while the file contents or line metrics are not
  * available yet (fresh mounts hydrate asynchronously).
@@ -549,12 +579,16 @@ interface EditableFileSurfaceProps {
   cwd: string;
   relativePath: string;
   composerDraftTarget: ScopedThreadRef | DraftId;
+  /** Keys this file's request snapshot: thread plus relative path. */
+  agentChangeKey: string;
+  keybindings: ResolvedKeybindingsConfig;
   contents: string;
   resolvedTheme: "light" | "dark";
   revealRequestId: number;
   wordWrap: boolean;
   onPostRender: FilePostRender;
   onPendingChange: (relativePath: string, pending: boolean) => void;
+  onSendFileRequest: (comment: ReviewCommentContext) => void;
 }
 
 interface FileSelectionOverride {
@@ -567,15 +601,30 @@ function EditableFileSurface({
   cwd,
   relativePath,
   composerDraftTarget,
+  agentChangeKey,
+  keybindings,
   contents,
   resolvedTheme,
   revealRequestId,
   wordWrap,
   onPostRender,
   onPendingChange,
+  onSendFileRequest,
 }: EditableFileSurfaceProps) {
   const addReviewComment = useComposerDraftStore((store) => store.addReviewComment);
   const removeReviewComment = useComposerDraftStore((store) => store.removeReviewComment);
+  const agentChangeSnapshot = useFileAgentChangeStore(
+    (store) => store.snapshotsByKey[agentChangeKey],
+  );
+  const recordAgentChangeSnapshot = useFileAgentChangeStore((store) => store.record);
+  const clearAgentChangeSnapshot = useFileAgentChangeStore((store) => store.clear);
+  const agentChangeRanges = useMemo(
+    () =>
+      agentChangeSnapshot === undefined
+        ? []
+        : fileAgentChangeRanges(relativePath, agentChangeSnapshot, contents),
+    [agentChangeSnapshot, contents, relativePath],
+  );
   const [lineAnnotations, setLineAnnotations] = useState<FileCommentLineAnnotation[]>([]);
   const [selectionOverride, setSelectionOverride] = useState<FileSelectionOverride | null>(null);
   const selectedRange =
@@ -600,6 +649,8 @@ function EditableFileSurface({
         persistState: true,
         persistStateStorage: "inMemory",
         onChange: (file, nextLineAnnotations) => {
+          // Editing the file yourself ends the "what the agent changed" tint.
+          clearAgentChangeSnapshot(agentChangeKey);
           setProjectFileQueryData(environmentId, cwd, relativePath, file.contents);
           saveCoordinator.change(file.contents);
           if (nextLineAnnotations) {
@@ -626,7 +677,16 @@ function EditableFileSurface({
           }
         },
       }),
-    [addReviewComment, composerDraftTarget, cwd, environmentId, relativePath, saveCoordinator],
+    [
+      addReviewComment,
+      agentChangeKey,
+      clearAgentChangeSnapshot,
+      composerDraftTarget,
+      cwd,
+      environmentId,
+      relativePath,
+      saveCoordinator,
+    ],
   );
 
   useEffect(
@@ -656,6 +716,22 @@ function EditableFileSurface({
       const entry = lineAnnotations
         .flatMap((annotation) => annotation.metadata.entries)
         .find((candidate) => candidate.id === entryId);
+      if (entry?.intent === "request") {
+        // A request skips the composer draft: it goes out as its own message.
+        recordAgentChangeSnapshot(agentChangeKey, contents);
+        onSendFileRequest(
+          buildFileReviewComment({
+            id: entry.id,
+            filePath: relativePath,
+            startLine: entry.startLine,
+            endLine: entry.endLine,
+            text,
+            contents,
+          }),
+        );
+        removeAnnotationEntry(entry.id);
+        return;
+      }
       if (entry) {
         addReviewComment(
           composerDraftTarget,
@@ -684,22 +760,27 @@ function EditableFileSurface({
     },
     [
       addReviewComment,
+      agentChangeKey,
       composerDraftTarget,
       contents,
       lineAnnotations,
+      onSendFileRequest,
+      recordAgentChangeSnapshot,
       relativePath,
+      removeAnnotationEntry,
       setSelectedRange,
     ],
   );
 
   const beginComment = useCallback(
-    (range: SelectedLineRange) => {
+    (range: SelectedLineRange, intent?: "request") => {
       editor.setSelections([]);
       editor.blur();
       const { startLine, endLine } = normalizeFileCommentRange(range);
       const draftEntry: FileCommentAnnotationEntry = {
         id: nextFileCommentId(),
         kind: "draft",
+        ...(intent ? { intent } : {}),
         startLine,
         endLine,
         text: "",
@@ -746,6 +827,34 @@ function EditableFileSurface({
       onDismiss: () => setSelectedRange(null),
     });
   }, [editor, hasOpenCommentForm, setSelectedRange]);
+  // Selecting lines opens a comment draft at once, so the shortcut usually
+  // converts that open draft (keeping its text) instead of opening a second one.
+  // With only a caret and no selected lines there is no range to request on.
+  const requestChange = useCallback(() => {
+    if (hasOpenCommentForm) {
+      setLineAnnotations((current) => markFileCommentDraftAsRequest(current));
+      return;
+    }
+    if (selectedRange !== null) beginComment(selectedRange, "request");
+  }, [beginComment, hasOpenCommentForm, selectedRange]);
+  useEffect(() => {
+    const root = surfaceRef.current;
+    if (!root) return;
+    // Keys typed in the editor come from its shadow root and reach this
+    // listener retargeted to the <diffs-container> host, so focus is read
+    // from the shadow root rather than from event.target.
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const command = resolveShortcutCommand(event, keybindings, {
+        context: { fileViewerFocus: isFileEditorFocused(root) || selectedRange !== null },
+      });
+      if (command !== "fileViewer.requestChange") return;
+      event.preventDefault();
+      event.stopPropagation();
+      requestChange();
+    };
+    root.addEventListener("keydown", handleKeyDown);
+    return () => root.removeEventListener("keydown", handleKeyDown);
+  }, [keybindings, requestChange, selectedRange]);
   const handleLineSelectionEnd = useCallback(
     (range: SelectedLineRange | null) => {
       setSelectedRange(range);
@@ -759,6 +868,7 @@ function EditableFileSurface({
   const handlePostRender = useCallback<FilePostRender>(
     (fileContainer, instance, phase) => {
       onPostRender(fileContainer, instance, phase);
+      if (phase !== "unmount") updateFileAgentChanges(fileContainer, agentChangeRanges);
 
       if (selectionFrameRef.current !== null) {
         cancelAnimationFrame(selectionFrameRef.current);
@@ -772,8 +882,13 @@ function EditableFileSurface({
         instance.setSelectedLines(selectedRange, { notify: false });
       });
     },
-    [onPostRender, selectedRange],
+    [agentChangeRanges, onPostRender, selectedRange],
   );
+  // Ranges also change without a re-render (a new request resets the snapshot).
+  useEffect(() => {
+    const fileContainer = surfaceRef.current?.querySelector<HTMLElement>("diffs-container");
+    if (fileContainer) updateFileAgentChanges(fileContainer, agentChangeRanges);
+  }, [agentChangeRanges]);
 
   return (
     <EditProvider editor={editor}>
@@ -824,6 +939,13 @@ function EditableFileSurface({
                     onCancel={() => removeAnnotationEntry(entry.id)}
                     onComment={(text) => submitAnnotationEntry(entry.id, text)}
                     onDelete={() => removeAnnotationEntry(entry.id)}
+                    {...(entry.intent === "request"
+                      ? {
+                          placeholder: t("What should change here?"),
+                          submitLabel: t("Send"),
+                          submitOnEnter: true,
+                        }
+                      : {})}
                   />
                 ))}
               </div>
@@ -853,6 +975,9 @@ function RenderedMarkdownSurface({
   | "revealRequestId"
   | "wordWrap"
   | "onPostRender"
+  | "agentChangeKey"
+  | "keybindings"
+  | "onSendFileRequest"
 > & {
   threadRef: ScopedThreadRef;
   readOnly: boolean;
@@ -921,6 +1046,7 @@ export default function FilePreviewPanel({
   onPendingChange,
   selectedFilePending,
   workspaceMutationId,
+  onSendFileRequest,
 }: FilePreviewPanelProps) {
   const { resolvedTheme } = useTheme();
   const wordWrap = useClientSettings((settings) => settings.wordWrap);
@@ -1279,12 +1405,15 @@ export default function FilePreviewPanel({
                   cwd={cwd}
                   relativePath={relativePath}
                   composerDraftTarget={composerDraftTarget}
+                  agentChangeKey={fileAgentChangeKey(scopedThreadKey(threadRef), relativePath)}
+                  keybindings={keybindings}
                   contents={file.data.contents}
                   resolvedTheme={resolvedTheme}
                   revealRequestId={revealRequestId}
                   wordWrap={wordWrap}
                   onPostRender={onFilePostRender}
                   onPendingChange={onPendingChange}
+                  onSendFileRequest={onSendFileRequest}
                 />
               </DiffWorkerPoolProvider>
             )

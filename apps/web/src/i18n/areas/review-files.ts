@@ -836,5 +836,12 @@ const dictionary: Readonly<Record<string, string>> = {
   "Approve and run": "Aprovar e executar",
   // Final sweep
   "Refresh failed — retry": "Falha ao atualizar — tentar de novo",
+  // File viewer: ask for a change in the selected lines
+  "File Viewer: Request Change": "Arquivo: Pedir mudança no trecho",
+  "Ask for a change in the selected lines": "Pedir mudança nas linhas selecionadas",
+  "Works with lines selected in an open file.":
+    "Funciona com linhas selecionadas num arquivo aberto.",
+  "What should change here?": "O que mudar aqui?",
+  "Enter to send · Shift+Enter for a new line": "Enter envia · Shift+Enter quebra a linha",
 };
 export default dictionary;

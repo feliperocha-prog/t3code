@@ -27,6 +27,8 @@ interface DiffCommentAnnotationProps {
   pending?: boolean;
   secondaryAction?: DiffCommentSecondaryAction;
   focusOnMount?: boolean;
+  /** Enter sends and Shift+Enter inserts a newline, instead of the default Command/Ctrl+Enter. */
+  submitOnEnter?: boolean;
 }
 
 /** The shared inline comment treatment for file previews, thread diffs, and pull-request diffs. */
@@ -43,6 +45,7 @@ export function DiffCommentAnnotation({
   pending = false,
   secondaryAction,
   focusOnMount = true,
+  submitOnEnter = false,
 }: DiffCommentAnnotationProps) {
   const [localDraftText, setLocalDraftText] = useState("");
   const displayedText = kind === "draft" && !onTextChange ? localDraftText : text;
@@ -107,7 +110,21 @@ export function DiffCommentAnnotation({
             event.preventDefault();
             onCancel();
           }
-          if (isCommentSubmitShortcut(event, trimmedText, pending)) {
+          if (
+            isCommentSubmitShortcut(
+              {
+                key: event.key,
+                metaKey: event.metaKey,
+                ctrlKey: event.ctrlKey,
+                shiftKey: event.shiftKey,
+                isComposing: event.nativeEvent.isComposing,
+                keyCode: event.nativeEvent.keyCode,
+              },
+              trimmedText,
+              pending,
+              { submitOnEnter },
+            )
+          ) {
             event.preventDefault();
             onComment(trimmedText);
           }
@@ -115,7 +132,9 @@ export function DiffCommentAnnotation({
       />
       <div className="mt-1.5 flex items-center gap-1">
         <span className="mr-auto text-3xs text-muted-foreground/70">
-          {t("⌘/Ctrl Enter to send")}
+          {submitOnEnter
+            ? t("Enter to send · Shift+Enter for a new line")
+            : t("⌘/Ctrl Enter to send")}
         </span>
         <Button variant="ghost-muted" size="xs" onClick={onCancel}>
           {t("Cancel")}

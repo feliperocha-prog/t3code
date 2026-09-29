@@ -323,6 +323,7 @@ import {
   previewAnnotationContextLabel,
   previewAnnotationContextReference,
   reviewCommentContextLabel,
+  reviewCommentContextReference,
   terminalContextReference,
 } from "../lib/composerContextRecords";
 import {
@@ -7375,14 +7376,47 @@ export default function ChatView(props: ChatViewProps) {
   const onSend = async (
     e?: { preventDefault: () => void },
     submissionIntent: ComposerSubmissionIntent = "foreground",
-    directAnnotation?: {
-      annotation: PreviewAnnotationPayload;
-      image: ComposerImageAttachment | null;
-    },
+    /**
+     * Content sent on its own instead of from the composer. A preview annotation
+     * joins the draft; a review comment (a file viewer change request) goes as a
+     * separate message and leaves the draft alone.
+     */
+    direct?:
+      | {
+          kind: "preview-annotation";
+          annotation: PreviewAnnotationPayload;
+          image: ComposerImageAttachment | null;
+        }
+      | { kind: "review-comment"; comment: ReviewCommentContext },
     /** A queued message being sent now instead of the live composer draft. */
     queuedMessage?: QueuedComposerMessage,
-  ) => {
+  ): Promise<void> => {
     e?.preventDefault();
+    // A review comment rides the queued-message path, which never reads or clears
+    // the composer: it waits in the queue like any follow-up while the agent is
+    // busy, is sent now otherwise, and stays queued if sending is blocked.
+    if (direct?.kind === "review-comment") {
+      if (!activeThreadKey) return;
+      const entry = useQueuedMessageStore.getState().enqueue(activeThreadKey, {
+        prompt: ensureInlineContextReferences("", [reviewCommentContextReference(direct.comment)]),
+        images: [],
+        files: [],
+        terminalContexts: [],
+        previewAnnotations: [],
+        reviewComments: [direct.comment],
+        submissionIntent,
+        queuedAfterToolActivityId: latestCompletedToolActivityId(threadActivities),
+        createdAt: new Date().toISOString(),
+      });
+      if (
+        phase === "running" &&
+        (settings.followUpBehavior === "queue") !== (submissionIntent === "alternate")
+      ) {
+        return;
+      }
+      return onSend(e, submissionIntent, undefined, entry);
+    }
+    const directAnnotation = direct?.kind === "preview-annotation" ? direct : undefined;
     // Typed out in full rather than picked from the menu. Attachments or contexts
     // mean the user is sending a prompt, so those go through as usual.
     if (
@@ -9725,7 +9759,7 @@ export default function ChatView(props: ChatViewProps) {
           configuredUrls={configuredPreviewUrls}
           visible={rightPanelOpen}
           onSendAnnotation={(annotation, image) => {
-            void onSend(undefined, "foreground", { annotation, image });
+            void onSend(undefined, "foreground", { kind: "preview-annotation", annotation, image });
           }}
         />
       </Suspense>
@@ -9874,6 +9908,9 @@ export default function ChatView(props: ChatViewProps) {
             pendingFileSurfaceIds.has(renderedRightPanelSurface.id)
           }
           workspaceMutationId={workspaceMutationId}
+          onSendFileRequest={(comment) => {
+            void onSend(undefined, "foreground", { kind: "review-comment", comment });
+          }}
         />
       </Suspense>
     ) : null

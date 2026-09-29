@@ -831,6 +831,38 @@ describe("cross-command precedence", () => {
   });
 });
 
+describe("file viewer change request shortcut", () => {
+  it("resolves mod+i only while the file viewer has focus", () => {
+    for (const [platform, input] of [
+      ["Win32", event({ key: "i", ctrlKey: true })],
+      ["MacIntel", event({ key: "i", metaKey: true })],
+    ] as const) {
+      assert.strictEqual(
+        resolveShortcutCommand(input, DEFAULT_RESOLVED_KEYBINDINGS, {
+          platform,
+          context: { fileViewerFocus: true },
+        }),
+        "fileViewer.requestChange",
+      );
+      assert.isNull(
+        resolveShortcutCommand(input, DEFAULT_RESOLVED_KEYBINDINGS, {
+          platform,
+          context: { fileViewerFocus: false },
+        }),
+      );
+    }
+  });
+
+  it("leaves mod+i to the composer when no context says otherwise", () => {
+    assert.isNull(
+      resolveShortcutCommand(event({ key: "i", ctrlKey: true }), DEFAULT_RESOLVED_KEYBINDINGS, {
+        platform: "Win32",
+        context: { editableFocus: true },
+      }),
+    );
+  });
+});
+
 describe("resolveShortcutCommand", () => {
   it("resolves a custom stop-thread shortcut", () => {
     const keybindings = compile([{ shortcut: modShortcut("escape"), command: "thread.stop" }]);
@@ -1213,25 +1245,30 @@ describe("composer and pull request shortcuts", () => {
     }
   });
 
-  it.each(["terminalOpen", "previewFocus", "previewOpen", "modelPickerOpen", "isWeb", "isDesktop"])(
-    "honors custom PR shortcut conditions for %s",
-    (condition) => {
-      const bindings = compileResolvedKeybindingsConfig([
-        { key: "mod+shift+k", command: "thread.copyReference", when: condition },
-        { key: "mod+shift+k", command: "pullRequest.copyNumber", when: `!${condition}` },
-      ]);
-      const input = event({ key: "k", ctrlKey: true, shiftKey: true });
-      for (const enabled of [false, true]) {
-        assert.strictEqual(
-          resolveShortcutCommand(input, bindings, {
-            platform: "Linux",
-            context: { [condition]: enabled },
-          }),
-          enabled ? "thread.copyReference" : "pullRequest.copyNumber",
-        );
-      }
-    },
-  );
+  it.each([
+    "terminalOpen",
+    "previewFocus",
+    "previewOpen",
+    "modelPickerOpen",
+    "fileViewerFocus",
+    "isWeb",
+    "isDesktop",
+  ])("honors custom PR shortcut conditions for %s", (condition) => {
+    const bindings = compileResolvedKeybindingsConfig([
+      { key: "mod+shift+k", command: "thread.copyReference", when: condition },
+      { key: "mod+shift+k", command: "pullRequest.copyNumber", when: `!${condition}` },
+    ]);
+    const input = event({ key: "k", ctrlKey: true, shiftKey: true });
+    for (const enabled of [false, true]) {
+      assert.strictEqual(
+        resolveShortcutCommand(input, bindings, {
+          platform: "Linux",
+          context: { [condition]: enabled },
+        }),
+        enabled ? "thread.copyReference" : "pullRequest.copyNumber",
+      );
+    }
+  });
 
   const shortcuts = [
     ["h", "composer.host"],

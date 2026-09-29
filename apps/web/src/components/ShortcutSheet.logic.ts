@@ -77,12 +77,17 @@ const CURATED_GROUPS: ReadonlyArray<CuratedGroup> = [
   {
     id: "files",
     heading: () => t("Files"),
+    footnote: () => t("Works with lines selected in an open file."),
     entries: [
       { command: "filePicker.toggle", label: () => t("Open a file") },
       { command: "projectSearch.toggle", label: () => t("Search text in files") },
       { command: "diff.toggle", label: () => t("See what the agent changed") },
       { command: "rightPanel.toggle", label: () => t("Side panel") },
       { command: "editor.openFavorite", label: () => t("Open in editor") },
+      {
+        command: "fileViewer.requestChange",
+        label: () => t("Ask for a change in the selected lines"),
+      },
     ],
   },
 ];

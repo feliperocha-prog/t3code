@@ -19,6 +19,8 @@ export const FILE_SURFACE_SUBHEADER_CLASS =
 
 export const FILE_LINK_REVEAL_ATTRIBUTE = "data-file-link-reveal";
 
+export const FILE_AGENT_CHANGE_ATTRIBUTE = "data-file-agent-change";
+
 export const FILE_LINK_REVEAL_UNSAFE_CSS = `
   ${DIFF_SURFACE_THEME_UNSAFE_CSS}
 
@@ -32,7 +34,23 @@ export const FILE_LINK_REVEAL_UNSAFE_CSS = `
 
   /* Tint through --diffs-line-bg, not background-color. The editor paints row
      tints on a layer below its text selection; a background on the row itself
-     covers the selection and makes selected text on this line invisible. */
+     covers the selection and makes selected text on this line invisible.
+     Lines the agent changed after a request get a faint addition tint; the
+     link reveal below comes later so it wins on a line that has both. */
+  [${FILE_AGENT_CHANGE_ATTRIBUTE}][data-line] {
+    --diffs-line-bg: light-dark(
+      color-mix(in lab, var(--diffs-computed-diff-line-bg) 92%, var(--diffs-addition-base)),
+      color-mix(in lab, var(--diffs-computed-diff-line-bg) 88%, var(--diffs-addition-base))
+    ) !important;
+  }
+
+  [${FILE_AGENT_CHANGE_ATTRIBUTE}][data-column-number] {
+    background-color: light-dark(
+      color-mix(in lab, var(--diffs-computed-diff-line-bg) 88%, var(--diffs-addition-base)),
+      color-mix(in lab, var(--diffs-computed-diff-line-bg) 82%, var(--diffs-addition-base))
+    ) !important;
+  }
+
   [${FILE_LINK_REVEAL_ATTRIBUTE}][data-line] {
     --diffs-line-bg: light-dark(
       color-mix(

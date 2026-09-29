@@ -39,6 +39,9 @@ export interface ShortcutMatchContext {
   /** A text field, textarea, select or rich-text editor owns the keyboard.
       Optional: only chords that collide with native editing consult it. */
   editableFocus?: boolean;
+  /** The file viewer's editor or line selection owns the keyboard. Only the
+      file viewer's own keydown listener sets it; global handlers leave it off. */
+  fileViewerFocus?: boolean;
   [key: string]: boolean;
 }
 
@@ -153,6 +156,7 @@ function resolveContext(options: ShortcutMatchOptions | undefined): ShortcutMatc
     isWeb: !isElectron,
     isDesktop: isElectron,
     editableFocus: false,
+    fileViewerFocus: false,
     ...options?.context,
   };
 }

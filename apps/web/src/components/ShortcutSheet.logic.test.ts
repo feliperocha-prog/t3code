@@ -32,6 +32,16 @@ describe("buildShortcutSheetGroups", () => {
     expect(otherIds).toContain("usage.open");
     expect(otherIds).not.toContain("chat.new");
     expect(groups.find((group) => group.id === "terminal")?.footnote).not.toBeNull();
+    const files = groups.find((group) => group.id === "files");
+    expect(files?.rows.map((row) => row.id)).toContain("fileViewer.requestChange");
+    expect(files?.footnote).not.toBeNull();
+    expect(otherIds).not.toContain("fileViewer.requestChange");
+  });
+
+  it("shows the file viewer change request on Ctrl+I", () => {
+    const rows = rowsById(buildShortcutSheetGroups(DEFAULT_RESOLVED_KEYBINDINGS, PLATFORM));
+
+    expect(rows.get("fileViewer.requestChange")?.shortcuts).toEqual(["Ctrl+I"]);
   });
 
   it("shows every binding of a command", () => {

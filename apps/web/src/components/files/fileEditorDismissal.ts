@@ -22,7 +22,8 @@ function dismissFileEditorInteraction({
   }
 }
 
-function isFileEditorFocused(root: HTMLElement): boolean {
+/** Whether the editable file's text (inside its shadow root) owns the caret. */
+export function isFileEditorFocused(root: HTMLElement): boolean {
   const file = root.querySelector<HTMLElement>("diffs-container");
   return file?.shadowRoot?.activeElement?.hasAttribute("data-content") === true;
 }
