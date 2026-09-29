@@ -106,19 +106,26 @@ export function SidebarThreadHeader({
           className="min-w-0 flex-1"
         />
         {isSearching ? (
-          <Button
-            type="button"
-            size="icon-micro"
-            variant="ghost-muted"
-            className="shrink-0"
-            aria-label={t("Clear thread search")}
-            onClick={() => {
-              onClearSearch();
-              searchInputRef.current?.focus();
-            }}
-          >
-            <XIcon className="size-3" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  size="icon-micro"
+                  variant="ghost-muted"
+                  className="shrink-0"
+                  aria-label={t("Clear thread search")}
+                  onClick={() => {
+                    onClearSearch();
+                    searchInputRef.current?.focus();
+                  }}
+                />
+              }
+            >
+              <XIcon className="size-3" />
+            </TooltipTrigger>
+            <TooltipPopup side="top">{t("Clear the search")}</TooltipPopup>
+          </Tooltip>
         ) : null}
       </div>
       {/* Unfilled like the search field beside it: the buttons carry their own

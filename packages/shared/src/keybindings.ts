@@ -68,6 +68,7 @@ export const DEFAULT_KEYBINDINGS: ReadonlyArray<KeybindingRule> = [
   { key: "mod+z", command: "thread.undo", when: "!terminalFocus && !editableFocus" },
   { key: "ctrl+tab", command: "tabs.next" },
   { key: "ctrl+shift+tab", command: "tabs.previous" },
+  { key: "mod+shift+?", command: "help.shortcuts" },
   ...THREAD_JUMP_KEYBINDING_COMMANDS.map((command, index) => ({
     key: `mod+${index + 1}`,
     command,

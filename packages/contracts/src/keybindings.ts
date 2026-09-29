@@ -58,6 +58,9 @@ export type ModelPickerKeybindingCommand = (typeof MODEL_PICKER_KEYBINDING_COMMA
 const TAB_KEYBINDING_COMMANDS = ["tabs.next", "tabs.previous"] as const;
 export type TabKeybindingCommand = (typeof TAB_KEYBINDING_COMMANDS)[number];
 
+const HELP_KEYBINDING_COMMANDS = ["help.shortcuts"] as const;
+export type HelpKeybindingCommand = (typeof HELP_KEYBINDING_COMMANDS)[number];
+
 export const STATIC_KEYBINDING_COMMANDS = [
   "sidebar.toggle",
   "navigation.back",
@@ -98,6 +101,7 @@ export const STATIC_KEYBINDING_COMMANDS = [
   ...MODEL_PICKER_KEYBINDING_COMMANDS,
   ...THREAD_KEYBINDING_COMMANDS,
   ...TAB_KEYBINDING_COMMANDS,
+  ...HELP_KEYBINDING_COMMANDS,
 ] as const;
 
 export const SCRIPT_RUN_COMMAND_PATTERN = Schema.TemplateLiteral([

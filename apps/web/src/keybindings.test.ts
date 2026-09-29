@@ -1377,3 +1377,20 @@ describe("composer and pull request shortcuts", () => {
     });
   }
 });
+
+describe("help shortcuts sheet", () => {
+  // Brazilian ABNT2 keyboards type "?" from the IntlRo key, which has no
+  // physical-key fallback, so the default binding must target "?" itself.
+  it("resolves ctrl+shift+? from both the ABNT2 and the US key position", () => {
+    for (const code of ["IntlRo", "Slash"]) {
+      assert.strictEqual(
+        resolveShortcutCommand(
+          event({ key: "?", code, ctrlKey: true, shiftKey: true }),
+          DEFAULT_RESOLVED_KEYBINDINGS,
+          { platform: "Win32" },
+        ),
+        "help.shortcuts",
+      );
+    }
+  });
+});

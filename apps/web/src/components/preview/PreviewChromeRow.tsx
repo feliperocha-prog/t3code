@@ -1,3 +1,4 @@
+import { useAtomValue } from "@effect/atom-react";
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 import {
   ArrowLeft,
@@ -19,7 +20,9 @@ import {
 import { Button } from "~/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "~/components/ui/input-group";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
+import { shortcutLabelForCommand } from "~/keybindings";
 import { cn } from "~/lib/utils";
+import { primaryServerKeybindingsAtom } from "~/state/server";
 import { t } from "~/i18n";
 
 interface Props {
@@ -93,6 +96,11 @@ export function PreviewChromeRow({
   trailingActions,
   leadingActions,
 }: Props) {
+  const keybindings = useAtomValue(primaryServerKeybindingsAtom);
+  // Refresh only fires while the preview has focus, so resolve it in that context.
+  const refreshShortcut = shortcutLabelForCommand(keybindings, "preview.refresh", {
+    context: { previewFocus: true },
+  });
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [draft, setDraft] = useState(url);
   const [inputFocused, setInputFocused] = useState(false);
@@ -169,7 +177,11 @@ export function PreviewChromeRow({
             >
               <RefreshIcon refreshing={loading} />
             </TooltipTrigger>
-            <TooltipPopup>{loading ? t("Loading…") : t("Refresh")}</TooltipPopup>
+            <TooltipPopup>
+              {loading
+                ? t("Loading…")
+                : `${t("Refresh")}${refreshShortcut ? ` (${refreshShortcut})` : ""}`}
+            </TooltipPopup>
           </Tooltip>
         </div>
 

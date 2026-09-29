@@ -1864,14 +1864,25 @@ export default function GitActionsControl({
               }
             }}
           >
-            <MenuTrigger
-              render={
-                <Button aria-label={t("Git action options")} size="icon-xs" variant="outline" />
-              }
-              disabled={isGitActionRunning}
-            >
-              <ChevronDownIcon aria-hidden="true" className="size-4" />
-            </MenuTrigger>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <MenuTrigger
+                    render={
+                      <Button
+                        aria-label={t("Git action options")}
+                        size="icon-xs"
+                        variant="outline"
+                      />
+                    }
+                    disabled={isGitActionRunning}
+                  />
+                }
+              >
+                <ChevronDownIcon aria-hidden="true" className="size-4" />
+              </TooltipTrigger>
+              <TooltipPopup side="top">{t("More git options")}</TooltipPopup>
+            </Tooltip>
             <MenuPopup align="end">{gitItems}</MenuPopup>
           </Menu>
         </Group>

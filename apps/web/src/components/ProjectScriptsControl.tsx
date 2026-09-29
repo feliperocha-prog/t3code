@@ -299,11 +299,20 @@ export default function ProjectScriptsControl({
               setActionsMenuOpen({ presentation, scripts: open, imports: false })
             }
           >
-            <MenuTrigger
-              render={<Button size="icon-xs" variant="outline" aria-label={t("Script actions")} />}
-            >
-              <ChevronDownIcon className="size-4" />
-            </MenuTrigger>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <MenuTrigger
+                    render={
+                      <Button size="icon-xs" variant="outline" aria-label={t("Script actions")} />
+                    }
+                  />
+                }
+              >
+                <ChevronDownIcon className="size-4" />
+              </TooltipTrigger>
+              <TooltipPopup side="top">{t("More script options")}</TooltipPopup>
+            </Tooltip>
             <MenuPopup align="end">{scriptItems}</MenuPopup>
           </Menu>
         </Group>

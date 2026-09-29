@@ -18,6 +18,7 @@ import { useEnvironment } from "../../state/environments";
 import { ChevronDownIcon, FolderClosedIcon, SquareArrowOutUpRightIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { Group, GroupSeparator } from "../ui/group";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   Menu,
   MenuItem,
@@ -379,11 +380,18 @@ export const OpenInPicker = memo(function OpenInPicker({
       </Button>
       <GroupSeparator {...(!compact ? { className: "hidden @3xl/header-actions:block" } : {})} />
       <Menu>
-        <MenuTrigger
-          render={<Button aria-label={t("Choose editor")} size="icon-xs" variant="outline" />}
-        >
-          <ChevronDownIcon aria-hidden="true" className="size-4" />
-        </MenuTrigger>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <MenuTrigger
+                render={<Button aria-label={t("Choose editor")} size="icon-xs" variant="outline" />}
+              />
+            }
+          >
+            <ChevronDownIcon aria-hidden="true" className="size-4" />
+          </TooltipTrigger>
+          <TooltipPopup side="top">{t("Choose where to open")}</TooltipPopup>
+        </Tooltip>
         <MenuPopup align="end">{editorItems}</MenuPopup>
       </Menu>
     </Group>

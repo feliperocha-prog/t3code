@@ -609,6 +609,9 @@ export function CommandPalette({ children }: { children: ReactNode }) {
           openNewThreadIn();
         } else if (detail.open === "add-project") {
           openAddProject();
+        } else if (detail.mode !== undefined) {
+          // Callers open from outside the palette, so it is closed and this opens it.
+          toggleMode(detail.mode);
         } else if (detail.query !== undefined) {
           dispatch({
             _tag: "OpenSearch",
@@ -619,7 +622,7 @@ export function CommandPalette({ children }: { children: ReactNode }) {
           setOpen(true);
         }
       }),
-    [openAddProject, openNewThreadIn, setOpen],
+    [openAddProject, openNewThreadIn, setOpen, toggleMode],
   );
 
   return (

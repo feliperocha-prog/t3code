@@ -504,17 +504,26 @@ export const ChatHeader = memo(function ChatHeader({
         )}
       >
         <Menu open={actionsCollapsed && actionsOpen} onOpenChange={setActionsOpen}>
-          <MenuTrigger
-            className={
-              actionsCollapsed &&
-              (activeProjectScripts || showOpenInPicker || (activeProjectName && gitCwd))
-                ? undefined
-                : "hidden"
-            }
-            render={<Button size="icon-sm" variant="ghost" aria-label={t("More header actions")} />}
-          >
-            <EllipsisIcon className="size-4" />
-          </MenuTrigger>
+          <Tooltip>
+            <TooltipTrigger
+              className={
+                actionsCollapsed &&
+                (activeProjectScripts || showOpenInPicker || (activeProjectName && gitCwd))
+                  ? undefined
+                  : "hidden"
+              }
+              render={
+                <MenuTrigger
+                  render={
+                    <Button size="icon-sm" variant="ghost" aria-label={t("More header actions")} />
+                  }
+                />
+              }
+            >
+              <EllipsisIcon className="size-4" />
+            </TooltipTrigger>
+            <TooltipPopup side="top">{t("More actions")}</TooltipPopup>
+          </Tooltip>
           <div ref={mountInlineActions} className="contents" />
           <MenuPopup
             data-chat-header-actions

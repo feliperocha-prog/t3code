@@ -1,11 +1,14 @@
-import { ArrowLeftIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
+import { ArrowLeftIcon, ChartNoAxesColumnIcon, KeyboardIcon, SettingsIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { memo, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { useAtomValue } from "@effect/atom-react";
 
 import { useEnvironmentIdentificationMode } from "../../hooks/useSettings";
+import { shortcutLabelForCommand } from "../../keybindings";
 import { cn } from "../../lib/utils";
 import { useEnvironments } from "../../state/environments";
+import { openShortcutSheet } from "../ShortcutSheetDialog";
 import { T3Wordmark } from "../T3Wordmark";
 import {
   resolveEnvironmentIdentificationPillLabel,
@@ -29,6 +32,7 @@ import { SidebarThreadUndoNotice } from "./SidebarThreadUndoNotice";
 import { SidebarProviderUpdatePill } from "./SidebarProviderUpdatePill";
 import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
+import { primaryServerKeybindingsAtom } from "~/state/server";
 import { t } from "~/i18n";
 
 export const SidebarChromeHeader = memo(function SidebarChromeHeader({
@@ -105,26 +109,33 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
 function SidebarUtilityItem({
   icon,
   label,
+  tooltip,
   onClick,
 }: {
   icon: ReactNode;
   label: string;
+  tooltip: string;
   onClick: () => void;
 }) {
   return (
-    <SidebarMenuItem className="shrink-0">
+    <SidebarMenuItem>
       <Tooltip>
         <TooltipTrigger
           render={
-            <SidebarMenuButton aria-label={label} onClick={onClick} size="icon">
+            <SidebarMenuButton onClick={onClick} size="sm">
               {icon}
+              <span>{label}</span>
             </SidebarMenuButton>
           }
         />
-        <TooltipPopup side="top">{label}</TooltipPopup>
+        <TooltipPopup side="top">{tooltip}</TooltipPopup>
       </Tooltip>
     </SidebarMenuItem>
   );
+}
+
+function withShortcut(label: string, shortcut: string | null): string {
+  return shortcut ? `${label} (${shortcut})` : label;
 }
 
 export const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
@@ -135,6 +146,7 @@ export const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
     select: (location) => isSidebarUtilityPage(location.pathname),
   });
   const { environments } = useEnvironments();
+  const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   // The page reads every connected server, so one of them offering pull requests is enough for
   // the link to lead somewhere.
   const pullRequestsSupported = environments.some(
@@ -164,41 +176,65 @@ export const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
     void navigate({ to: "/usage" });
   }, [isMobile, navigate, setOpenMobile]);
 
+  const handleShortcutsClick = useCallback(() => {
+    closeMobileSidebar();
+    openShortcutSheet();
+  }, [closeMobileSidebar]);
+
   const handleBackClick = useCallback(() => {
     closeMobileSidebar();
     void navigateToMainApp();
   }, [closeMobileSidebar, navigateToMainApp]);
 
-  return (
-    <SidebarMenu className="flex-row items-center">
-      {isOnUtilityPage ? (
+  if (isOnUtilityPage) {
+    return (
+      <SidebarMenu className="flex-row items-center">
         <SidebarMenuItem className="min-w-0 flex-1">
           <SidebarMenuButton onClick={handleBackClick}>
             <ArrowLeftIcon />
             <span>{t("Back")}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
-      ) : (
-        <>
-          <SidebarUtilityItem
-            icon={<SettingsIcon />}
-            label={t("Settings")}
-            onClick={handleSettingsClick}
-          />
-          {pullRequestsSupported ? (
-            <SidebarUtilityItem
-              icon={<PullRequestGlyph.pullRequest />}
-              label={t("Pull Requests")}
-              onClick={handlePullRequestsClick}
-            />
-          ) : null}
-          <SidebarUtilityItem
-            icon={<ChartNoAxesColumnIcon />}
-            label={t("Usage")}
-            onClick={handleUsageClick}
-          />
-        </>
-      )}
+        <SidebarUpdatePill />
+      </SidebarMenu>
+    );
+  }
+
+  return (
+    <SidebarMenu>
+      <SidebarUtilityItem
+        icon={<SettingsIcon />}
+        label={t("Settings")}
+        tooltip={t("Open settings")}
+        onClick={handleSettingsClick}
+      />
+      {pullRequestsSupported ? (
+        <SidebarUtilityItem
+          icon={<PullRequestGlyph.pullRequest />}
+          label={t("Pull Requests")}
+          tooltip={t("See pull requests")}
+          onClick={handlePullRequestsClick}
+        />
+      ) : null}
+      <SidebarUtilityItem
+        icon={<ChartNoAxesColumnIcon />}
+        label={t("Usage")}
+        tooltip={withShortcut(
+          t("See usage and limits"),
+          shortcutLabelForCommand(keybindings, "usage.open"),
+        )}
+        onClick={handleUsageClick}
+      />
+      <SidebarUtilityItem
+        icon={<KeyboardIcon />}
+        label={t("Shortcuts")}
+        tooltip={withShortcut(
+          t("See all keyboard shortcuts"),
+          shortcutLabelForCommand(keybindings, "help.shortcuts"),
+        )}
+        onClick={handleShortcutsClick}
+      />
+      {/* Its own row, end-aligned by the pill's `ml-auto`. */}
       <SidebarUpdatePill />
     </SidebarMenu>
   );

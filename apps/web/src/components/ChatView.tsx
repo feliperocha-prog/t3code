@@ -200,6 +200,7 @@ import { addBrowserSurface } from "./preview/addBrowserSurface";
 import { closePreviewSession } from "./preview/closePreviewSession";
 import { ThreadPreviewMiniPlayer } from "./preview/ThreadPreviewMiniPlayer";
 import { subscribePreviewAction } from "./preview/previewActionBus";
+import { subscribeTerminalAction } from "../terminalActionBus";
 import { getConfiguredPreviewUrls } from "./preview/previewEmptyStateLogic";
 import { makeWorkspaceFileDropHandlers } from "./chat/workspaceFileDrop";
 import {
@@ -368,6 +369,7 @@ import { ChatComposer, type ChatComposerHandle } from "./chat/ChatComposer";
 import { createPageScrollController, type PageScrollKey } from "./chat/pageScrollController";
 import { isTimelineScrollTarget } from "./chat/timelineScrollTarget";
 import { DraftHeroHeadline } from "./chat/DraftHeroHeadline";
+import { FirstStepsCards } from "./chat/FirstStepsCards";
 import { ExpandedImageDialog } from "./chat/ExpandedImageDialog";
 import { PullRequestThreadDialog } from "./PullRequestThreadDialog";
 import { MessagesTimeline } from "./chat/MessagesTimeline";
@@ -5253,6 +5255,14 @@ export default function ChatView(props: ChatViewProps) {
         if (action === "toggle-panel") togglePreviewPanel();
       }),
     [togglePreviewPanel],
+  );
+  useEffect(
+    () =>
+      subscribeTerminalAction((action) => {
+        // "open" never closes: an already open terminal stays as it is.
+        if (action === "open" && !terminalUiState.terminalOpen) toggleTerminalVisibility();
+      }),
+    [terminalUiState.terminalOpen, toggleTerminalVisibility],
   );
   const persistThreadSettingsForNextTurn = useCallback(
     async (input: {
@@ -10353,6 +10363,12 @@ export default function ChatView(props: ChatViewProps) {
                       className="h-[calc(env(safe-area-inset-bottom)+1rem)] sm:h-[calc(env(safe-area-inset-bottom)+1.25rem)]"
                     />
                   </div>
+                  {isDraftHeroState ? (
+                    // Hangs below the composer so it never moves it; hidden where it would not fit.
+                    <div className="absolute inset-x-0 top-full z-0 pt-2 [@media(max-height:600px)]:hidden">
+                      <FirstStepsCards terminalAvailable={activeProject !== null} />
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>

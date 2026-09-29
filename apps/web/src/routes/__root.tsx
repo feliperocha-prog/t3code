@@ -19,6 +19,7 @@ import { resolveServerBackedAppDisplayName } from "../branding.logic";
 import { AppSidebarLayout } from "../components/AppSidebarLayout";
 import { CommandPalette } from "../components/CommandPalette";
 import { CustomSnoozeDialogHost } from "../components/CustomSnoozeDialog";
+import { ShortcutSheetDialogHost } from "../components/ShortcutSheetDialog";
 import { ConfirmDialogHost } from "../components/ConfirmDialogHost";
 import { FirstRunGate } from "../components/onboarding/FirstRunGate";
 import { ConnectOnboardingDialog } from "../components/cloud/ConnectOnboardingDialog";
@@ -179,6 +180,7 @@ function RootRouteView() {
           <GlassAppearanceSync />
           <FontAppearanceSync />
           <CustomSnoozeDialogHost />
+          <ShortcutSheetDialogHost />
           <CommandPalette>
             <AppSidebarLayout>
               <Outlet />
@@ -232,6 +234,7 @@ function RootRouteView() {
           <ThreadNotificationCoordinator />
           <ConfirmDialogHost />
           <CustomSnoozeDialogHost />
+          <ShortcutSheetDialogHost />
           <SlowRpcRequestToastCoordinator />
           <ProjectCloneToastCoordinator />
           <HostedStaticEnvironmentBootstrap />

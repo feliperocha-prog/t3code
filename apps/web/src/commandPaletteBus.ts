@@ -11,6 +11,8 @@ const COMMAND_PALETTE_OPEN_EVENT = "t3code:open-command-palette";
 
 export interface CommandPaletteOpenDetail {
   readonly open?: "add-project" | "new-thread-in";
+  /** Opens straight into the file picker or the project text search. */
+  readonly mode?: "files" | "content";
   readonly query?: string;
   readonly linkedThreads?: CommandPaletteLinkedThreads;
 }
