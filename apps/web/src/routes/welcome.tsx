@@ -13,6 +13,8 @@ export const Route = createFileRoute("/welcome")({
       throw redirect({ to: "/pair", replace: true });
     }
   },
+  validateSearch: (raw: Record<string, unknown>): { step?: "import" } =>
+    raw.step === "import" ? { step: "import" } : {},
   component: WelcomeRouteView,
 });
 
@@ -23,6 +25,7 @@ function WelcomeRouteView() {
   // Never reopen setup while the destination route is still loading.
   const isWelcomeRoute = useLocation({ select: (location) => location.pathname === "/welcome" });
   const [dismissed, setDismissed] = useState(false);
+  const { step } = Route.useSearch();
   const openNewThread = useNewThreadHandler();
   // An authenticated gate means a primary server is serving this app —
   // desktop, `npx t3`, or a dev server — and that server is "this machine"
@@ -35,6 +38,7 @@ function WelcomeRouteView() {
       {isWelcomeRoute && !dismissed ? (
         <WelcomeWizard
           localAvailable={localAvailable}
+          initialStep={step === "import" && localAvailable ? "import" : "connection"}
           onDone={(projectRef) => {
             setDismissed(true);
             if (projectRef !== undefined) {

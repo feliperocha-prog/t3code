@@ -591,6 +591,16 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
   },
   {
+    id: "import-agent-conversations",
+    title: t("Import conversations"),
+    to: "/settings/general",
+    searchTerms: [
+      "import claude code codex history sessions projects onboarding welcome",
+      "Import conversations",
+      "importar conversas histórico sessões projetos",
+    ],
+  },
+  {
     id: "unpin-confirmation",
     title: t("Unpin confirmation"),
     to: "/settings/general",

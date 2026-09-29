@@ -96,14 +96,17 @@ const SCAN_LIMIT_MESSAGE = t("Scan limit reached. Some projects or conversations
 
 export function WelcomeWizard({
   localAvailable,
+  initialStep = "connection",
   onDone,
 }: {
   /** Whether this client is authenticated to the server serving the app. */
   readonly localAvailable: boolean;
+  /** "import" reopens straight at project import on this machine (Settings → General). */
+  readonly initialStep?: "connection" | "import";
   readonly onDone: (projectRef?: ScopedProjectRef) => void;
 }) {
   const completeOnboarding = useCompleteOnboarding();
-  const [step, setStep] = useState<WizardStep>("connection");
+  const [step, setStep] = useState<WizardStep>(initialStep);
   const { environments } = useEnvironments();
   const [selection, setSelection] = useState<ReadonlySet<EnvironmentId> | null>(null);
   const autoSelectedComputers = useRef(new Set<EnvironmentId>());
@@ -130,6 +133,13 @@ export function WelcomeWizard({
   }, [environments]);
   const selectedIds =
     selection ?? new Set(primaryEnvironment ? [primaryEnvironment.environmentId] : []);
+  // Skipping ahead to import still needs a machine to scan; the primary one may
+  // only resolve after the first render.
+  const primaryEnvironmentId = primaryEnvironment?.environmentId ?? null;
+  useEffect(() => {
+    if (step !== "import" || setupIds.length > 0 || primaryEnvironmentId === null) return;
+    setSetupIds([primaryEnvironmentId]);
+  }, [primaryEnvironmentId, setupIds.length, step]);
   const scans = useProjectScans(step === "import" ? setupIds : NO_ENVIRONMENTS);
   const isLoadingProjects =
     step === "import" &&

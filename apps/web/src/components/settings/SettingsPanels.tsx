@@ -3015,6 +3015,21 @@ export function GeneralSettingsPanel() {
             />
           }
         />
+        <SettingsRow
+          {...searchableSetting("import-agent-conversations")}
+          description={t(
+            "Brings in projects and conversations from Claude Code and Codex on this computer. Conversations already imported are skipped.",
+          )}
+          control={
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void navigate({ to: "/welcome", search: { step: "import" } })}
+            >
+              {t("Import…")}
+            </Button>
+          }
+        />
       </SettingsSection>
 
       <SettingsSection id="confirmations" title={t("Confirmations")}>

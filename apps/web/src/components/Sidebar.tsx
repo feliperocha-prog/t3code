@@ -4940,7 +4940,9 @@ export default function Sidebar() {
                           className="flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-sidebar-muted-foreground/55 hover:bg-sidebar-row-hover hover:text-sidebar-foreground"
                         >
                           <PlusIcon aria-hidden className="size-4 shrink-0" />
-                          Show {Math.min(hiddenSettledCount, SETTLED_TAIL_PAGE_COUNT)} more
+                          {t("Show {count} more", {
+                            count: Math.min(hiddenSettledCount, SETTLED_TAIL_PAGE_COUNT),
+                          })}
                         </button>
                       </li>
                     ) : null}

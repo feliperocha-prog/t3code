@@ -51,6 +51,7 @@ export const PanelLayoutControls = memo(function PanelLayoutControls({
               disabled={!terminalAvailable}
             >
               <PanelBottomIcon className="size-4" />
+              <span>{t("Terminal")}</span>
             </Toggle>
           </TooltipTrigger>
           <TooltipPopup side="bottom">
