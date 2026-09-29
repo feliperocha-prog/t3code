@@ -99,7 +99,7 @@ function CommentIdentity({
         </TooltipTrigger>
         <TooltipPopup>
           {new Date(comment.createdAt).toLocaleString()}
-          {comment.url ? " · Open comment on host" : ""}
+          {comment.url ? ` · ${t("Open comment on host")}` : ""}
         </TooltipPopup>
       </Tooltip>
     </div>
@@ -427,7 +427,7 @@ function CommentGroup({
                 ) : null}
                 {latest ? (
                   <span>
-                    · Latest{" "}
+                    · {t("Latest")}{" "}
                     <Tooltip>
                       <TooltipTrigger render={<time dateTime={latest} />}>
                         {formatRelativeTimeLabel(latest)}

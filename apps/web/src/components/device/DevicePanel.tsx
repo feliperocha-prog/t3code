@@ -179,7 +179,9 @@ export function DevicePanel(props: {
       <DeviceHostUpdates state={state} environmentId={environmentId} />
       {bootingDevices.length > 0 ? (
         <div role="status" className="border-b px-3 py-2 text-xs text-muted-foreground">
-          Starting {bootingDevices.map((device) => device.name).join(", ")}… This can take a minute.
+          {t("Starting {names}… This can take a minute.", {
+            names: bootingDevices.map((device) => device.name).join(", "),
+          })}
         </div>
       ) : null}
       {operationError ? (

@@ -19,7 +19,7 @@ import { Toggle, ToggleGroup } from "~/components/ui/toggle-group";
 import { cn } from "~/lib/utils";
 import type { DeviceControls } from "./useDeviceControls";
 import { type DeviceEventLogEntry, subscribeDeviceEventLog } from "./deviceHubApi";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 const TEXT_SIZES: ReadonlyArray<{ value: DeviceTextSize; label: string }> = [
   { value: "small", label: t("Small") },
@@ -209,8 +209,8 @@ export function DeviceToolsPanel(props: {
                     }
                   }}
                 >
-                  <Toggle value="clear">Clear</Toggle>
-                  <Toggle value="tinted">Tinted</Toggle>
+                  <Toggle value="clear">{tc("liquid glass style", "Clear")}</Toggle>
+                  <Toggle value="tinted">{t("Tinted")}</Toggle>
                 </ToggleGroup>
               </Row>
               <Row label={t("Color filter")}>
@@ -506,7 +506,7 @@ function LocationSection(props: {
           <SelectPopup align="start" alignItemWithTrigger={false}>
             {LOCATION_PRESETS.map((preset) => (
               <SelectItem key={preset.label} value={preset.label}>
-                {preset.label}
+                {t(preset.label)}
               </SelectItem>
             ))}
           </SelectPopup>

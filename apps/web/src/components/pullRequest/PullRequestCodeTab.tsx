@@ -1467,7 +1467,9 @@ function PullRequestCodeTab({
                       {threads.map((thread) => (
                         <div key={thread.id}>
                           {thread.line === null ? null : (
-                            <p className="px-3 text-xs text-muted-foreground">Line {thread.line}</p>
+                            <p className="px-3 text-xs text-muted-foreground">
+                              {t("Line {line}", { line: thread.line })}
+                            </p>
                           )}
                           {renderThreadCard(thread)}
                         </div>

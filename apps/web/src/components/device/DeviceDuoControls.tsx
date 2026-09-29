@@ -7,7 +7,7 @@ import type { DeviceScreenSize } from "@t3tools/client-runtime/device/stream";
 import { DeviceDuoGlyph } from "./DeviceDuoGlyph";
 import { Button } from "~/components/ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 /** Physical presets live beside the device. Pinching supplies continuous hinge control. */
 export function DeviceDuoControls(props: {
@@ -37,7 +37,7 @@ export function DeviceDuoControls(props: {
                     size="icon"
                     variant={selected(pose.id) ? "secondary" : "ghost"}
                     disabled={!props.enabled}
-                    aria-label={`${pose.label} stand`}
+                    aria-label={t("{label} stand", { label: tc("duo pose", pose.label) })}
                     aria-pressed={selected(pose.id)}
                     data-pressed={selected(pose.id) ? "" : undefined}
                     onClick={() => props.onCommand({ control: "pose", value: pose.id })}
@@ -47,8 +47,8 @@ export function DeviceDuoControls(props: {
                 <DeviceDuoGlyph pose={pose.id} />
               </TooltipTrigger>
               <TooltipPopup side="left">
-                {pose.label}
-                {pose.id === "book" ? " / bookshelf" : ""}
+                {tc("duo pose", pose.label)}
+                {pose.id === "book" ? ` / ${t("bookshelf")}` : ""}
               </TooltipPopup>
             </Tooltip>
           ))}

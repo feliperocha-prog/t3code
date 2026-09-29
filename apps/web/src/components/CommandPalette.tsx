@@ -884,9 +884,9 @@ function OpenCommandPaletteDialog(props: {
             {
               kind: isLocal ? "local" : "remote",
               label: isPrimary
-                ? "Local"
+                ? t("Local")
                 : isLocal
-                  ? `${environment.label} (Local)`
+                  ? `${environment.label} (${t("Local")})`
                   : environment.label,
               machine: resolveEnvironmentMachineKind(environment.serverConfig),
             },

@@ -307,7 +307,7 @@ export function PullRequestThreadDialog({
               preparePullRequestThreadAction.isPending
             }
           >
-            {preparingMode === "local" ? t("Preparing local...") : "Local"}
+            {preparingMode === "local" ? t("Preparing local...") : t("Local")}
           </Button>
           <Button
             type="button"

@@ -87,7 +87,11 @@ export function PullRequestStackPopover({
           }
         />
         <TooltipPopup>
-          View stack #{membership.number}, layer {membership.position} of {membership.size}
+          {t("View stack #{number}, layer {position} of {size}", {
+            number: membership.number,
+            position: membership.position,
+            size: membership.size,
+          })}
         </TooltipPopup>
       </Tooltip>
       <MenuPopup

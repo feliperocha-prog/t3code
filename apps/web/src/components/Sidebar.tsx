@@ -247,7 +247,7 @@ import {
   type ComposerThreadDraftState,
   type DraftSessionState,
 } from "../composerDraftStore";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 // Settled-tail paging: recent history is the common lookup; the deep tail
 // stays behind an explicit Show more.
@@ -1153,7 +1153,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: {
             }
           : status === "input"
             ? {
-                label: "Input",
+                label: tc("thread status", "Input"),
                 icon: "input" as const,
                 className: "text-indigo-600 dark:text-indigo-300",
               }

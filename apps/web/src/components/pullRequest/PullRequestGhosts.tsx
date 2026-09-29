@@ -222,7 +222,9 @@ export function PullRequestDetailGhost({
                 {seed ? (
                   <PullRequestMetaLine className="min-w-0 whitespace-nowrap">
                     <PullRequestActorLabel actor={seed.author ?? null} tooltip={false} />
-                    <span>updated {formatRelativeTimeLabel(seed.updatedAt)}</span>
+                    <span>
+                      {t("updated {time}", { time: formatRelativeTimeLabel(seed.updatedAt) })}
+                    </span>
                   </PullRequestMetaLine>
                 ) : (
                   <PullRequestMetaLine className="min-w-0 whitespace-nowrap">

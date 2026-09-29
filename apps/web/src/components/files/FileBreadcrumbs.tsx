@@ -116,7 +116,9 @@ function BreadcrumbMenuContent(props: {
         <>
           <MenuItem closeOnClick={false} onClick={() => props.onDirectoryChange(parentPath)}>
             <ArrowLeftIcon />
-            <span className="truncate">Back to {pathLabel(parentPath, props.projectName)}</span>
+            <span className="truncate">
+              {t("Back to {pathLabel}", { pathLabel: pathLabel(parentPath, props.projectName) })}
+            </span>
           </MenuItem>
           <MenuSeparator />
         </>

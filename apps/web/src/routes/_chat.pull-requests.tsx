@@ -158,7 +158,7 @@ import { Separator } from "~/components/ui/separator";
 import { primaryServerKeybindingsAtom } from "~/state/server";
 import { getSourceControlPresentationForKind } from "~/sourceControlPresentation";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 function getShortcutContext() {
   return {
@@ -232,10 +232,10 @@ const INVOLVEMENT_TABS = [
 ] as const satisfies ReadonlyArray<PullRequestFilterOption<PullRequestInvolvement>>;
 
 const STATE_TABS = [
-  { value: "all", label: "All", Icon: LayersIcon },
-  { value: "open", label: "Open", Icon: PullRequestGlyph.pullRequest },
-  { value: "closed", label: "Closed", Icon: PullRequestGlyph.closed },
-  { value: "merged", label: "Merged", Icon: PullRequestGlyph.merged },
+  { value: "all", label: t("All"), Icon: LayersIcon },
+  { value: "open", label: tc("pull request filter", "Open"), Icon: PullRequestGlyph.pullRequest },
+  { value: "closed", label: tc("pull request filter", "Closed"), Icon: PullRequestGlyph.closed },
+  { value: "merged", label: tc("pull request filter", "Merged"), Icon: PullRequestGlyph.merged },
 ] as const satisfies ReadonlyArray<PullRequestFilterOption<PullRequestListState>>;
 
 const SORT_OPTIONS = [

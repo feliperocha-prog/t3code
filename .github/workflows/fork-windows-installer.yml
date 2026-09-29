@@ -1,0 +1,93 @@
+# Instalador Windows do fork pt-BR (feliperocha-prog/t3code).
+# Roda a cada push no pt-br e gera o mesmo T3-Code-*-x64.exe do build local
+# (`vp run dist:desktop:win:x64`), sem assinatura, como artefato da execução.
+# Baixar: Actions → "Fork Windows installer" → execução → Artifacts.
+name: Fork Windows installer
+
+on:
+  push:
+    branches:
+      - pt-br
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-windows-installer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.repository == 'feliperocha-prog/t3code'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      # setup-vp's own cache restores a Linux-shaped store on Windows (see #7975).
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1
+        with:
+          node-version-file: package.json
+          cache: false
+          run-install: false
+
+      - name: Resolve package cache path
+        id: package_cache_path
+        shell: pwsh
+        run: '"path=$(vp pm cache dir)" >> $env:GITHUB_OUTPUT'
+
+      - name: Cache packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.package_cache_path.outputs.path }}
+          key: fork-windows-installer-packages-v1-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install
+        run: vp install
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install Spectre-mitigated MSVC libs
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installPath = & $vswhere -products * -latest -property installationPath
+          $setupExe = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\setup.exe"
+          $proc = Start-Process -FilePath $setupExe `
+            -ArgumentList "modify", "--installPath", "`"$installPath`"", "--add", `
+            "Microsoft.VisualStudio.Component.VC.Runtimes.x86.x64.Spectre", "--quiet", "--norestart" `
+            -Wait -PassThru -NoNewWindow
+          if ($null -eq $proc -or $proc.ExitCode -ne 0) {
+            $code = if ($null -ne $proc) { $proc.ExitCode } else { 1 }
+            Write-Error "Visual Studio Installer failed with exit code $code"
+            exit $code
+          }
+
+      # GITHUB_REPOSITORY would give the app an update feed on this fork's
+      # releases (scripts/build-desktop-artifact.ts). Local builds have none.
+      - name: Build installer
+        shell: pwsh
+        run: |
+          Remove-Item Env:GITHUB_REPOSITORY -ErrorAction SilentlyContinue
+          vp run dist:desktop:win:x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload installer
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: t3code-pt-br-win-x64-${{ github.sha }}
+          path: release/*.exe
+          if-no-files-found: error
+          retention-days: 30

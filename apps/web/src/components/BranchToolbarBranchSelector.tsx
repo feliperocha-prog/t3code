@@ -728,7 +728,7 @@ export function BranchToolbarBranchSelector({
           value={itemValue}
           onClick={() => selectPickerItem(itemValue)}
         >
-          <span className="truncate">Create new ref &quot;{newRefName}&quot;</span>
+          <span className="truncate">{t('Create new ref "{newRefName}"', { newRefName })}</span>
         </ComboboxItem>
       );
     }

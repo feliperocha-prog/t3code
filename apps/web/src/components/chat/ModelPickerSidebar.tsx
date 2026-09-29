@@ -197,7 +197,7 @@ export const ModelPickerSidebar = memo(function ModelPickerSidebar(props: {
                   isUnavailable || isContextDisabled
                     ? tooltip
                     : showNewBadge
-                      ? `${entry.displayName}, new`
+                      ? t("{name}, new", { name: entry.displayName })
                       : entry.displayName
                 }
               >

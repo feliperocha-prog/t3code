@@ -133,14 +133,15 @@ export function WelcomeWizard({
   }, [environments]);
   const selectedIds =
     selection ?? new Set(primaryEnvironment ? [primaryEnvironment.environmentId] : []);
-  // Skipping ahead to import still needs a machine to scan; the primary one may
-  // only resolve after the first render.
+  // Opening straight at import skips the connection choice, so this machine
+  // stands in for the computers that step would have picked.
   const primaryEnvironmentId = primaryEnvironment?.environmentId ?? null;
-  useEffect(() => {
-    if (step !== "import" || setupIds.length > 0 || primaryEnvironmentId === null) return;
-    setSetupIds([primaryEnvironmentId]);
-  }, [primaryEnvironmentId, setupIds.length, step]);
-  const scans = useProjectScans(step === "import" ? setupIds : NO_ENVIRONMENTS);
+  const activeSetupIds = useMemo<readonly EnvironmentId[]>(
+    () =>
+      setupIds.length > 0 || primaryEnvironmentId === null ? setupIds : [primaryEnvironmentId],
+    [primaryEnvironmentId, setupIds],
+  );
+  const scans = useProjectScans(step === "import" ? activeSetupIds : NO_ENVIRONMENTS);
   const isLoadingProjects =
     step === "import" &&
     scans.every((scan) => scan.data === null) &&
@@ -248,7 +249,7 @@ export function WelcomeWizard({
               }}
             />
           ) : step === "agents" ? (
-            <AgentsStep environmentIds={setupIds} onContinue={() => setStep("import")} />
+            <AgentsStep environmentIds={activeSetupIds} onContinue={() => setStep("import")} />
           ) : (
             <ImportStep
               scans={scans}

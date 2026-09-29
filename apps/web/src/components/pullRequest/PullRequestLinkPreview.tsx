@@ -12,6 +12,7 @@ import {
 import { formatRelativeTimeLabel } from "~/timestampFormat";
 import { pullRequestEnvironment } from "~/state/pullRequests";
 import { useAtomQueryRunner } from "~/state/use-atom-query-runner";
+import { t } from "~/i18n";
 import { useEnvironmentQuery } from "~/state/query";
 
 import { PreviewCard, PreviewCardPopup, PreviewCardTrigger } from "../ui/preview-card";
@@ -125,7 +126,7 @@ export function PullRequestLinkPreview({
                   <span className="min-w-0 truncate">{authorLabel}</span>
                   <span aria-hidden>·</span>
                   <span className="shrink-0">
-                    opened {formatRelativeTimeLabel(detail.createdAt)}
+                    {t("opened {time}", { time: formatRelativeTimeLabel(detail.createdAt) })}
                   </span>
                 </div>
               </div>
