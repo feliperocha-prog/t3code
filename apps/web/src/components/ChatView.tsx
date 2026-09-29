@@ -8,6 +8,7 @@ import {
 } from "@t3tools/shared/usageLimits";
 import { feedbackBannerItem } from "./chat/ComposerFeedback";
 import { usageLimitsBannerItem } from "./chat/ComposerUsageLimits";
+import { ThreadTabStrip } from "./chat/ThreadTabStrip";
 import { derivePendingRequests } from "@t3tools/client-runtime/pending-requests";
 import {
   questionAttachmentDraftId,
@@ -9950,6 +9951,13 @@ export default function ChatView(props: ChatViewProps) {
             onDeleteProjectScript={deleteProjectScript}
           />
         </WorkspacePageHeader>
+        <ThreadTabStrip
+          activeThreadRef={
+            isServerThread && activeThread
+              ? { environmentId: activeThread.environmentId, threadId: activeThread.id }
+              : null
+          }
+        />
 
         {/* Main content area with optional plan sidebar */}
         <div className="flex min-h-0 min-w-0 flex-1">

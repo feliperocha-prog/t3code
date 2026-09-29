@@ -3993,6 +3993,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     event: KeyboardEvent,
     isTaskItem = false,
   ) => {
+    // Ctrl/Cmd+Tab belongs to the conversation tabs, not the editor.
+    if (key === "Tab" && (event.ctrlKey || event.metaKey)) return false;
     if (key === "Tab" && event.shiftKey) {
       if (!planModeUiEnabled) return false;
       toggleInteractionMode();
