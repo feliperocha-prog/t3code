@@ -98,10 +98,7 @@ export function AddCodexAccountDialog({
             provider?.setup ? (
               renderSetup(instanceId, provider)
             ) : (
-              <SettingsRow
-                title={t("Codex runtime")}
-                description={t("Preparing managed setup.")}
-              />
+              <SettingsRow title={t("Codex runtime")} description={t("Preparing managed setup.")} />
             )
           ) : (
             <form

@@ -247,7 +247,11 @@ export function AddProviderInstanceDialog({
         <WizardHeader
           title={t("Add provider instance")}
           description={
-            <>{t("Add an account or configure a provider on {environment}.", { environment: environmentLabel })}</>
+            <>
+              {t("Add an account or configure a provider on {environment}.", {
+                environment: environmentLabel,
+              })}
+            </>
           }
         >
           <AddProviderInstanceWizardSteps

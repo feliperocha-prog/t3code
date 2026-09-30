@@ -51,9 +51,7 @@ export function RemoveT3ConnectEnvironmentDialog({
               {t("This forgets its pairing, credentials, and cached threads here.")}
             </AlertDialogDescription>
             <AlertDialogDescription>
-              {t(
-                "It stays on your T3 Connect account and keeps its host space. Deregister it in",
-              )}{" "}
+              {t("It stays on your T3 Connect account and keeps its host space. Deregister it in")}{" "}
               {openAccountPage ? (
                 <InlineButton
                   onClick={() => {
