@@ -1,5 +1,9 @@
-import { t } from "~/i18n";
-/** Shows startup failures before React can replace the boot splash. */
+/**
+ * Shows startup failures before React can replace the boot splash.
+ *
+ * The text is Portuguese inline on purpose: importing ~/i18n here would pull every
+ * dictionary into the boot chunk that must load before the app does.
+ */
 export function showBootError(error: unknown) {
   console.error("T3 Code failed to start.", error);
   const bootShell = document.getElementById("boot-shell");
@@ -10,7 +14,7 @@ export function showBootError(error: unknown) {
   content.setAttribute("role", "alert");
 
   const message = document.createElement("p");
-  message.textContent = t("T3 Code could not load.");
+  message.textContent = "Não foi possível carregar o T3 Code.";
   content.append(message);
 
   if (import.meta.env.DEV && error instanceof Error) {
@@ -21,7 +25,7 @@ export function showBootError(error: unknown) {
 
   const reload = document.createElement("button");
   reload.type = "button";
-  reload.textContent = t("Reload");
+  reload.textContent = "Recarregar";
   reload.addEventListener("click", () => window.location.reload());
   content.append(reload);
   bootShell.replaceChildren(content);
