@@ -697,6 +697,22 @@ export const ThreadTitleState = Schema.Struct({
 });
 export type ThreadTitleState = typeof ThreadTitleState.Type;
 
+/** Who wrote the thread objective. A manual objective is never replaced by a generated one. */
+export const ThreadObjectiveState = Schema.Struct({
+  source: Schema.Literals(["manual", "generated"]),
+});
+export type ThreadObjectiveState = typeof ThreadObjectiveState.Type;
+
+/** The STATUS / VOCÊ / EU block the latest completed assistant message ended with. */
+export const ThreadStatusCard = Schema.Struct({
+  kind: Schema.Literals(["pronto", "bloqueado", "aguardando", "outro"]),
+  status: Schema.String,
+  voce: Schema.String,
+  eu: Schema.String,
+  messageId: MessageId,
+});
+export type ThreadStatusCard = typeof ThreadStatusCard.Type;
+
 export const ThreadTitleRegeneration = Schema.Struct({
   requestId: CommandId,
   startedAt: IsoDateTime,
@@ -845,6 +861,9 @@ export const OrchestrationThread = Schema.Struct({
   // Pending-only state. Optional so older servers remain compatible.
   titleRegeneration: Schema.optional(Schema.NullOr(ThreadTitleRegeneration)),
   titleState: Schema.optional(Schema.NullOr(ThreadTitleState)),
+  // One-line goal of the thread. Optional so older servers still decode.
+  objective: Schema.optional(Schema.NullOr(Schema.String)),
+  objectiveState: Schema.optional(Schema.NullOr(ThreadObjectiveState)),
   deletedAt: Schema.NullOr(IsoDateTime),
   messages: Schema.Array(OrchestrationMessage),
   proposedPlans: Schema.Array(OrchestrationProposedPlan).pipe(
@@ -917,6 +936,13 @@ export const OrchestrationThreadShell = Schema.Struct({
   titleState: Schema.optional(Schema.NullOr(ThreadTitleState)),
   session: Schema.NullOr(OrchestrationSession),
   latestUserMessageAt: Schema.NullOr(IsoDateTime),
+  // See OrchestrationThread.objective. Optional so old servers/clients interop.
+  objective: Schema.optional(Schema.NullOr(Schema.String)),
+  /**
+   * Status block of the latest completed assistant message; null when that
+   * message had none. Optional so old servers/clients interop.
+   */
+  statusCard: Schema.optional(Schema.NullOr(ThreadStatusCard)),
   hasPendingApprovals: Schema.Boolean,
   hasPendingUserInput: Schema.Boolean,
   hasActionableProposedPlan: Schema.Boolean,
@@ -1244,6 +1270,8 @@ const ThreadMetaUpdateCommand = Schema.Struct({
   threadId: ThreadId,
   title: Schema.optional(TrimmedNonEmptyString),
   regenerateTitle: Schema.optional(Schema.Literal(true)),
+  // An empty string clears the objective.
+  objective: Schema.optional(Schema.String),
   modelSelection: Schema.optional(ModelSelection),
   branch: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   expectedBranch: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
@@ -1615,6 +1643,7 @@ const ThreadTitleGenerateCompleteCommand = Schema.Struct({
   expectedVersion: Schema.NullOr(CommandId),
   title: TrimmedNonEmptyString,
   needsRefinement: Schema.Boolean,
+  objective: Schema.optional(TrimmedNonEmptyString),
 });
 
 const ThreadTitleRefineCommand = Schema.Struct({
@@ -1862,6 +1891,9 @@ export const ThreadMetaUpdatedPayload = Schema.Struct({
   /** Pending state shared with clients. Null clears a matching request. */
   titleRegeneration: Schema.optional(Schema.NullOr(ThreadTitleRegeneration)),
   titleState: Schema.optional(Schema.NullOr(ThreadTitleState)),
+  /** Null clears the objective. */
+  objective: Schema.optional(Schema.NullOr(Schema.String)),
+  objectiveState: Schema.optional(Schema.NullOr(ThreadObjectiveState)),
   modelSelection: Schema.optional(ModelSelection),
   branch: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   worktreePath: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),

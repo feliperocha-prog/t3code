@@ -222,8 +222,8 @@ describe("ClaudeSettings auto-compaction", () => {
 });
 
 describe("ClientSettings notifications", () => {
-  it("requires opt-in when existing settings omit notification preferences", () => {
-    expect(decodeClientSettings({}).notificationMode).toBe("off");
+  it("turns system notifications on when existing settings omit notification preferences", () => {
+    expect(decodeClientSettings({}).notificationMode).toBe("notifications");
     expect(decodeClientSettings({}).inAppNotificationsEnabled).toBe(false);
     expect(decodeClientSettingsPatch({})).not.toHaveProperty("inAppNotificationsEnabled");
     expect(decodeClientSettingsPatch({})).not.toHaveProperty("notificationMode");
