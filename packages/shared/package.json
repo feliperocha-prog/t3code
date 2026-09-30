@@ -358,6 +358,10 @@
     "./codexAuthHandoff": {
       "types": "./src/codexAuthHandoff.ts",
       "import": "./src/codexAuthHandoff.ts"
+    },
+    "./statusCard": {
+      "types": "./src/statusCard.ts",
+      "import": "./src/statusCard.ts"
     }
   },
   "scripts": {
