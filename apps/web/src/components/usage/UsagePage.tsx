@@ -48,7 +48,6 @@ import {
   formatHourShort,
   formatPercent,
   formatTokens,
-  formatUsageContractMismatch,
   formatUsd,
   makeWindow,
 } from "@t3tools/shared/usageFormat";
@@ -535,7 +534,7 @@ export function UsagePage() {
                         presentation.serverConfig?.providers.some(usesChatGptSharing),
                     ) ? (
                       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                        <span>ChatGPT shared usage</span>
+                        <span>{t("ChatGPT shared usage")}</span>
                         <ChatGptUsageButton size="xs" />
                       </div>
                     ) : null}
@@ -999,7 +998,14 @@ function UsageCoverageNotice({
       ))}
       {incompatible.map(({ environment, mismatch }) => (
         <span key={environment.environmentId}>
-          {formatUsageContractMismatch(environment.label, mismatch)}
+          {mismatch.direction === "serverBehind"
+            ? t("{environment} runs an older server version and is excluded from totals.", {
+                environment: environment.label,
+              })
+            : t(
+                "This client is older than the server on {environment}; its usage is excluded from totals.",
+                { environment: environment.label },
+              )}
         </span>
       ))}
       {duplicateSources.length > 0 ? (

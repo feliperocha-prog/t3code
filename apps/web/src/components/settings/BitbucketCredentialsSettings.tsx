@@ -9,6 +9,7 @@ import { Button, InlineButton } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Toggle, ToggleGroup } from "../ui/toggle-group";
+import { t } from "~/i18n";
 
 type CredentialMethod = "access-token" | "api-token";
 
@@ -22,18 +23,20 @@ const METHODS: Record<
   }
 > = {
   "access-token": {
-    label: "Access token",
-    description:
+    label: t("Access token"),
+    description: t(
       "Scoped to one repository, project, or workspace. Create it in that item's Bitbucket settings.",
+    ),
     link: "https://support.atlassian.com/bitbucket-cloud/docs/access-tokens/",
-    linkLabel: "Learn more",
+    linkLabel: t("Learn more"),
   },
   "api-token": {
-    label: "API token",
-    description:
+    label: t("API token"),
+    description: t(
       "Uses your Atlassian account, so it reaches every repository you can. Give it read and write access to repositories and pull requests, and read:user:bitbucket.",
+    ),
     link: "https://id.atlassian.com/manage-profile/security/api-tokens",
-    linkLabel: "Create an API token",
+    linkLabel: t("Create an API token"),
   },
 };
 
@@ -61,7 +64,7 @@ function TokenInput({
       type="password"
       autoComplete="off"
       size="sm"
-      placeholder={isSaved ? "Stored secret, enter a new value to replace" : "Not set"}
+      placeholder={isSaved ? t("Stored secret, enter a new value to replace") : t("Not set")}
       value={draft}
       onChange={(event) => onDraftChange(event.target.value)}
     />
@@ -140,7 +143,7 @@ export function BitbucketCredentialsSettings({
       {/* Locked while saving: a successful save clears the drafts, which would drop edits made mid-request. */}
       <fieldset disabled={saving} className="contents">
         <ToggleGroup
-          aria-label="Bitbucket sign-in method"
+          aria-label={t("Bitbucket sign-in method")}
           variant="segmented"
           value={[method]}
           onValueChange={(next) => {
@@ -160,7 +163,7 @@ export function BitbucketCredentialsSettings({
         </p>
         {method === "access-token" ? (
           <div className="grid gap-1.5">
-            <Label htmlFor={`bitbucket-access-token-${environmentId}`}>Access token</Label>
+            <Label htmlFor={`bitbucket-access-token-${environmentId}`}>{t("Access token")}</Label>
             <TokenInput
               id={`bitbucket-access-token-${environmentId}`}
               isSaved={methodIsSaved}
@@ -171,7 +174,9 @@ export function BitbucketCredentialsSettings({
         ) : (
           <>
             <div className="grid gap-1.5">
-              <Label htmlFor={`bitbucket-email-${environmentId}`}>Atlassian account email</Label>
+              <Label htmlFor={`bitbucket-email-${environmentId}`}>
+                {t("Atlassian account email")}
+              </Label>
               <Input
                 id={`bitbucket-email-${environmentId}`}
                 type="email"
@@ -183,7 +188,7 @@ export function BitbucketCredentialsSettings({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor={`bitbucket-api-token-${environmentId}`}>API token</Label>
+              <Label htmlFor={`bitbucket-api-token-${environmentId}`}>{t("API token")}</Label>
               <TokenInput
                 id={`bitbucket-api-token-${environmentId}`}
                 isSaved={methodIsSaved}
@@ -196,10 +201,14 @@ export function BitbucketCredentialsSettings({
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             {current === null
-              ? "Without a saved token, the server falls back to its T3CODE_BITBUCKET_* environment variables."
+              ? t(
+                  "Without a saved token, the server falls back to its T3CODE_BITBUCKET_* environment variables.",
+                )
               : methodIsSaved
                 ? null
-                : `Saving replaces your ${METHODS[current].label.toLowerCase()}.`}
+                : t("Saving replaces your {method}.", {
+                    method: METHODS[current].label.toLowerCase(),
+                  })}
           </p>
           <div className="flex shrink-0 gap-2">
             {current !== null ? (
@@ -209,11 +218,11 @@ export function BitbucketCredentialsSettings({
                 disabled={saving}
                 onClick={() => void save({ accessToken: "", email: "", apiToken: "" })}
               >
-                Remove
+                {t("Remove")}
               </Button>
             ) : null}
             <Button type="submit" size="xs" disabled={!canSave || saving}>
-              Save
+              {t("Save")}
             </Button>
           </div>
         </div>

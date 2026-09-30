@@ -32,6 +32,7 @@ import {
 import { toastManager } from "../ui/toast";
 import { fileAttachmentCapabilityBlockReason } from "./composerAttachmentFiles";
 import { ATTACHMENT_ONLY_BOOTSTRAP_PROMPT } from "./composerPromptHistory";
+import { t } from "~/i18n";
 
 async function run<W, A, E>(command: AtomCommand<W, A, E>, input: W): Promise<A> {
   const result = await runAtomCommand(appAtomRegistry, command, input, { reportFailure: false });
@@ -111,11 +112,12 @@ export async function sendQueuedMessage(
       attachments.map(async (attachment) => {
         if (useUploads) {
           const uploaded = getUploadedAttachments({ environmentId, images: [attachment] })?.[0];
-          if (!uploaded) throw new Error(`Attachment '${attachment.name}' did not upload.`);
+          if (!uploaded)
+            throw new Error(t("Attachment '{name}' did not upload.", { name: attachment.name }));
           return uploaded;
         }
         if (attachment.type !== "image") {
-          throw new Error("This server does not support file attachments.");
+          throw new Error(t("This server does not support file attachments."));
         }
         return {
           type: "image" as const,
@@ -204,8 +206,10 @@ export async function sendQueuedMessage(
     const title = readThreadShell(threadRef)?.title;
     toastManager.add({
       type: "error",
-      title: title ? `Queued message not sent in "${title}"` : "Queued message not sent",
-      description: error instanceof Error ? error.message : "Use Send now to try again.",
+      title: title
+        ? t('Queued message not sent in "{title}"', { title })
+        : t("Queued message not sent"),
+      description: error instanceof Error ? error.message : t("Use Send now to try again."),
     });
   }
 }

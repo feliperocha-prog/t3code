@@ -258,9 +258,13 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "chat-width",
-    title: "Chat width",
+    title: t("Chat width"),
     to: "/settings/appearance",
-    searchTerms: ["wide full width column layout messages composer monitor"],
+    searchTerms: [
+      "wide full width column layout messages composer monitor",
+      "Chat width",
+      "largura chat coluna mensagens compositor larga cheia tela monitor",
+    ],
   },
   {
     id: "panel-animations",
@@ -991,9 +995,13 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "bitbucket-credentials",
-    title: "Bitbucket credentials",
+    title: t("Bitbucket credentials"),
     to: "/settings/source-control",
-    searchTerms: ["bitbucket atlassian access token api token email credentials sign in"],
+    searchTerms: [
+      "bitbucket atlassian access token api token email credentials sign in",
+      "Bitbucket credentials",
+      "bitbucket atlassian credenciais token de acesso token de api e-mail login",
+    ],
     environmentOnly: true,
     scope: "environment-defaults",
   },
