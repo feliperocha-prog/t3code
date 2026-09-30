@@ -40,10 +40,13 @@ export function AssistantCitationChip({
     onCancel?: () => void;
     onSave: (comment: string) => boolean;
     onSaveAndSend?: (comment: string) => boolean;
+    /** Returns focus to the host editor when the popover closes instead of to the pencil trigger. */
+    onRestoreFocus?: () => void;
   };
 }) {
   const navigate = useNavigate();
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const commentPopupRef = useRef<HTMLDivElement>(null);
   const draftCommentRef = useRef<string | null>(null);
   const [unavailableSourceAnchor, setUnavailableSourceAnchor] =
     useState<AssistantCitationSourceAnchor | null>(null);
@@ -158,6 +161,7 @@ export function AssistantCitationChip({
             aria-label={
               citation.comment ? t("Edit citation comment") : t("Add comment to citation")
             }
+            data-citation-comment-trigger="true"
             render={<ContextChipAction />}
           >
             <PencilIcon aria-hidden="true" />
@@ -172,6 +176,22 @@ export function AssistantCitationChip({
                 commentInputRef.current?.focus({ preventScroll: true });
                 return false;
               }}
+              finalFocus={
+                commentEditor.onRestoreFocus
+                  ? () => {
+                      // Leave focus alone when the user closed the popover by moving to another control.
+                      const activeElement = document.activeElement;
+                      if (
+                        activeElement === document.body ||
+                        (activeElement !== null && commentPopupRef.current?.contains(activeElement))
+                      ) {
+                        commentEditor.onRestoreFocus?.();
+                      }
+                      return false;
+                    }
+                  : undefined
+              }
+              ref={commentPopupRef}
               aria-label={t("Edit citation comment")}
               width="md"
               padding="compact"

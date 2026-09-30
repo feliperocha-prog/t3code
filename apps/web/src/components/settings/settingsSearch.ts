@@ -257,6 +257,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
   },
   {
+    id: "chat-width",
+    title: "Chat width",
+    to: "/settings/appearance",
+    searchTerms: ["wide full width column layout messages composer monitor"],
+  },
+  {
     id: "panel-animations",
     title: t("Panel animations"),
     to: "/settings/appearance",
@@ -980,6 +986,14 @@ export const SETTINGS_SEARCH_ITEMS = [
       "Git fetch interval",
       "automático remoto branch atualizar segundo plano credenciais chaves de segurança segundos desligado intervalo do fetch",
     ],
+    environmentOnly: true,
+    scope: "environment-defaults",
+  },
+  {
+    id: "bitbucket-credentials",
+    title: "Bitbucket credentials",
+    to: "/settings/source-control",
+    searchTerms: ["bitbucket atlassian access token api token email credentials sign in"],
     environmentOnly: true,
     scope: "environment-defaults",
   },
