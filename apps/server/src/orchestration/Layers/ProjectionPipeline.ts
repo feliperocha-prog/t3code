@@ -8,6 +8,7 @@ import {
   ThreadId,
 } from "@t3tools/contracts";
 import { compareDateTimeStrings } from "@t3tools/shared/dateTime";
+import { parseStatusCard } from "@t3tools/shared/statusCard";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -614,6 +615,9 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             threadId: event.payload.threadId,
             projectId: event.payload.projectId,
             title: event.payload.title,
+            objective: null,
+            objectiveState: null,
+            statusCard: null,
             modelSelection: event.payload.modelSelection,
             runtimeMode: event.payload.runtimeMode,
             interactionMode: event.payload.interactionMode,
@@ -829,6 +833,12 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             ...(event.payload.titleState !== undefined
               ? { titleState: event.payload.titleState }
               : {}),
+            ...(event.payload.objective !== undefined
+              ? { objective: event.payload.objective }
+              : {}),
+            ...(event.payload.objectiveState !== undefined
+              ? { objectiveState: event.payload.objectiveState }
+              : {}),
             ...(event.payload.titleRegeneration !== undefined
               ? {
                   titleRegenerationRequestId: event.payload.titleRegeneration?.requestId ?? null,
@@ -1010,9 +1020,10 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
           return;
         }
 
-        // A message cannot change any summary field except latestUserMessageAt,
-        // which is a monotonic maximum that folds in directly. The full refresh
-        // would re-read every message body in the thread per user message.
+        // A message changes only two summary fields, both folded in directly
+        // (the full refresh would re-read every message body in the thread):
+        // latestUserMessageAt, a monotonic maximum over user messages, and
+        // statusCard, taken from each completed assistant message.
         case "thread.message-sent": {
           const existingRow = yield* projectionThreadRepository.getById({
             threadId: event.payload.threadId,
@@ -1021,8 +1032,23 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             return;
           }
           const previousLatest = existingRow.value.latestUserMessageAt;
+          let statusCard = existingRow.value.statusCard ?? null;
+          if (event.payload.role === "assistant" && !event.payload.streaming) {
+            // The completion event of a streamed reply carries no text; the
+            // messages projector, which runs first, holds the full body.
+            const storedMessage = yield* projectionThreadMessageRepository.getByMessageId({
+              messageId: event.payload.messageId,
+            });
+            const text = Option.match(storedMessage, {
+              onNone: () => event.payload.text,
+              onSome: (message) => (message.text.length > 0 ? message.text : event.payload.text),
+            });
+            const card = parseStatusCard(text);
+            statusCard = card === null ? null : { ...card, messageId: event.payload.messageId };
+          }
           yield* projectionThreadRepository.upsert({
             ...existingRow.value,
+            statusCard,
             updatedAt: event.occurredAt,
             latestUserMessageAt:
               event.payload.role === "user" &&

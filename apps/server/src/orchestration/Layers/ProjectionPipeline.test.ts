@@ -4869,4 +4869,98 @@ engineLayer("OrchestrationProjectionPipeline via engine dispatch", (it) => {
       );
     }),
   );
+
+  it.effect(
+    "keeps the status card of the latest assistant reply and the objective in the shell",
+    () =>
+      Effect.gen(function* () {
+        const engine = yield* OrchestrationEngineService;
+        const snapshotQuery = yield* ProjectionSnapshotQuery;
+        const sql = yield* SqlClient.SqlClient;
+        const createdAt = "2026-01-01T00:00:00.000Z";
+        const projectId = ProjectId.make("project-status-card");
+        const threadId = ThreadId.make("thread-status-card");
+        const modelSelection = {
+          instanceId: ProviderInstanceId.make("codex"),
+          model: "gpt-5-codex",
+        };
+        yield* engine.dispatch({
+          type: "project.create",
+          commandId: CommandId.make("cmd-status-card-project"),
+          projectId,
+          title: "Status Card Project",
+          workspaceRoot: "/tmp/project-status-card",
+          defaultModelSelection: modelSelection,
+          createdAt,
+        });
+        yield* engine.dispatch({
+          type: "thread.create",
+          commandId: CommandId.make("cmd-status-card-thread"),
+          threadId,
+          projectId,
+          title: "Status card",
+          modelSelection,
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          branch: null,
+          worktreePath: null,
+          createdAt,
+        });
+        const shell = () =>
+          snapshotQuery.getThreadShellById(threadId).pipe(Effect.map(Option.getOrThrow));
+        assert.strictEqual((yield* shell()).statusCard, null);
+        assert.strictEqual((yield* shell()).objective, null);
+
+        const reply = (id: string, chunks: ReadonlyArray<string>) =>
+          Effect.gen(function* () {
+            for (const [index, delta] of chunks.entries()) {
+              yield* engine.dispatch({
+                type: "thread.message.assistant.delta",
+                commandId: CommandId.make(`cmd-${id}-delta-${index}`),
+                threadId,
+                messageId: MessageId.make(id),
+                delta,
+                createdAt,
+              });
+            }
+            yield* engine.dispatch({
+              type: "thread.message.assistant.complete",
+              commandId: CommandId.make(`cmd-${id}-complete`),
+              threadId,
+              messageId: MessageId.make(id),
+              createdAt,
+            });
+          });
+
+        yield* reply("assistant-with-card", [
+          ["Build passou.", "", "STATUS: aguardando sua aprovação", ""].join("\n"),
+          ["VOCÊ: aprovar o push", "EU: subir depois do sim"].join("\n"),
+        ]);
+        assert.deepEqual((yield* shell()).statusCard, {
+          kind: "aguardando",
+          status: "aguardando sua aprovação",
+          voce: "aprovar o push",
+          eu: "subir depois do sim",
+          messageId: MessageId.make("assistant-with-card"),
+        });
+
+        yield* reply("assistant-without-card", ["Resposta comum, sem bloco."]);
+        assert.strictEqual((yield* shell()).statusCard, null);
+
+        yield* engine.dispatch({
+          type: "thread.meta.update",
+          commandId: CommandId.make("cmd-status-card-objective"),
+          threadId,
+          objective: " Publicar a LP B2B ",
+        });
+        assert.strictEqual((yield* shell()).objective, "Publicar a LP B2B");
+
+        // The card is derived data: a column that no longer decodes reads as no card.
+        yield* sql`
+        UPDATE projection_threads SET status_card_json = '{broken' WHERE thread_id = ${threadId}
+      `;
+        assert.strictEqual((yield* shell()).statusCard, null);
+        assert.strictEqual((yield* shell()).objective, "Publicar a LP B2B");
+      }),
+  );
 });

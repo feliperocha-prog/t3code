@@ -489,6 +489,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           autoSettleDisabledAt: null,
           titleRegeneration: null,
           titleState: null,
+          objective: null,
+          objectiveState: null,
           deletedAt: null,
           messages: [
             {
@@ -626,6 +628,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             updatedAt: "2026-02-24T00:00:07.000Z",
           },
           latestUserMessageAt: "2026-02-24T00:00:04.000Z",
+          objective: null,
+          statusCard: null,
           hasPendingApprovals: true,
           hasPendingUserInput: false,
           hasActionableProposedPlan: false,

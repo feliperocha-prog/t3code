@@ -15,6 +15,8 @@ import {
   ProviderInteractionMode,
   RuntimeMode,
   ThreadLinkedPullRequest,
+  ThreadObjectiveState,
+  ThreadStatusCard,
   ThreadTitleState,
   ThreadId,
   TurnId,
@@ -22,7 +24,7 @@ import {
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import * as Context from "effect/Context";
-import type * as Effect from "effect/Effect";
+import * as Effect from "effect/Effect";
 
 import type { ProjectionRepositoryError } from "../Errors.ts";
 
@@ -31,6 +33,9 @@ export const ProjectionThread = Schema.Struct({
   projectId: ProjectId,
   title: Schema.String,
   titleState: Schema.optional(Schema.NullOr(ThreadTitleState)),
+  objective: Schema.optional(Schema.NullOr(Schema.String)),
+  objectiveState: Schema.optional(Schema.NullOr(ThreadObjectiveState)),
+  statusCard: Schema.optional(Schema.NullOr(ThreadStatusCard)),
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
   interactionMode: ProviderInteractionMode,
@@ -60,6 +65,15 @@ export const ProjectionThread = Schema.Struct({
   deletedAt: Schema.NullOr(IsoDateTime),
 });
 export type ProjectionThread = typeof ProjectionThread.Type;
+
+/**
+ * `status_card_json` column. The card is derived from an assistant message and
+ * can always be rebuilt from the next one, so a row that no longer decodes
+ * reads as "no card" instead of failing the whole thread load.
+ */
+export const ProjectionThreadStatusCardJson = Schema.NullOr(
+  Schema.fromJsonString(ThreadStatusCard),
+).pipe(Schema.catchDecoding(() => Effect.succeed(Option.some(null))));
 
 export const GetProjectionThreadInput = Schema.Struct({
   threadId: ThreadId,
