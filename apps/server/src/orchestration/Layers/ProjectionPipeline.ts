@@ -3,6 +3,7 @@ import {
   isImportedAgentSessionMessageId,
   UserInputAttachmentAnswerPayload,
   type ChatAttachment,
+  type MessageId,
   type OrchestrationEvent,
   type OrchestrationSessionStatus,
   ThreadId,
@@ -570,6 +571,11 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
       }
     });
 
+    const statusCardFromMessage = (messageId: MessageId, text: string) => {
+      const card = parseStatusCard(text);
+      return card === null ? null : { ...card, messageId };
+    };
+
     const refreshThreadShellSummary = Effect.fn("refreshThreadShellSummary")(function* (
       threadId: ThreadId,
     ) {
@@ -1043,8 +1049,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
               onNone: () => event.payload.text,
               onSome: (message) => (message.text.length > 0 ? message.text : event.payload.text),
             });
-            const card = parseStatusCard(text);
-            statusCard = card === null ? null : { ...card, messageId: event.payload.messageId };
+            statusCard = statusCardFromMessage(event.payload.messageId, text);
           }
           yield* projectionThreadRepository.upsert({
             ...existingRow.value,
@@ -1142,9 +1147,31 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             }
           }
 
+          // The messages projector already dropped the reverted messages. A card
+          // whose message went with them falls back to the latest kept reply.
+          let statusCard = existingRow.value.statusCard ?? null;
+          if (statusCard !== null) {
+            const cardMessage = yield* projectionThreadMessageRepository.getByMessageId({
+              messageId: statusCard.messageId,
+            });
+            if (Option.isNone(cardMessage)) {
+              const keptMessages = yield* projectionThreadMessageRepository.listByThreadId({
+                threadId: event.payload.threadId,
+              });
+              const latestReply = keptMessages.findLast(
+                (message) => message.role === "assistant" && !message.isStreaming,
+              );
+              statusCard =
+                latestReply === undefined
+                  ? null
+                  : statusCardFromMessage(latestReply.messageId, latestReply.text);
+            }
+          }
+
           yield* projectionThreadRepository.upsert({
             ...existingRow.value,
             latestTurnId,
+            statusCard,
             updatedAt: event.occurredAt,
           });
           yield* refreshThreadShellSummary(event.payload.threadId);

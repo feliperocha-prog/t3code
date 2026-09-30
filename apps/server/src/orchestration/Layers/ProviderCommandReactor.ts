@@ -1010,11 +1010,25 @@ const make = Effect.gen(function* () {
 
         const thread = yield* resolveThreadShell(input.threadId);
         if (!thread) return;
+        const objective = boundGeneratedObjective(generated.objective);
         if (!canReplaceThreadTitle(thread.title, input.titleSeed)) {
+          // The thread was renamed while the title generated. Its title no longer
+          // matches expectedTitle, so the decider leaves it alone; the objective
+          // still fills an empty slot.
+          if (objective === undefined || thread.objective) return;
+          yield* orchestrationEngine.dispatch({
+            type: "thread.title.generate.complete",
+            commandId: yield* serverCommandId("thread-objective-generate"),
+            threadId: input.threadId,
+            title: thread.title,
+            expectedTitle: input.expectedTitle,
+            expectedVersion: input.expectedVersion,
+            needsRefinement: false,
+            objective,
+          });
           return;
         }
 
-        const objective = boundGeneratedObjective(generated.objective);
         yield* orchestrationEngine.dispatch({
           type: "thread.title.generate.complete",
           commandId: yield* serverCommandId("thread-title-rename"),

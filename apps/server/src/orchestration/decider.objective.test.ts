@@ -84,6 +84,25 @@ it.layer(NodeServices.layer)("thread objective decider", (it) => {
     }),
   );
 
+  it.effect("caps a manual objective at 200 characters", () =>
+    Effect.gen(function* () {
+      const event = yield* decideFirst({
+        command: {
+          type: "thread.meta.update",
+          commandId: CommandId.make("long-objective"),
+          threadId: THREAD_ID,
+          objective: `  ${"a".repeat(199)} ${"b".repeat(50)}  `,
+        },
+        readModel: readModelWith({}),
+      });
+      // Cut at 200, then the trailing space the cut exposed is dropped.
+      expect(event.payload).toMatchObject({
+        objective: "a".repeat(199),
+        objectiveState: { source: "manual" },
+      });
+    }),
+  );
+
   it.effect("clears the objective when the manual value is empty", () =>
     Effect.gen(function* () {
       const event = yield* decideFirst({

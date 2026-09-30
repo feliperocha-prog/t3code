@@ -54,6 +54,8 @@ const isScriptRunCommand = Schema.is(SCRIPT_RUN_COMMAND_PATTERN);
 const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 const decodeUserInputRequestedPayload = Schema.decodeUnknownOption(UserInputRequestedPayload);
 const threadPullRequestLinksEqual = Schema.toEquivalence(Schema.NullOr(ThreadLinkedPullRequest));
+/** The thread shell carries the objective on every event, so a typed one is capped too. */
+const THREAD_OBJECTIVE_MAX_LENGTH = 200;
 
 /**
  * Blocked-on-you work derived from the thread's retained activities: an
@@ -1005,7 +1007,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           ? thread.branch
           : command.branch;
       const occurredAt = yield* nowIso;
-      const objective = command.objective?.trim();
+      const objective = command.objective?.trim().slice(0, THREAD_OBJECTIVE_MAX_LENGTH).trimEnd();
       return {
         ...(yield* withEventBase({
           aggregateKind: "thread",

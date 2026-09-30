@@ -4029,6 +4029,141 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
     }),
   );
 
+  it.effect("recomputes the status card when a revert removes its message", () =>
+    Effect.gen(function* () {
+      const projectionPipeline = yield* OrchestrationProjectionPipeline;
+      const eventStore = yield* OrchestrationEventStore;
+      const sql = yield* SqlClient.SqlClient;
+      const threadId = ThreadId.make("thread-revert-card");
+      let sequence = 0;
+      type StoredEvent = Parameters<typeof eventStore.append>[0];
+      type EventBody<E> = E extends unknown
+        ? Omit<E, "eventId" | "commandId" | "causationEventId" | "correlationId" | "metadata">
+        : never;
+      const appendAndProject = (event: EventBody<StoredEvent>) => {
+        sequence += 1;
+        const commandId = CommandId.make(`cmd-revert-card-${sequence}`);
+        return eventStore
+          .append({
+            ...event,
+            eventId: EventId.make(`evt-revert-card-${sequence}`),
+            commandId,
+            causationEventId: null,
+            correlationId: CorrelationId.make(commandId),
+            metadata: {},
+          } as StoredEvent)
+          .pipe(Effect.flatMap((savedEvent) => projectionPipeline.projectEvent(savedEvent)));
+      };
+      const statusCardMessageId = () =>
+        sql<{ readonly statusCardJson: string | null }>`
+          SELECT status_card_json AS "statusCardJson"
+          FROM projection_threads
+          WHERE thread_id = ${threadId}
+        `.pipe(
+          Effect.map(([row]) =>
+            row?.statusCardJson == null
+              ? null
+              : (JSON.parse(row.statusCardJson) as { messageId: string }).messageId,
+          ),
+        );
+
+      yield* appendAndProject({
+        type: "project.created",
+        aggregateKind: "project",
+        aggregateId: ProjectId.make("project-revert-card"),
+        occurredAt: "2026-02-26T13:00:00.000Z",
+        payload: {
+          projectId: ProjectId.make("project-revert-card"),
+          title: "Project Revert Card",
+          workspaceRoot: "/tmp/project-revert-card",
+          defaultModelSelection: null,
+          scripts: [],
+          createdAt: "2026-02-26T13:00:00.000Z",
+          updatedAt: "2026-02-26T13:00:00.000Z",
+        },
+      });
+      yield* appendAndProject({
+        type: "thread.created",
+        aggregateKind: "thread",
+        aggregateId: threadId,
+        occurredAt: "2026-02-26T13:00:01.000Z",
+        payload: {
+          threadId,
+          projectId: ProjectId.make("project-revert-card"),
+          title: "Thread Revert Card",
+          modelSelection: {
+            instanceId: ProviderInstanceId.make("codex"),
+            model: "gpt-5-codex",
+          },
+          runtimeMode: "full-access",
+          branch: null,
+          worktreePath: null,
+          createdAt: "2026-02-26T13:00:01.000Z",
+          updatedAt: "2026-02-26T13:00:01.000Z",
+        },
+      });
+
+      const completeTurn = (turn: number, messageId: string, text: string) =>
+        Effect.gen(function* () {
+          const at = `2026-02-26T13:00:0${turn + 1}.000Z`;
+          yield* appendAndProject({
+            type: "thread.turn-diff-completed",
+            aggregateKind: "thread",
+            aggregateId: threadId,
+            occurredAt: at,
+            payload: {
+              threadId,
+              turnId: TurnId.make(`turn-card-${turn}`),
+              checkpointTurnCount: turn,
+              checkpointRef: CheckpointRef.make(
+                `refs/t3/checkpoints/thread-revert-card/turn/${turn}`,
+              ),
+              status: "ready",
+              files: [],
+              assistantMessageId: MessageId.make(messageId),
+              completedAt: at,
+            },
+          });
+          yield* appendAndProject({
+            type: "thread.message-sent",
+            aggregateKind: "thread",
+            aggregateId: threadId,
+            occurredAt: at,
+            payload: {
+              threadId,
+              messageId: MessageId.make(messageId),
+              role: "assistant",
+              text,
+              turnId: TurnId.make(`turn-card-${turn}`),
+              streaming: false,
+              createdAt: at,
+              updatedAt: at,
+            },
+          });
+        });
+      const revertTo = (turnCount: number) =>
+        appendAndProject({
+          type: "thread.reverted",
+          aggregateKind: "thread",
+          aggregateId: threadId,
+          occurredAt: `2026-02-26T13:00:0${8 - turnCount}.000Z`,
+          payload: { threadId, turnCount },
+        });
+
+      yield* completeTurn(1, "assistant-card-1", "Feito.\n\nSTATUS: pronto\nVOCÊ: nada\nEU: nada");
+      yield* completeTurn(2, "assistant-card-2", "STATUS: bloqueado\nVOCÊ: logar\nEU: esperar");
+      assert.strictEqual(yield* statusCardMessageId(), "assistant-card-2");
+
+      // The card's message is reverted away: the latest kept reply takes over.
+      yield* revertTo(1);
+      assert.strictEqual(yield* statusCardMessageId(), "assistant-card-1");
+
+      // No assistant reply left: no card.
+      yield* revertTo(0);
+      assert.strictEqual(yield* statusCardMessageId(), null);
+    }),
+  );
+
   it.effect("does not let a later missing placeholder clobber a ready checkpoint", () =>
     Effect.gen(function* () {
       const projectionPipeline = yield* OrchestrationProjectionPipeline;

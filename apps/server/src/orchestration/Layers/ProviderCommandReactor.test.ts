@@ -2628,33 +2628,48 @@ describe("ProviderCommandReactor", () => {
     {
       label: "with",
       generated: "  Corrigir o spinner de reconexão  ",
+      renamedTo: undefined,
+      expectedTitle: "Reconnect spinner resume bug",
       expected: "Corrigir o spinner de reconexão",
     },
-    { label: "without", generated: undefined, expected: undefined },
+    {
+      label: "without",
+      generated: undefined,
+      renamedTo: undefined,
+      expectedTitle: "Reconnect spinner resume bug",
+      expected: undefined,
+    },
+    {
+      label: "with a rename during generation and",
+      generated: "Corrigir o spinner de reconexão",
+      renamedTo: "Renomeado na mão",
+      expectedTitle: "Renomeado na mão",
+      expected: "Corrigir o spinner de reconexão",
+    },
   ])(
     "stores the generated objective $label one on the first turn",
-    async ({ generated, expected }) => {
+    async ({ generated, renamedTo, expectedTitle, expected }) => {
       const seededTitle = "Fix reconnect spinner on resume";
       const harness = await createHarness({ initialTitle: seededTitle });
-      harness.generateThreadTitle.mockReturnValue(
-        Effect.succeed({
-          title: "Reconnect spinner resume bug",
-          ...(generated !== undefined ? { objective: generated } : {}),
-        }),
+      const generatedTitle = await harness.runEffect(
+        Deferred.make<{ readonly title: string; readonly objective?: string }, never>(),
       );
-
-      const titleUpdated = await harness.runEffect(
+      harness.generateThreadTitle.mockReturnValue(Deferred.await(generatedTitle));
+      // The generation lands as one meta update; a manual rename is not it.
+      const generationLanded = await harness.runEffect(
         harness.engine.streamDomainEvents.pipe(
           Stream.filter(
             (event) =>
               event.type === "thread.meta-updated" &&
-              event.payload.title === "Reconnect spinner resume bug",
+              (event.payload.titleState?.source === "generated" ||
+                event.payload.objectiveState?.source === "generated"),
           ),
           Stream.take(1),
           Stream.toPull,
           Scope.provide(scope!),
         ),
       );
+
       await harness.runEffect(
         harness.engine.dispatch({
           type: "thread.turn.start",
@@ -2672,13 +2687,29 @@ describe("ProviderCommandReactor", () => {
           createdAt: "2026-01-01T00:00:00.000Z",
         }),
       );
-
-      await harness.runEffect(titleUpdated);
+      await waitFor(() => harness.generateThreadTitle.mock.calls.length === 1);
+      if (renamedTo !== undefined) {
+        await harness.runEffect(
+          harness.engine.dispatch({
+            type: "thread.meta.update",
+            commandId: CommandId.make("cmd-rename-during-objective"),
+            threadId: ThreadId.make("thread-1"),
+            title: renamedTo,
+          }),
+        );
+      }
+      await harness.runEffect(
+        Deferred.succeed(generatedTitle, {
+          title: "Reconnect spinner resume bug",
+          ...(generated !== undefined ? { objective: generated } : {}),
+        }),
+      );
+      await harness.runEffect(generationLanded);
       await harness.drain();
 
       const readModel = await harness.readModel();
       const thread = readModel.threads.find((entry) => entry.id === ThreadId.make("thread-1"));
-      expect(thread?.title).toBe("Reconnect spinner resume bug");
+      expect(thread?.title).toBe(expectedTitle);
       expect(thread?.objective ?? undefined).toBe(expected);
       expect(thread?.objectiveState?.source).toBe(expected === undefined ? undefined : "generated");
     },
