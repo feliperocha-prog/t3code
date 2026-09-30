@@ -450,6 +450,7 @@ export const makeOpenCodeTextGeneration = Effect.fn("makeOpenCodeTextGeneration"
       return {
         title: sanitizeThreadTitle(generated.title),
         ...(generated.needsRefinement ? { needsRefinement: true } : {}),
+        ...(generated.objective ? { objective: generated.objective } : {}),
       };
     });
 

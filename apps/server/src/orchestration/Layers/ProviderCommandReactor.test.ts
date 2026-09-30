@@ -2624,6 +2624,66 @@ describe("ProviderCommandReactor", () => {
     expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({ input: prompt });
   });
 
+  it.each([
+    {
+      label: "with",
+      generated: "  Corrigir o spinner de reconexão  ",
+      expected: "Corrigir o spinner de reconexão",
+    },
+    { label: "without", generated: undefined, expected: undefined },
+  ])(
+    "stores the generated objective $label one on the first turn",
+    async ({ generated, expected }) => {
+      const seededTitle = "Fix reconnect spinner on resume";
+      const harness = await createHarness({ initialTitle: seededTitle });
+      harness.generateThreadTitle.mockReturnValue(
+        Effect.succeed({
+          title: "Reconnect spinner resume bug",
+          ...(generated !== undefined ? { objective: generated } : {}),
+        }),
+      );
+
+      const titleUpdated = await harness.runEffect(
+        harness.engine.streamDomainEvents.pipe(
+          Stream.filter(
+            (event) =>
+              event.type === "thread.meta-updated" &&
+              event.payload.title === "Reconnect spinner resume bug",
+          ),
+          Stream.take(1),
+          Stream.toPull,
+          Scope.provide(scope!),
+        ),
+      );
+      await harness.runEffect(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.make("cmd-turn-start-objective"),
+          threadId: ThreadId.make("thread-1"),
+          message: {
+            messageId: asMessageId("user-message-objective"),
+            role: "user",
+            text: "Fix reconnect spinner on resume",
+            attachments: [],
+          },
+          titleSeed: seededTitle,
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "approval-required",
+          createdAt: "2026-01-01T00:00:00.000Z",
+        }),
+      );
+
+      await harness.runEffect(titleUpdated);
+      await harness.drain();
+
+      const readModel = await harness.readModel();
+      const thread = readModel.threads.find((entry) => entry.id === ThreadId.make("thread-1"));
+      expect(thread?.title).toBe("Reconnect spinner resume bug");
+      expect(thread?.objective ?? undefined).toBe(expected);
+      expect(thread?.objectiveState?.source).toBe(expected === undefined ? undefined : "generated");
+    },
+  );
+
   it("generates a worktree branch name for the first turn", async () => {
     const harness = await createHarness();
     const now = "2026-01-01T00:00:00.000Z";

@@ -258,6 +258,7 @@ export const makeCursorTextGeneration = Effect.fn("makeCursorTextGeneration")(fu
       return {
         title: sanitizeThreadTitle(generated.title),
         ...(generated.needsRefinement ? { needsRefinement: true } : {}),
+        ...(generated.objective ? { objective: generated.objective } : {}),
       } satisfies TextGeneration.ThreadTitleGenerationResult;
     });
 

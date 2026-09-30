@@ -642,6 +642,10 @@ export function projectEvent(
             threads: updateThread(nextBase.threads, payload.threadId, {
               ...(payload.title !== undefined ? { title: payload.title } : {}),
               ...(payload.titleState !== undefined ? { titleState: payload.titleState } : {}),
+              ...(payload.objective !== undefined ? { objective: payload.objective } : {}),
+              ...(payload.objectiveState !== undefined
+                ? { objectiveState: payload.objectiveState }
+                : {}),
               ...(payload.titleRegeneration !== undefined
                 ? { titleRegeneration: payload.titleRegeneration }
                 : {}),

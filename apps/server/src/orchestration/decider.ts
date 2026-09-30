@@ -1005,6 +1005,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           ? thread.branch
           : command.branch;
       const occurredAt = yield* nowIso;
+      const objective = command.objective?.trim();
       return {
         ...(yield* withEventBase({
           aggregateKind: "thread",
@@ -1015,6 +1016,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         type: "thread.meta-updated",
         payload: {
           threadId: command.threadId,
+          ...(objective !== undefined
+            ? objective.length === 0
+              ? { objective: null, objectiveState: null }
+              : { objective, objectiveState: { source: "manual" as const } }
+            : {}),
           ...(command.title !== undefined
             ? {
                 title: command.title,
@@ -1253,6 +1259,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         thread.title === command.expectedTitle &&
         (thread.titleState?.version ?? null) === command.expectedVersion &&
         thread.titleRegeneration == null;
+      // A generated objective fills an empty slot or replaces an older generated
+      // one; it never overwrites what the user typed.
+      const acceptsObjective =
+        thread.deletedAt === null &&
+        (!thread.objective || thread.objectiveState?.source !== "manual");
       return {
         ...(yield* withEventBase({
           aggregateKind: "thread",
@@ -1272,6 +1283,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
                   needsRefinement: command.needsRefinement,
                 },
               }
+            : {}),
+          ...(command.objective !== undefined && acceptsObjective
+            ? { objective: command.objective, objectiveState: { source: "generated" as const } }
             : {}),
           updatedAt: thread.updatedAt,
         },

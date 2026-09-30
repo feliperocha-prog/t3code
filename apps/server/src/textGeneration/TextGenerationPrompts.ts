@@ -220,7 +220,8 @@ export interface ThreadTitlePromptInput {
 // Keep shared editorial rules in these two prompts in sync. Regeneration
 // intentionally adds guidance for thread history and the previous title.
 const INITIAL_THREAD_TITLE_PROMPT = `Generate a title that will help the user recognize this T3 Code thread weeks later.
-Return JSON with keys title and needsRefinement.
+Return JSON with keys title, objective and needsRefinement.
+Set objective to one sentence of at most 120 characters stating what the user wants to achieve, in the same language the user writes in (Portuguese when they write in Portuguese), without a trailing period and without naming models or tools.
 Set needsRefinement to true only if the subject is still unknown, such as an unresolved link, "fix this", or an unexplained attachment. Otherwise set it to false.
 
 Before answering, silently reduce the request to:
@@ -249,7 +250,8 @@ Editorial rules:
 function regenerateThreadTitlePrompt(previousTitle: string): string {
   return `Regenerate the title for an existing T3 Code thread so the user can recognize it weeks later.
 The previous title was ${JSON.stringify(previousTitle)}.
-Return JSON with keys title and needsRefinement. Set needsRefinement to false.
+Return JSON with keys title, objective and needsRefinement. Set needsRefinement to false.
+Set objective to one sentence of at most 120 characters stating what the user wants to achieve, in the same language the user writes in (Portuguese when they write in Portuguese), without a trailing period and without naming models or tools.
 
 Determine the title in this order:
 1. Read the USER messages first. Identify the latest explicit durable goal. The original subject remains the subject until the user clearly changes what the thread is about.
@@ -322,6 +324,9 @@ export function buildThreadTitlePrompt(input: ThreadTitlePromptInput) {
   }
   const outputSchema = Schema.Struct({
     title: Schema.String,
+    // Defaulted rather than optional: strict structured-output modes require
+    // every key, and a model that omits it must still yield a title.
+    objective: Schema.String.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
     needsRefinement: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   });
 

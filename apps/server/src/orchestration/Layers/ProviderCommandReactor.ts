@@ -97,6 +97,16 @@ const isCompactCommandMessage = (message: ThreadTitleMessage): boolean =>
   message.role === "user" &&
   (message.attachments?.length ?? 0) === 0 &&
   message.text.trim().toLowerCase() === "/compact";
+
+const GENERATED_OBJECTIVE_MAX_LENGTH = 160;
+
+/** The thread shell carries the objective on every event, so keep it bounded. */
+function boundGeneratedObjective(objective: string | undefined): string | undefined {
+  const trimmed = objective?.trim() ?? "";
+  if (trimmed.length === 0) return undefined;
+  return trimmed.slice(0, GENERATED_OBJECTIVE_MAX_LENGTH).trimEnd();
+}
+
 function mapProviderSessionStatusToOrchestrationStatus(
   status: "connecting" | "ready" | "running" | "error" | "closed",
 ): OrchestrationSession["status"] {
@@ -1004,6 +1014,7 @@ const make = Effect.gen(function* () {
           return;
         }
 
+        const objective = boundGeneratedObjective(generated.objective);
         yield* orchestrationEngine.dispatch({
           type: "thread.title.generate.complete",
           commandId: yield* serverCommandId("thread-title-rename"),
@@ -1013,6 +1024,7 @@ const make = Effect.gen(function* () {
           expectedVersion: input.expectedVersion,
           needsRefinement:
             generated.needsRefinement === true || generated.title === DEFAULT_THREAD_TITLE,
+          ...(objective !== undefined ? { objective } : {}),
         });
       }).pipe(
         Effect.catchCause((cause) =>

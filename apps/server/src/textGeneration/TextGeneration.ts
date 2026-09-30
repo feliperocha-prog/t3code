@@ -73,6 +73,8 @@ export interface ThreadTitleGenerationInput {
 export interface ThreadTitleGenerationResult {
   title: string;
   needsRefinement?: boolean | undefined;
+  /** Raw one-line goal from the model; the caller trims and bounds it. */
+  objective?: string | undefined;
 }
 
 /**

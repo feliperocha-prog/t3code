@@ -402,6 +402,7 @@ export const makeAntigravityTextGeneration = Effect.fn("makeAntigravityTextGener
       return {
         title: sanitizeThreadTitle(generated.title),
         ...(generated.needsRefinement ? { needsRefinement: true } : {}),
+        ...(generated.objective ? { objective: generated.objective } : {}),
       };
     });
 

@@ -407,6 +407,7 @@ export const makeClaudeTextGeneration = Effect.fn("makeClaudeTextGeneration")(fu
       return {
         title: sanitizeThreadTitle(generated.title),
         ...(generated.needsRefinement ? { needsRefinement: true } : {}),
+        ...(generated.objective ? { objective: generated.objective } : {}),
       };
     });
 
