@@ -10,6 +10,15 @@ import {
 } from "./ThreadStatusIndicators";
 import { newestPullRequestSummary } from "../state/pullRequests";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
+import { t, tc } from "~/i18n";
+
+// Pull request state words, in the active locale, as the presentation table resolves them.
+const STATE_LABEL = {
+  open: tc("pull request state", "Open"),
+  draft: t("Draft"),
+  closed: t("Closed"),
+  merged: t("Merged"),
+} as const;
 
 describe("synchronizeTerminalPulse", () => {
   it("pins only the status pulse to the document clock", () => {
@@ -104,8 +113,8 @@ describe("shared pull request state", () => {
 describe("prStatusIndicator", () => {
   it("formats PR tooltips with number, uppercase status, and title", () => {
     expect(prStatusIndicator(status().pr, undefined)).toMatchObject({
-      tooltip: "PR #42 - Open: PR branch",
-      tooltipLead: "PR #42 - Open",
+      tooltip: `PR #42 - ${STATE_LABEL.open}: PR branch`,
+      tooltipLead: `PR #42 - ${STATE_LABEL.open}`,
       tooltipTitle: "PR branch",
     });
   });
@@ -124,9 +133,9 @@ describe("prStatusIndicator", () => {
     if (!draftPr) throw new Error("Expected pull request fixture");
 
     expect(prStatusIndicator({ ...draftPr, isDraft: true }, undefined)).toMatchObject({
-      label: "PR draft",
+      label: `PR ${STATE_LABEL.draft.toLowerCase()}`,
       colorClass: "text-zinc-500 dark:text-zinc-400/80",
-      tooltipLead: "PR #42 - Draft",
+      tooltipLead: `PR #42 - ${STATE_LABEL.draft}`,
     });
   });
 });
@@ -145,7 +154,7 @@ describe("resolveThreadPullRequestBadgePresentation", () => {
     ).toEqual({
       Icon: PullRequestGlyph.pullRequest,
       toneClassName: "text-muted-foreground",
-      label: "PR #42, status pending",
+      label: t("PR #{number}, status pending", { number: 42 }),
       text: 42,
     });
   });
@@ -156,28 +165,28 @@ describe("resolveThreadPullRequestBadgePresentation", () => {
       { state: "open", isDraft: false },
       PullRequestGlyph.pullRequest,
       "text-emerald-600 dark:text-emerald-300/90",
-      "PR #42 - Open: PR branch",
+      `PR #42 - ${STATE_LABEL.open}: PR branch`,
     ],
     [
       "draft",
       { state: "open", isDraft: true },
       PullRequestGlyph.draft,
       "text-zinc-500 dark:text-zinc-400/80",
-      "PR #42 - Draft: PR branch",
+      `PR #42 - ${STATE_LABEL.draft}: PR branch`,
     ],
     [
       "closed",
       { state: "closed", isDraft: false },
       PullRequestGlyph.closed,
       "text-red-600 dark:text-red-300/90",
-      "PR #42 - Closed: PR branch",
+      `PR #42 - ${STATE_LABEL.closed}: PR branch`,
     ],
     [
       "merged",
       { state: "merged", isDraft: false },
       PullRequestGlyph.merged,
       "text-violet-600 dark:text-violet-300/90",
-      "PR #42 - Merged: PR branch",
+      `PR #42 - ${STATE_LABEL.merged}: PR branch`,
     ],
   ] as const)(
     "keeps the %s state for one linked pull request",
@@ -218,7 +227,10 @@ describe("resolveThreadPullRequestBadgePresentation", () => {
       ).toEqual({
         Icon: PullRequestGlyph.stack,
         toneClassName: expectedToneClassName,
-        label: `Stack of 3 pull requests, ${state}`,
+        label: t("Stack of {count} pull requests, {state}", {
+          count: 3,
+          state: STATE_LABEL[state].toLowerCase(),
+        }),
         text: 3,
       });
     },
@@ -249,7 +261,11 @@ describe("resolveThreadPullRequestBadgePresentation", () => {
       ).toEqual({
         Icon: expectedIcon,
         toneClassName: expectedToneClassName,
-        label: `PR #42 - Closed: PR branch, and 2 more linked; overall ${state}`,
+        label: t("{tooltip}, and {count} more linked; overall {state}", {
+          tooltip: `PR #42 - ${STATE_LABEL.closed}: PR branch`,
+          count: 2,
+          state: STATE_LABEL[state].toLowerCase(),
+        }),
         text: "+3",
       });
     },

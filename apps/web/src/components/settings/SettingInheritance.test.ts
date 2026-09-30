@@ -71,8 +71,8 @@ describe("settingInheritanceLayers", () => {
     expect(fromFile.map((layer) => [layer.label, layer.value, layer.effective])).toEqual([
       [t("Project"), t("Inherits"), false],
       ["Laptop", t("Inherits"), false],
-      ["t3.json", "New worktree", true],
-      [t("Default"), "Current checkout", false],
+      ["t3.json", t("New worktree"), true],
+      [t("Default"), t("Current checkout"), false],
     ]);
     const settings = { ...DEFAULT_SERVER_SETTINGS, defaultThreadEnvMode: "local" as const };
     const fromEnvironment = settingInheritanceLayers(
@@ -87,9 +87,9 @@ describe("settingInheritanceLayers", () => {
     );
     expect(fromEnvironment.map((layer) => [layer.value, layer.effective])).toEqual([
       [t("Inherits"), false],
-      ["Current checkout", true],
+      [t("Current checkout"), true],
       [t("Inherits"), false],
-      ["Current checkout", false],
+      [t("Current checkout"), false],
     ]);
   });
 });

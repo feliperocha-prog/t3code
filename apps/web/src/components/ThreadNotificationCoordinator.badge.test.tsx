@@ -3,6 +3,7 @@ import * as Option from "effect/Option";
 import { act } from "react";
 import { create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
+import { t } from "~/i18n";
 
 const state = vi.hoisted(() => ({
   mode: "notifications",
@@ -253,7 +254,7 @@ it("badges background failures with in-app notifications enabled", async () => {
   await render();
   state.shells.set("one", shell({ latestTurn: { ...thread.latestTurn, state: "error" } }));
   await render();
-  expect(TestNotification.sent[0]?.title).toBe("Thread failed");
+  expect(TestNotification.sent[0]?.title).toBe(t("Thread failed"));
   expect(state.badge).toHaveBeenLastCalledWith(1);
   expect(state.toast).not.toHaveBeenCalled();
 });

@@ -61,9 +61,21 @@ describe("KeybindingsSettings.logic", () => {
     ];
     const bindings = DEFAULT_RESOLVED_KEYBINDINGS.toReversed();
     expect(buildKeybindingRows(bindings, "usage").map((row) => row.command)).toEqual(expected);
+    // "usage.open" has no rank on the Usage page, so the picker places it by its translated
+    // label: "Usage: Open" sorts after "Usage: Cost", but "Uso: Abrir" sorts first.
+    const expectedOptions = [
+      "usage.open",
+      "usage.cost",
+      "usage.tokens",
+      "usage.limits",
+      "usage.period.day",
+      "usage.period.week",
+      "usage.period.month",
+      "usage.period.quarter",
+    ];
     expect(
       buildKeybindingCommandOptions(bindings).filter((command) => command.startsWith("usage.")),
-    ).toEqual(expected);
+    ).toEqual(expectedOptions);
   });
 
   it("builds searchable rows with readable key and when values", () => {

@@ -90,8 +90,8 @@ describe("shared color controls in settings", () => {
       );
     });
     const hue = t("Accent color hue");
-    const saturation = `${t("Accent color")} saturation`;
-    const brightness = `${t("Accent color")} brightness`;
+    const saturation = `${t("Accent color")} ${t("Saturation").toLowerCase()}`;
+    const brightness = `${t("Accent color")} ${t("Brightness").toLowerCase()}`;
     expect(await key(hue, "ArrowLeft")).toHaveBeenCalledOnce();
     expect(slider(hue).props["aria-valuenow"]).toBe(359);
     await key(hue, "ArrowRight");
@@ -129,8 +129,8 @@ describe("shared color controls in settings", () => {
         <ProviderAccentColorPicker displayName="Codex" value="#ff0000" onCommit={onCommit} />,
       );
     });
-    const saturation = `${t("Accent color")} saturation`;
-    const brightness = `${t("Accent color")} brightness`;
+    const saturation = `${t("Accent color")} ${t("Saturation").toLowerCase()}`;
+    const brightness = `${t("Accent color")} ${t("Brightness").toLowerCase()}`;
     await key(saturation, "Home");
     await key(saturation, "ArrowLeft");
     expect(slider(saturation).props.value).toBe(0);
@@ -155,8 +155,8 @@ describe("shared color controls in settings", () => {
     await act(async () => {
       renderer = create(<ThemeColorField role="accent" value="#ff000080" onChange={onChange} />);
     });
-    const saturation = `${t("Accent color")} saturation`;
-    const brightness = `${t("Accent color")} brightness`;
+    const saturation = `${t("Accent color")} ${t("Saturation").toLowerCase()}`;
+    const brightness = `${t("Accent color")} ${t("Brightness").toLowerCase()}`;
     await act(async () =>
       slider(saturation).props.onChange({ currentTarget: { valueAsNumber: 50 } }),
     );
@@ -199,7 +199,7 @@ describe("shared color controls in settings", () => {
     await act(async () => {
       renderer = create(<ThemeColorField role="accent" value="#ff000080" onChange={onChange} />);
     });
-    const planeLabel = `${t("Accent color")} saturation and brightness`;
+    const planeLabel = t("{label} saturation and brightness", { label: t("Accent color") });
     await act(async () => plane(planeLabel).props.onPointerDown(pointer(-50, -50)));
     await act(async () => plane(planeLabel).props.onPointerCancel(pointer(-50, -50)));
     expect(onChange).toHaveBeenLastCalledWith("accent", "#ffffff80");
@@ -219,7 +219,7 @@ describe("shared color controls in settings", () => {
       renderer = create(render("#ff0000"));
     });
     const hue = t("{label} hue", { label: t("Accent color") });
-    const planeLabel = `${t("Accent color")} saturation and brightness`;
+    const planeLabel = t("{label} saturation and brightness", { label: t("Accent color") });
     await key(hue, "ArrowRight", true);
     await act(async () => plane(planeLabel).props.onPointerDown(pointer(0, 0)));
     await frame();
