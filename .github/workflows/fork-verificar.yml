@@ -1,0 +1,107 @@
+# Verificação do fork pt-BR (feliperocha-prog/t3code): typecheck, lint e testes
+# num Linux gratuito do GitHub. Existe porque, no PC do Felipe, o Smart App
+# Control bloqueia os binários nativos do TypeScript 7 (tsc.exe) e do
+# formatador (oxfmt), então a verificação completa só roda aqui.
+# Espelha os jobs Check / Test / Test Server do ci.yml do original, sem os
+# runners pagos (blacksmith), sem knip e sem o build do desktop.
+name: Fork verificar
+
+on:
+  push:
+    branches:
+      - pt-br
+      - "t3top/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-verificar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck e lint
+    if: github.repository == 'feliperocha-prog/t3code'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: true
+
+      - name: Typecheck
+        run: vp run typecheck
+
+      - name: Check (lint + formatação)
+        run: vp check
+
+  test:
+    name: Testes (tudo menos o servidor)
+    if: github.repository == 'feliperocha-prog/t3code'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: true
+
+      - name: Ensure Electron runtime is installed
+        run: vp run --filter @t3tools/desktop ensure:electron
+
+      - name: Install browser secret helper build libraries
+        run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
+
+      - name: Test
+        run: vp run --parallel --concurrency-limit 2 --filter '!t3' --filter '!@t3tools/monorepo' test
+
+  test_server:
+    name: Testes do servidor ${{ matrix.shard }}
+    if: github.repository == 'feliperocha-prog/t3code'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: true
+
+      - name: Test
+        run: vp run --filter t3 test --shard ${{ matrix.shard }}/${{ strategy.job-total }}
