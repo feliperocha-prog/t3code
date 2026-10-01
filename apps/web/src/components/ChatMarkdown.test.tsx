@@ -8,7 +8,7 @@ import { getSyntaxHighlighterPromise } from "../lib/syntaxHighlighting";
 import { GitHubIcon } from "./Icons";
 import { Button } from "./ui/button";
 import { setMarkdownTaskChecked } from "./files/filePreviewMode";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 vi.mock("@effect/atom-react", () => ({ useAtomValue: () => null }));
 vi.mock("../hooks/useTheme", () => ({ useTheme: () => ({ resolvedTheme: "dark" }) }));
@@ -762,6 +762,61 @@ describe("ChatMarkdown artifact-template cards", () => {
 
     expect(html.match(/::artifact-template/g)).toHaveLength(2);
     expect(html).not.toContain("data-chat-markdown-artifact-template");
+  });
+});
+
+describe("ChatMarkdown status cards", () => {
+  const STATUS_FENCE = "```\nSTATUS: pronto\nVOCÊ: nada\nEU: nada, acabou\n```";
+
+  it("renders a closed STATUS fence as an inline status card", () => {
+    const html = renderToStaticMarkup(
+      <ChatMarkdown cwd="/tmp/project" text={`Feito.\n\n${STATUS_FENCE}`} statusCards />,
+    );
+
+    expect(html).toContain('data-status-card="inline"');
+    expect(html).toContain('data-status-tone="done"');
+    expect(html).toContain(">pronto<");
+    expect(html).toContain(tc("status card", "You"));
+    expect(html).toContain(">nada<");
+    expect(html).toContain(">nada, acabou<");
+    expect(html).toContain(`data-markdown-copy="${STATUS_FENCE}\n\n"`);
+    expect(html).not.toContain("<pre");
+    expect(html).not.toContain(tc("status card", "↑ from the last reply · click to go to it"));
+  });
+
+  it("accepts a bold STATUS label after blank lines", () => {
+    const html = renderToStaticMarkup(
+      <ChatMarkdown
+        cwd="/tmp/project"
+        text={"```text\n\n**STATUS:** bloqueado\n**VOCÊ:** liberar o acesso\n**EU:** nada\n```"}
+        statusCards
+      />,
+    );
+
+    expect(html).toContain('data-status-tone="failed"');
+    expect(html).toContain(">bloqueado<");
+    expect(html).toContain(">liberar o acesso<");
+  });
+
+  it("keeps the code block without the assistant flag", () => {
+    const html = renderToStaticMarkup(<ChatMarkdown cwd="/tmp/project" text={STATUS_FENCE} />);
+
+    expect(html).not.toContain("data-status-card");
+    expect(html).toContain("<pre");
+  });
+
+  it("keeps fences that do not open with STATUS, are unclosed or have an empty status", () => {
+    for (const text of [
+      "```\nsome code\nSTATUS: pronto\n```",
+      "```\nSTATUS: pronto\nVOCÊ: nada",
+      "```\nSTATUS:   \nVOCÊ: nada\n```",
+      "STATUS: pronto\nVOCÊ: nada\nEU: nada",
+    ]) {
+      const html = renderToStaticMarkup(
+        <ChatMarkdown cwd="/tmp/project" text={text} statusCards />,
+      );
+      expect(html).not.toContain("data-status-card");
+    }
   });
 });
 

@@ -198,6 +198,9 @@ import {
 import { resolveLinkTarget } from "../browser/browserLinkTarget";
 import { PullRequestLinkPreview } from "./pullRequest/PullRequestLinkPreview";
 import { t } from "~/i18n";
+import { parseStatusCard, type StatusCard as ParsedStatusCard } from "@t3tools/shared/statusCard";
+import { StatusCard } from "./chat/StatusCard";
+import { statusCardViewFromBlock } from "./chat/statusCard.logic";
 
 interface ChatMarkdownProps {
   text: string;
@@ -232,6 +235,9 @@ interface ChatMarkdownProps {
       text nests under the heading that introduces it, such as a chat message's
       author. Rendered tags and their styling are unchanged. */
   headingLevelOffset?: number | undefined;
+  /** Render a closed code fence that opens with `STATUS:` as a status card.
+      Only assistant replies set it: the block is the agent's closing summary. */
+  statusCards?: boolean | undefined;
 }
 
 export interface ChatMarkdownContextReference {
@@ -586,6 +592,22 @@ function extractPreCodeMeta(node: unknown): string | undefined {
   const codeNode = children?.find((child) => child?.type === "element" && child.tagName === "code");
   const meta = codeNode?.properties?.dataCodeMeta ?? codeNode?.data?.meta;
   return typeof meta === "string" && meta.trim().length > 0 ? meta.trim() : undefined;
+}
+
+const STATUS_FENCE_FIRST_LINE = /^\s*\**\s*STATUS\s*\**\s*:/u;
+
+/** The STATUS / VOCÊ / EU block a fence holds, when its first non-empty line is `STATUS:`. */
+export function statusCardFromFence(code: string): ParsedStatusCard | null {
+  const firstLine = code.split(/\r?\n/).find((line) => line.trim().length > 0);
+  if (firstLine === undefined || !STATUS_FENCE_FIRST_LINE.test(firstLine)) return null;
+  return parseStatusCard(code);
+}
+
+function codeFenceSource(node: ReactMarkdownExtraProps["node"], text: string): string | null {
+  const start = node?.position?.start.offset;
+  const end = node?.position?.end.offset;
+  if (start === undefined || end === undefined) return null;
+  return text.slice(start, end);
 }
 
 function isClosedCodeFence(node: ReactMarkdownExtraProps["node"], text: string): boolean {
@@ -2310,6 +2332,7 @@ function useChatMarkdownState({
   renderContextReference,
   headingLevelOffset = 0,
   githubMedia = false,
+  statusCards = false,
 }: ChatMarkdownProps) {
   const { resolvedTheme } = useTheme();
   const [localMediaPreview, setLocalMediaPreview] = useState<ExpandedImagePreview | null>(null);
@@ -2722,6 +2745,7 @@ function useChatMarkdownState({
       resolvedTheme,
       serverConfig,
       skills,
+      statusCards,
       text,
       threadRef,
       updateThreadPullRequestLink,
@@ -2753,6 +2777,7 @@ function useChatMarkdownState({
       resolvedTheme,
       serverConfig,
       skills,
+      statusCards,
       text,
       threadRef,
       updateThreadPullRequestLink,
@@ -3275,12 +3300,23 @@ const CHAT_MARKDOWN_COMPONENTS = {
     return <MarkdownDetails open={detailsOpen}>{children}</MarkdownDetails>;
   },
   pre: function MarkdownPre({ node, children, ...props }) {
-    const { resolvedTheme, diffThemeName, isStreaming, onRunShellCommand, text } = use(
+    const { resolvedTheme, diffThemeName, isStreaming, onRunShellCommand, statusCards, text } = use(
       ChatMarkdownRendererContext,
     );
     const codeBlock = extractCodeBlock(children);
     if (!codeBlock) {
       return <pre {...props}>{children}</pre>;
+    }
+
+    if (statusCards && isClosedCodeFence(node, text)) {
+      const statusCard = statusCardFromFence(codeBlock.code);
+      if (statusCard) {
+        return (
+          <div data-markdown-copy={`${codeFenceSource(node, text) ?? codeBlock.code}\n\n`}>
+            <StatusCard variant="inline" view={statusCardViewFromBlock(statusCard)} />
+          </div>
+        );
+      }
     }
 
     const language = extractFenceLanguage(codeBlock.className);

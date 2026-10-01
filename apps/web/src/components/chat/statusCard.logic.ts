@@ -42,6 +42,19 @@ export function statusCardToneForKind(kind: ThreadStatusCard["kind"]): StatusCar
   return CARD_TONE[kind];
 }
 
+/** A STATUS block read straight from a reply, with no live state and no scroll target. */
+export function statusCardViewFromBlock(
+  card: Pick<ThreadStatusCard, "kind" | "status" | "voce" | "eu">,
+): StatusCardView {
+  return {
+    tone: statusCardToneForKind(card.kind),
+    headline: { kind: "card", status: card.status },
+    voce: card.voce,
+    eu: card.eu,
+    messageId: null,
+  };
+}
+
 function liveView(tone: StatusCardTone, headline: StatusCardHeadline): StatusCardView {
   return { tone, headline, voce: "", eu: "", messageId: null };
 }
@@ -70,11 +83,5 @@ export function resolveStatusCardView(thread: StatusCardThreadInput): StatusCard
   if (!card || card.status.trim().length === 0) {
     return liveView("neutral", { kind: "none" });
   }
-  return {
-    tone: statusCardToneForKind(card.kind),
-    headline: { kind: "card", status: card.status },
-    voce: card.voce,
-    eu: card.eu,
-    messageId: card.messageId,
-  };
+  return { ...statusCardViewFromBlock(card), messageId: card.messageId };
 }
