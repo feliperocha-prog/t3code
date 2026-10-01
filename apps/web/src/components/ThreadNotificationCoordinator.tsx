@@ -21,6 +21,7 @@ import {
   unlockNotificationAudio,
 } from "../threadNotifications";
 import { resolveSidebarThreadStatus } from "./Sidebar.logic";
+import { notificationBody } from "./ThreadNotificationCoordinator.logic";
 import { toastManager } from "./ui/toast";
 import { t } from "~/i18n";
 
@@ -160,7 +161,7 @@ function EnvironmentNotifications({
         const toastId = toastManager.add({
           type: kind === "completion" ? "success" : status === "failed" ? "error" : "warning",
           title,
-          description: thread.title,
+          description: notificationBody(thread),
           data: {
             hideCopyButton: true,
             leadingIcon:
@@ -196,7 +197,7 @@ function EnvironmentNotifications({
         continue;
       try {
         const notification = new Notification(title, {
-          body: thread.title,
+          body: notificationBody(thread),
           tag: `${environmentId}:${thread.id}`,
           silent: true,
         });
