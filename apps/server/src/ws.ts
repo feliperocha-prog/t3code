@@ -2384,6 +2384,18 @@ const makeWsRpcLayer = (
                     }),
                   { concurrency: "unbounded", discard: true },
                 );
+              } else if (input.refreshLimits) {
+                // Usage-screen refresh: drop cached probes so limits are read
+                // again now, without forcing a model catalog refresh.
+                const instances = yield* providerInstances.listInstances;
+                yield* Effect.forEach(
+                  instances.filter(
+                    (instance) =>
+                      input.instanceId === undefined || input.instanceId === instance.instanceId,
+                  ),
+                  (instance) => instance.invalidateCaches ?? Effect.void,
+                  { concurrency: "unbounded", discard: true },
+                );
               }
               // An untargeted refresh is "re-read everything's status", which
               // includes quota from configured usage-limit sources. Awaited,

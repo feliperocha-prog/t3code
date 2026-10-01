@@ -6782,7 +6782,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
-  for (const mode of ["all", "targeted", "background"] as const) {
+  for (const mode of ["all", "targeted", "background", "limits"] as const) {
     it.effect(`provider refresh invalidates T3 caches before probing (${mode})`, () => {
       const driver = ProviderDriverKind.make("codex");
       const instanceIds = [ProviderInstanceId.make("codex"), ProviderInstanceId.make("codex_work")];
@@ -6832,15 +6832,17 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       );
       const expected =
         mode === "background" ? [] : mode === "targeted" ? [instanceIds[1]!] : instanceIds;
+      // A limits refresh only drops probe caches: no manifest or version refresh.
+      const expectedMaintenance = mode === "limits" ? [] : expected;
       const probe = Effect.sync(() => {
         probed = true;
-        assert.equal(manifestRefreshed, mode !== "background");
+        assert.equal(manifestRefreshed, mode === "all" || mode === "targeted");
         assert.deepEqual(invalidated.toSorted(), expected.toSorted());
-        assert.deepEqual(freshMaintenance.toSorted(), expected.toSorted());
+        assert.deepEqual(freshMaintenance.toSorted(), expectedMaintenance.toSorted());
         for (let index = 0; index < instanceIds.length; index++) {
           assert.equal(
             versionCache.has(packageNames[index]!),
-            !expected.includes(instanceIds[index]!),
+            !expectedMaintenance.includes(instanceIds[index]!),
           );
         }
         return [];
@@ -6863,7 +6865,8 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           withWsRpcClient(wsUrl, (client) =>
             client[WS_METHODS.serverRefreshProviders]({
               ...(mode === "targeted" ? { instanceId: instanceIds[1]! } : {}),
-              ...(mode !== "background" ? { refreshModels: true } : {}),
+              ...(mode === "all" || mode === "targeted" ? { refreshModels: true } : {}),
+              ...(mode === "limits" ? { refreshLimits: true } : {}),
             }),
           ),
         );

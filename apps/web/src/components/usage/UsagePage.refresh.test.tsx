@@ -172,6 +172,10 @@ it.each([0, 1])(
       environmentId: `test-${environmentNumber}`,
       input: {},
     });
+    expect(state.refreshProviders).toHaveBeenLastCalledWith({
+      environmentId: `test-${environmentNumber}`,
+      input: { refreshLimits: true },
+    });
     expect(
       JSON.stringify(renderer.toJSON(), (key, value) => (key === "props" ? undefined : value)),
     ).toContain(`${t("in")} 1h 30m`);
@@ -283,4 +287,97 @@ it("keeps manual refresh busy until the already-running automatic check settles"
     });
   }
   expect(button().props["aria-busy"]).toBe(false);
+});
+
+it("retries limits that could not be read once, about 25 seconds later", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  try {
+    const [id, presentation] = [...state.presentations][0]!;
+    const [provider] = presentation.serverConfig.providers;
+    state.presentations = new Map([
+      [
+        id,
+        {
+          ...presentation,
+          serverConfig: {
+            providers: [
+              {
+                ...provider,
+                usageLimits: {
+                  checkedAt: "2026-09-11T12:00:00Z",
+                  windows: [],
+                  unavailable: { reason: "probeFailed" },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    ]);
+    await act(() => {
+      renderer = create(<UsagePage />);
+    });
+    expect(state.refreshProviders).toHaveBeenCalledTimes(1);
+    expect(state.refreshProviders).toHaveBeenLastCalledWith({ environmentId: id, input: {} });
+
+    await act(async () => {
+      vi.advanceTimersByTime(24_000);
+    });
+    expect(state.refreshProviders).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(state.refreshProviders).toHaveBeenCalledTimes(2);
+    expect(state.refreshProviders).toHaveBeenLastCalledWith({
+      environmentId: id,
+      input: { refreshLimits: true },
+    });
+
+    // Still failing after the retry: no loop.
+    await act(async () => {
+      vi.advanceTimersByTime(120_000);
+    });
+    expect(state.refreshProviders).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("drops the pending retry when the user leaves the limits screen", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  try {
+    const [id, presentation] = [...state.presentations][0]!;
+    const [provider] = presentation.serverConfig.providers;
+    state.presentations = new Map([
+      [
+        id,
+        {
+          ...presentation,
+          serverConfig: {
+            providers: [
+              {
+                ...provider,
+                usageLimits: {
+                  checkedAt: "2026-09-11T12:00:00Z",
+                  windows: [],
+                  unavailable: { reason: "probeFailed" },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    ]);
+    await act(() => {
+      renderer = create(<UsagePage />);
+    });
+    expect(state.refreshProviders).toHaveBeenCalledTimes(1);
+    await act(() => renderer.unmount());
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(state.refreshProviders).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.useRealTimers();
+  }
 });

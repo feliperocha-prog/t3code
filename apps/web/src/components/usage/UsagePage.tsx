@@ -39,6 +39,7 @@ import { isModelPickerOpen } from "../../modelPickerVisibility";
 import { shortcutLabelForCommand } from "../../keybindings";
 import { useUsage, type EnvironmentUsageStatus } from "../../state/usage";
 import { useAtomCommand } from "../../state/use-atom-command";
+import { hasProbeFailedLimits, LIMITS_PROBE_RETRY_DELAY_MS } from "./usageLimitsRetry";
 import {
   enumerateDays,
   enumerateHourStarts,
@@ -219,7 +220,12 @@ export function UsagePage() {
           if (presentation.connection.phase === "connected" && presentation.serverConfig !== null) {
             return refreshUsageLimits(
               environmentId,
-              () => refreshProviders({ environmentId, input: {} }),
+              // A manual refresh drops the server's cached probe so limits are read again.
+              () =>
+                refreshProviders({
+                  environmentId,
+                  input: automatic ? {} : { refreshLimits: true },
+                }),
               automatic,
               afterPending,
             );
@@ -300,6 +306,21 @@ export function UsagePage() {
   useEffect(() => {
     if (showingLimits && connectedLimitsEnvironments) autoRefreshLimits();
   }, [showingLimits, connectedLimitsEnvironments]);
+  const limitsProbeFailed = [...presentations].some(
+    ([environmentId, presentation]) =>
+      presentation.connection.phase === "connected" &&
+      (selectedEnvironmentIds === null || selectedEnvironmentIds.has(environmentId)) &&
+      hasProbeFailedLimits(presentation.serverConfig?.providers ?? []),
+  );
+  const retryFailedLimits = useEffectEvent(() => {
+    void refreshLimits();
+  });
+  useEffect(() => {
+    if (!showingLimits || !limitsProbeFailed) return;
+    // One retry per failure: a second failure keeps the flag set, so this does not loop.
+    const timer = globalThis.setTimeout(retryFailedLimits, LIMITS_PROBE_RETRY_DELAY_MS);
+    return () => globalThis.clearTimeout(timer);
+  }, [showingLimits, limitsProbeFailed]);
 
   const windowLabel =
     isPast24Hours && window.sinceTime !== undefined && window.untilTime !== undefined
