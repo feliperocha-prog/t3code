@@ -182,6 +182,16 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
   },
   {
+    id: "project-state-note",
+    title: t("State note"),
+    to: "/settings/projects",
+    searchTerms: [
+      "vault hub obsidian project home where we are next step",
+      "State note",
+      "nota de estado vault hub obsidian página inicial do projeto onde estamos próximo passo",
+    ],
+  },
+  {
     id: "default-model",
     title: t("Default model"),
     to: "/settings/general",
@@ -598,6 +608,16 @@ export const SETTINGS_SEARCH_ITEMS = [
       "base directory folder browser path home",
       "Add project starts in",
       "diretório base pasta caminho",
+    ],
+  },
+  {
+    id: "vault-folder",
+    title: t("Vault folder"),
+    to: "/settings/general",
+    searchTerms: [
+      "notes obsidian hub state note project home folder path",
+      "Vault folder",
+      "pasta do vault notas obsidian hub nota de estado página inicial do projeto caminho",
     ],
   },
   {

@@ -26,6 +26,13 @@ const dictionary: Readonly<Record<string, string>> = {
   "sidebar inbox|Working": "Trabalhando",
   "sidebar inbox|Done": "Acabou",
   "sidebar inbox|No threads match this filter": "Nenhum thread neste filtro",
+  "Vault folder": "Pasta do vault",
+  "vault folder": "pasta do vault",
+  "Folder of your notes vault on this computer. The project home reads each project's state note from it.":
+    "Pasta do seu vault de notas neste computador. A página inicial do projeto lê dela a nota de estado de cada projeto.",
+  "State note": "Nota de estado",
+  "Note in your vault that the project home reads for where we are, the next step and pitfalls. Relative to the vault folder.":
+    "Nota do vault que a página inicial do projeto lê para mostrar onde estamos, o próximo passo e as armadilhas. Caminho relativo à pasta do vault.",
 };
 
 export default dictionary;

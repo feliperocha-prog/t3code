@@ -3058,6 +3058,33 @@ export function GeneralSettingsPanel() {
           }
         />
         <SettingsRow
+          {...searchableSetting("vault-folder")}
+          description={t(
+            "Folder of your notes vault on this computer. The project home reads each project's state note from it.",
+          )}
+          resetAction={
+            settings.vaultFolder !== DEFAULT_UNIFIED_SETTINGS.vaultFolder ? (
+              <SettingResetButton
+                label={t("vault folder")}
+                onClick={() =>
+                  updateSettings({ vaultFolder: DEFAULT_UNIFIED_SETTINGS.vaultFolder })
+                }
+              />
+            ) : null
+          }
+          control={
+            <DraftInput
+              size="sm"
+              className="w-full sm:w-72"
+              value={settings.vaultFolder}
+              onCommit={(next) => updateSettings({ vaultFolder: next })}
+              placeholder={t("Not set")}
+              spellCheck={false}
+              aria-label={t("Vault folder")}
+            />
+          }
+        />
+        <SettingsRow
           {...searchableSetting("import-agent-conversations")}
           description={t(
             "Brings in projects and conversations from Claude Code and Codex on this computer. Conversations already imported are skipped.",

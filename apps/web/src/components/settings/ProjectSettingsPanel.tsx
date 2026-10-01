@@ -27,7 +27,9 @@ import { projectEnvironment } from "../../state/projects";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { ProjectFavicon } from "../ProjectFavicon";
 import { Alert, AlertDescription } from "../ui/alert";
+import { defaultStateNotePath } from "../chat/projectHome.logic";
 import { Button } from "../ui/button";
+import { DraftInput } from "../ui/draft-input";
 import { Input } from "../ui/input";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import {
@@ -43,7 +45,13 @@ import {
 import { ProjectActionsSettings } from "./ProjectActionsSettings";
 import { ProjectDefaultsSettings } from "./ProjectDefaultsSettings";
 import { projectGroupTitleNeedsUpdate } from "./ProjectSettingsPanel.logic";
+import { searchableSetting } from "./settingsSearch";
 import { useSettingsProjectGroups } from "./useSettingsProjectGroups";
+import {
+  useScopedSettings,
+  useScopedSettingsMixed,
+  useUpdateScopedSettings,
+} from "./useScopedSettings";
 
 const ProjectIconPickerDialog = lazy(() =>
   import("./ProjectIconPickerDialog").then((module) => ({
@@ -154,6 +162,35 @@ export function ProjectSettingsPanel({
       key={`${selected.projectKey}:${environmentId ?? "all"}:${checkoutKey ?? "all"}`}
       group={scopedGroup}
       hasOtherMembers={members.length < selected.memberProjects.length}
+    />
+  );
+}
+
+/** Where the project home finds this project's state note, relative to the vault folder. */
+function ProjectStateNoteRow({ workspaceRoot }: { workspaceRoot: string }) {
+  const notePath = useScopedSettings((settings) => settings.projectStateNotePath);
+  const mixed = useScopedSettingsMixed(["projectStateNotePath"]);
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      serverScoped
+      settingKeys={["projectStateNotePath"]}
+      mixed={mixed}
+      {...searchableSetting("project-state-note")}
+      description={t(
+        "Note in your vault that the project home reads for where we are, the next step and pitfalls. Relative to the vault folder.",
+      )}
+      control={
+        <DraftInput
+          size="sm"
+          className="w-full sm:w-72"
+          value={mixed ? "" : notePath}
+          onCommit={(next) => updateSettings({ projectStateNotePath: next })}
+          placeholder={mixed ? t("Mixed") : defaultStateNotePath(workspaceRoot)}
+          spellCheck={false}
+          aria-label={t("State note")}
+        />
+      }
     />
   );
 }
@@ -513,6 +550,7 @@ function ProjectDetail({
               </div>
             }
           />
+          <ProjectStateNoteRow workspaceRoot={representative.workspaceRoot} />
         </SettingsSection>
         <ProjectDefaultsSettings category="project" />
         <ProjectActionsSettings />
