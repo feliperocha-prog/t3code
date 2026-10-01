@@ -188,14 +188,19 @@ import {
   resolveProjectStatusIndicator,
   resolveThreadStatusPill,
   orderItemsByPreferredIds,
+  filterSidebarThreadsByInbox,
+  resolveSidebarThreadInbox,
   shouldClearThreadSelectionOnMouseDown,
   sortProjectsForSidebar,
+  sortSidebarThreadsByInbox,
   useSidebarRowSubscriptionLease,
   useThreadJumpHintVisibility,
   ThreadStatusPill,
   threadStatusLabelText,
 } from "./Sidebar.logic";
 import { sortThreads } from "../lib/threadSort";
+import { SidebarInboxFilter } from "./sidebar/SidebarInboxFilter";
+import type { SidebarInboxFilter as InboxFilter } from "../uiStateStore";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { useIsMobile } from "~/hooks/useMediaQuery";
@@ -1272,6 +1277,7 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
   const sidebarThreadByKeyRef = useRef(sidebarThreadByKey);
   sidebarThreadByKeyRef.current = sidebarThreadByKey;
   const projectThreads = sidebarThreads;
+  const inboxFilter = useUiStateStore((state) => state.sidebarInboxFilter);
   const projectPreferenceKeys = useMemo(() => projectExpansionPreferenceKeys(project), [project]);
   const projectExpanded = useUiStateStore((state) =>
     resolveProjectExpanded(state.projectExpandedById, projectPreferenceKeys),
@@ -1345,12 +1351,18 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
         },
       });
     };
-    const visibleProjectThreads = sortThreads(
+    const unarchivedProjectThreads = sortThreads(
       projectThreads.filter((thread) => thread.archivedAt === null),
       threadSortOrder,
     );
+    // The project's status dot keeps reading every thread: the inbox chip
+    // narrows the rows, not what the project reports.
     const projectStatus = resolveProjectStatusIndicator(
-      visibleProjectThreads.map((thread) => resolveProjectThreadStatus(thread)),
+      unarchivedProjectThreads.map((thread) => resolveProjectThreadStatus(thread)),
+    );
+    const visibleProjectThreads = arrangeLegacyThreadsForInbox(
+      unarchivedProjectThreads,
+      inboxFilter,
     );
     return {
       orderedProjectThreadKeys: visibleProjectThreads.map((thread) =>
@@ -1359,7 +1371,7 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
       projectStatus,
       visibleProjectThreads,
     };
-  }, [projectThreads, threadLastVisitedAts, threadSortOrder]);
+  }, [inboxFilter, projectThreads, threadLastVisitedAts, threadSortOrder]);
   const pinnedCollapsedThread = useMemo(() => {
     const activeThreadKey = activeRouteThreadKey ?? undefined;
     if (!activeThreadKey || projectExpanded) {
@@ -2943,6 +2955,26 @@ interface SidebarProjectsContentProps {
   suppressProjectClickForContextMenuRef: React.RefObject<boolean>;
   attachProjectListAutoAnimateRef: (node: HTMLElement | null) => void;
   projectsLength: number;
+  inboxWaitingCount: number;
+}
+
+// The legacy list has no pinned/settled sections, so the inbox rules apply per
+// project: settled threads (settledOverride) read as "done", the rest by live
+// state and status card. Order is waiting → working → rest, stable inside each
+// group; under "tudo" nothing is hidden.
+function legacyInboxClass(thread: SidebarThreadSummary) {
+  return resolveSidebarThreadInbox(thread, { isSettled: thread.settledOverride === "settled" });
+}
+
+function arrangeLegacyThreadsForInbox<T extends SidebarThreadSummary>(
+  threads: readonly T[],
+  filter: InboxFilter,
+): readonly T[] {
+  return filterSidebarThreadsByInbox(
+    sortSidebarThreadsByInbox(threads, legacyInboxClass),
+    filter,
+    legacyInboxClass,
+  );
 }
 
 const SidebarProjectsContent = memo(function SidebarProjectsContent(
@@ -2985,7 +3017,10 @@ const SidebarProjectsContent = memo(function SidebarProjectsContent(
     suppressProjectClickForContextMenuRef,
     attachProjectListAutoAnimateRef,
     projectsLength,
+    inboxWaitingCount,
   } = props;
+  const inboxFilter = useUiStateStore((store) => store.sidebarInboxFilter);
+  const setInboxFilter = useUiStateStore((store) => store.setSidebarInboxFilter);
 
   const handleProjectSortOrderChange = useCallback(
     (sortOrder: SidebarProjectSortOrder) => {
@@ -3023,6 +3058,11 @@ const SidebarProjectsContent = memo(function SidebarProjectsContent(
               </CommandDialogTrigger>
             </SidebarMenuItem>
           </SidebarMenu>
+          <SidebarInboxFilter
+            value={inboxFilter}
+            onValueChange={setInboxFilter}
+            waitingCount={inboxWaitingCount}
+          />
         </SidebarGroup>
       }
     >
@@ -3216,6 +3256,15 @@ export default function LegacySidebar() {
   const [desktopUpdateActionPending, setDesktopUpdateActionPending] = useState(false);
   const clearSelection = useThreadSelectionStore((s) => s.clearSelection);
   const setSelectionAnchor = useThreadSelectionStore((s) => s.setAnchor);
+  const inboxFilter = useUiStateStore((store) => store.sidebarInboxFilter);
+  // Rows the inbox filter hides must not stay selected: bulk actions never
+  // count or touch invisible rows. Only a change clears, not the mount.
+  const lastInboxFilterRef = useRef(inboxFilter);
+  useEffect(() => {
+    if (lastInboxFilterRef.current === inboxFilter) return;
+    lastInboxFilterRef.current = inboxFilter;
+    clearSelection();
+  }, [clearSelection, inboxFilter]);
   const platform = navigator.platform;
   const shortcutModifiers = useShortcutModifierState();
   const terminalFocused = useTerminalFocus();
@@ -3456,6 +3505,10 @@ export default function LegacySidebar() {
     () => sidebarThreads.filter((thread) => thread.archivedAt === null),
     [sidebarThreads],
   );
+  const inboxWaitingCount = useMemo(
+    () => visibleThreads.filter((thread) => legacyInboxClass(thread) === "esperando").length,
+    [visibleThreads],
+  );
   const sortedProjects = useMemo(() => {
     const sortableProjects = sidebarProjects.map((project) => ({
       ...project,
@@ -3491,11 +3544,14 @@ export default function LegacySidebar() {
   const visibleSidebarThreadKeys = useMemo(
     () =>
       sortedProjects.flatMap((project) => {
-        const projectThreads = sortThreads(
-          (threadsByProjectKey.get(project.projectKey) ?? []).filter(
-            (thread) => thread.archivedAt === null,
+        const projectThreads = arrangeLegacyThreadsForInbox(
+          sortThreads(
+            (threadsByProjectKey.get(project.projectKey) ?? []).filter(
+              (thread) => thread.archivedAt === null,
+            ),
+            sidebarThreadSortOrder,
           ),
-          sidebarThreadSortOrder,
+          inboxFilter,
         );
         const projectExpanded = resolveProjectExpanded(
           projectExpandedById,
@@ -3526,6 +3582,7 @@ export default function LegacySidebar() {
         );
       }),
     [
+      inboxFilter,
       sidebarThreadSortOrder,
       sidebarThreadPreviewCount,
       expandedThreadListsByProject,
@@ -3851,6 +3908,7 @@ export default function LegacySidebar() {
         suppressProjectClickForContextMenuRef={suppressProjectClickForContextMenuRef}
         attachProjectListAutoAnimateRef={attachProjectListAutoAnimateRef}
         projectsLength={projects.length}
+        inboxWaitingCount={inboxWaitingCount}
       />
       <SidebarChromeFooter />
     </>

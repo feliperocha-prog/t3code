@@ -175,6 +175,7 @@ import {
   resolveSidebarDropVerb,
   resolveSidebarRowAccessibility,
   type SidebarDropVerb,
+  resolveSidebarThreadInbox,
   resolveSidebarThreadStatus,
   searchSidebarThreads,
   shouldCreateNewThreadInCurrentProject,
@@ -185,6 +186,7 @@ import {
   sidebarMarkerId,
   sortLogicalProjectsForSidebar,
   sortPinnedThreadsForSidebar,
+  sortSidebarThreadsByInbox,
   sortThreadsForSidebar,
   useRetainedValue,
   useSidebarRowSubscriptionLease,
@@ -192,7 +194,9 @@ import {
   type SidebarListItem,
   type SidebarListMarker,
   type SidebarSection,
+  filterSidebarThreadsByInbox,
 } from "./Sidebar.logic";
+import { SidebarInboxFilter } from "./sidebar/SidebarInboxFilter";
 import { resolveLocalCheckoutBranchMismatch } from "./BranchToolbar.logic";
 import {
   createSidebarCollisionDetection,
@@ -2402,6 +2406,10 @@ export default function Sidebar() {
   // app restarts keep it.
   const projectScopeKey = useUiStateStore((store) => store.sidebarProjectScopeKey);
   const setProjectScopeKey = useUiStateStore((store) => store.setSidebarProjectScopeKey);
+  // Inbox chips (Tudo / Esperando você / Trabalhando / Acabou) persist next to
+  // the project scope and narrow every section the same way.
+  const inboxFilter = useUiStateStore((store) => store.sidebarInboxFilter);
+  const setInboxFilter = useUiStateStore((store) => store.setSidebarInboxFilter);
   // {value, label} items let Base UI drive the combobox selection contract
   // while the popup search filters the same collection.
   const projectScopeItems = useMemo(
@@ -2507,9 +2515,10 @@ export default function Sidebar() {
   });
   // Scope flips drop the selection: rows selected under the old scope may be
   // hidden now, and bulk actions must never count or touch invisible rows.
+  // The inbox filter hides rows the same way, so it drops the selection too.
   useEffect(() => {
     clearSelection();
-  }, [clearSelection, projectScopeKey]);
+  }, [clearSelection, inboxFilter, projectScopeKey]);
 
   const openProjectSettings = useCallback(
     (projectGroup: SidebarProjectSnapshot) => {
@@ -2568,6 +2577,7 @@ export default function Sidebar() {
     snoozedThreads,
     settledThreads,
     snoozeNow,
+    inboxWaitingCount,
   } = useMemo(() => {
     // Snooze classification uses a REAL clock, not the quantized minute:
     // wake times are second-precise and a woken thread must not linger on
@@ -2635,8 +2645,32 @@ export default function Sidebar() {
     // Server capability only gates DRAGGING — it must not influence the
     // sort, or mixed-version fleets would render different pinned orders on
     // web and mobile from the same data.
-    const sortedPinned = sortPinnedThreadsForSidebar(pinned);
-    const sortedActive = sortThreadsForSidebar(active);
+    // Inbox: settled rows read as "done" unless a live state needs the user.
+    // The waiting counter covers the scoped, unfiltered sections; snoozed
+    // threads stay out of it because they asked not to be seen until wake.
+    const classifyLive = (thread: EnvironmentThreadShell) => resolveSidebarThreadInbox(thread);
+    const classifySettled = (thread: EnvironmentThreadShell) =>
+      resolveSidebarThreadInbox(thread, { isSettled: true });
+    let waitingCount = 0;
+    for (const thread of [...pinned, ...active]) {
+      if (classifyLive(thread) === "esperando") waitingCount += 1;
+    }
+    for (const thread of settled) {
+      if (classifySettled(thread) === "esperando") waitingCount += 1;
+    }
+    const sortedPinned = filterSidebarThreadsByInbox(
+      sortPinnedThreadsForSidebar(pinned),
+      inboxFilter,
+      classifyLive,
+    );
+    // Waiting first, then working, then the rest — stable inside each group.
+    // Sorted before the optimistic drop order so the rendered order and the
+    // drag planner's order come from the same array.
+    const sortedActive = filterSidebarThreadsByInbox(
+      sortSidebarThreadsByInbox(sortThreadsForSidebar(active), classifyLive),
+      inboxFilter,
+      classifyLive,
+    );
     return {
       pinnedThreads:
         optimisticDrop?.section !== "pinned" || optimisticDrop.order === null
@@ -2657,15 +2691,32 @@ export default function Sidebar() {
               getId: (thread) => scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
             }),
       // Soonest wake first: "what comes back next" is the shelf's question.
-      snoozedThreads: snoozed.toSorted(
-        (left, right) =>
-          firstValidTimestampMs(left.snoozedUntil ?? null) -
-          firstValidTimestampMs(right.snoozedUntil ?? null),
+      snoozedThreads: filterSidebarThreadsByInbox(
+        snoozed.toSorted(
+          (left, right) =>
+            firstValidTimestampMs(left.snoozedUntil ?? null) -
+            firstValidTimestampMs(right.snoozedUntil ?? null),
+        ),
+        inboxFilter,
+        classifyLive,
       ),
-      settledThreads: sortSettledThreads(settled),
+      settledThreads: filterSidebarThreadsByInbox(
+        sortSettledThreads(settled),
+        inboxFilter,
+        classifySettled,
+      ),
       snoozeNow: preciseNow,
+      inboxWaitingCount: waitingCount,
     };
-  }, [nowMinute, optimisticDrop, scopedProjectKeys, serverConfigs, snoozeWakeTick, threads]);
+  }, [
+    inboxFilter,
+    nowMinute,
+    optimisticDrop,
+    scopedProjectKeys,
+    serverConfigs,
+    snoozeWakeTick,
+    threads,
+  ]);
 
   const threadSearchInputRef = useRef<HTMLInputElement>(null);
   const [threadSearchQuery, setThreadSearchQuery] = useState("");
@@ -2736,7 +2787,7 @@ export default function Sidebar() {
   // filter context changes so a scope/search flip never inherits a deep
   // page state.
   const [settledVisibleCount, setSettledVisibleCount] = useState(SETTLED_TAIL_INITIAL_COUNT);
-  const settledResetKey = projectScopeKey ?? "all";
+  const settledResetKey = `${projectScopeKey ?? "all"}:${inboxFilter}`;
   const lastSettledResetKeyRef = useRef(settledResetKey);
   if (lastSettledResetKeyRef.current !== settledResetKey) {
     lastSettledResetKeyRef.current = settledResetKey;
@@ -2773,15 +2824,19 @@ export default function Sidebar() {
     () => setSettledShelfExpanded((value) => !value),
     [setSettledShelfExpanded],
   );
+  // "Acabou" is mostly the settled tail, so that chip opens the shelf for as
+  // long as it is on — derived, never written, so the stored preference
+  // (collapsed by default) is back when the chip changes.
+  const settledExpanded = settledShelfExpanded || inboxFilter === "acabou";
   const renderedSettledThreads = useMemo(() => {
-    if (settledShelfExpanded) return visibleSettledThreads;
+    if (settledExpanded) return visibleSettledThreads;
     if (routeThreadKey === null) return EMPTY_THREADS;
     const routeThread = visibleSettledThreads.find(
       (thread) =>
         scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)) === routeThreadKey,
     );
     return routeThread === undefined ? EMPTY_THREADS : [routeThread];
-  }, [routeThreadKey, settledShelfExpanded, visibleSettledThreads]);
+  }, [routeThreadKey, settledExpanded, visibleSettledThreads]);
 
   // The snoozed shelf is collapsed by default: out of the way, never gone.
   // Collapsed threads don't render (and so don't participate in jump
@@ -3499,7 +3554,7 @@ export default function Sidebar() {
         items: sidebarListItems,
         boundaryLabelHeight: SIDEBAR_DRAG_LABEL_HEIGHT,
         settledOrder: draggedSettledOrder,
-        settledExpanded: settledShelfExpanded,
+        settledExpanded,
         settledVisibleCount,
         routeThreadKey,
         snoozedThreadCount: snoozedThreads.length,
@@ -3507,7 +3562,7 @@ export default function Sidebar() {
     [
       draggedSettledOrder,
       routeThreadKey,
-      settledShelfExpanded,
+      settledExpanded,
       settledVisibleCount,
       sidebarListItems,
       snoozedThreads.length,
@@ -4616,6 +4671,11 @@ export default function Sidebar() {
               activeSearchResultIndex={activeSearchResultIndex}
               onClearSearch={clearThreadSearch}
             />
+            <SidebarInboxFilter
+              value={inboxFilter}
+              onValueChange={setInboxFilter}
+              waitingCount={inboxWaitingCount}
+            />
           </SidebarGroup>
         }
       >
@@ -4932,14 +4992,14 @@ export default function Sidebar() {
                                 marker="settled-header"
                                 className={cn(snoozedThreads.length === 0 && "mt-auto")}
                                 label={
-                                  settledShelfExpanded
+                                  settledExpanded
                                     ? t("Settled")
                                     : t("Settled ({count})", { count: settledThreads.length })
                                 }
                                 dragging={from !== null}
                                 isDropTarget={dragTargetSection === "settled"}
                                 toggle={{
-                                  expanded: settledShelfExpanded,
+                                  expanded: settledExpanded,
                                   onToggle: toggleSettledShelf,
                                 }}
                               />,
@@ -4967,7 +5027,7 @@ export default function Sidebar() {
                       }
                       return items;
                     })()}
-                    {settledShelfExpanded && hiddenSettledCount > 0 ? (
+                    {settledExpanded && hiddenSettledCount > 0 ? (
                       <li className="list-none">
                         <button
                           type="button"
@@ -5006,6 +5066,8 @@ export default function Sidebar() {
                     {t("Add project")}
                   </button>
                 </>
+              ) : inboxFilter !== "tudo" ? (
+                tc("sidebar inbox", "No threads match this filter")
               ) : scopedProjectGroup ? (
                 t("No threads in {name} yet", { name: scopedProjectGroup.displayName })
               ) : (
