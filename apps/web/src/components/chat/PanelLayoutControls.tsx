@@ -65,7 +65,7 @@ export const PanelLayoutControls = memo(function PanelLayoutControls({
         <Tooltip>
           <TooltipTrigger render={<span className="flex shrink-0" />}>
             <Toggle
-              className="shrink-0 px-2 [-webkit-app-region:no-drag]"
+              className="mx-1 shrink-0 [-webkit-app-region:no-drag]"
               pressed={terminalOpen}
               onPressedChange={onToggleTerminal}
               aria-label={t("Toggle terminal drawer")}
