@@ -31,6 +31,13 @@ describe("resolveStateNotePath", () => {
   it("uses the configured path when the project sets one", () => {
     expect(resolveStateNotePath("/work/apex", " Notas/apex.md ")).toBe("Notas/apex.md");
   });
+
+  it("falls back to the default when the configured path escapes the vault", () => {
+    expect(resolveStateNotePath("/work/apex", "../../.ssh/id_rsa")).toBe("Projetos/apex/HUB.md");
+    expect(resolveStateNotePath("/work/apex", "Notas/../../x.md")).toBe("Projetos/apex/HUB.md");
+    expect(resolveStateNotePath("/work/apex", "/etc/passwd")).toBe("Projetos/apex/HUB.md");
+    expect(resolveStateNotePath("/work/apex", "C:\\x\\y.md")).toBe("Projetos/apex/HUB.md");
+  });
 });
 
 describe("normalizeHeading", () => {

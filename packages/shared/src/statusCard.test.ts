@@ -93,4 +93,25 @@ describe("parseStatusCard", () => {
     expect(card?.voce.endsWith("…")).toBe(true);
     expect(card?.voce).not.toContain("  ");
   });
+
+  it("lets bloqueado/aguardando win over pronto in a mixed status", () => {
+    expect(parseStatusCard("STATUS: pronto pra subir, aguardando sua aprovação")?.kind).toBe(
+      "aguardando",
+    );
+    expect(parseStatusCard("STATUS: bloqueado — quase pronto")?.kind).toBe("bloqueado");
+    expect(parseStatusCard("STATUS: pronto")?.kind).toBe("pronto");
+  });
+
+  it("accepts Status in any case and with a list or quote prefix", () => {
+    expect(parseStatusCard("Status: pronto\nVocê: nada\nEu: nada")).toEqual({
+      kind: "pronto",
+      status: "pronto",
+      voce: "nada",
+      eu: "nada",
+    });
+    expect(parseStatusCard("- STATUS: bloqueado\n- VOCÊ: liberar\n- EU: espero")?.voce).toBe(
+      "liberar",
+    );
+    expect(parseStatusCard("> STATUS: pronto\n> EU: nada")?.eu).toBe("nada");
+  });
 });

@@ -20,9 +20,10 @@ export interface StatusCard {
 
 export const STATUS_CARD_MAX_FIELD_LENGTH = 200;
 
-const STATUS_LINE = /^\s*\**\s*STATUS\s*\**\s*:\s*(.+)$/u;
-const VOCE_LINE = /^\s*\**\s*VOC[EÊ]\s*\**\s*:\s*(.*)$/iu;
-const EU_LINE = /^\s*\**\s*EU\s*\**\s*:\s*(.*)$/iu;
+// Optional list/quote prefix ("- STATUS:", "> STATUS:") and bold markers around the label.
+const STATUS_LINE = /^\s*(?:[-*>]\s*)?\**\s*STATUS\s*\**\s*:\s*(.+)$/iu;
+const VOCE_LINE = /^\s*(?:[-*>]\s*)?\**\s*VOC[EÊ]\s*\**\s*:\s*(.*)$/iu;
+const EU_LINE = /^\s*(?:[-*>]\s*)?\**\s*EU\s*\**\s*:\s*(.*)$/iu;
 const FOLLOWING_LINE_WINDOW = 6;
 
 function cleanField(raw: string): string {
@@ -33,9 +34,11 @@ function cleanField(raw: string): string {
 
 function statusCardKind(status: string): StatusCardKind {
   const normalized = status.toLowerCase();
-  if (normalized.includes("pronto")) return "pronto";
+  // Whatever still needs the user wins over "pronto": "pronto, aguardando sua
+  // aprovação" is a thread waiting on them, not a finished one.
   if (normalized.includes("bloque")) return "bloqueado";
   if (normalized.includes("aguard") || normalized.includes("aprova")) return "aguardando";
+  if (normalized.includes("pronto")) return "pronto";
   return "outro";
 }
 

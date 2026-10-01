@@ -117,7 +117,30 @@ it.layer(NodeServices.layer)("thread objective decider", (it) => {
           objectiveState: { source: "manual" },
         }),
       });
-      expect(event.payload).toMatchObject({ objective: null, objectiveState: null });
+      expect(event.payload).toMatchObject({
+        objective: null,
+        objectiveState: { source: "manual" },
+      });
+    }),
+  );
+
+  it.effect("does not refill an objective the user cleared", () =>
+    Effect.gen(function* () {
+      const event = yield* decideFirst({
+        command: generateComplete("Objetivo gerado"),
+        readModel: readModelWith({ objective: null, objectiveState: { source: "manual" } }),
+      });
+      expect(event.payload).not.toHaveProperty("objective");
+    }),
+  );
+
+  it.effect("caps a generated objective at the manual limit", () =>
+    Effect.gen(function* () {
+      const event = yield* decideFirst({
+        command: generateComplete(`${"x".repeat(250)}  `),
+        readModel: readModelWith({ objective: null, objectiveState: null }),
+      });
+      expect(event.payload).toMatchObject({ objective: "x".repeat(200) });
     }),
   );
 

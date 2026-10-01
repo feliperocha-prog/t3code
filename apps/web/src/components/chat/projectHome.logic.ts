@@ -17,7 +17,11 @@ export function defaultStateNotePath(cwd: string): string {
 /** The configured note path, or the default one when the setting is empty. */
 export function resolveStateNotePath(cwd: string, configured: string): string {
   const trimmed = configured.trim();
-  return trimmed.length > 0 ? trimmed : defaultStateNotePath(cwd);
+  if (trimmed.length === 0) return defaultStateNotePath(cwd);
+  // The note lives inside the vault folder: an absolute path or a ".." segment
+  // would escape it (the server refuses the read anyway; this keeps the UI honest).
+  const escapes = /^(?:[a-zA-Z]:)?[\\/]/.test(trimmed) || trimmed.split(/[\\/]+/).includes("..");
+  return escapes ? defaultStateNotePath(cwd) : trimmed;
 }
 
 /** Lines a box shows before it is cut with "…". */

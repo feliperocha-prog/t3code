@@ -2647,13 +2647,13 @@ export default function Sidebar() {
     // sort, or mixed-version fleets would render different pinned orders on
     // web and mobile from the same data.
     // Inbox: settled rows read as "done" unless a live state needs the user.
-    // The waiting counter covers the scoped, unfiltered sections; snoozed
-    // threads stay out of it because they asked not to be seen until wake.
+    // The waiting counter covers every section the chip filters, snoozed
+    // included: the badge must match what "Esperando você" lists.
     const classifyLive = (thread: EnvironmentThreadShell) => resolveSidebarThreadInbox(thread);
     const classifySettled = (thread: EnvironmentThreadShell) =>
       resolveSidebarThreadInbox(thread, { isSettled: true });
     let waitingCount = 0;
-    for (const thread of [...pinned, ...active]) {
+    for (const thread of [...pinned, ...active, ...snoozed]) {
       if (classifyLive(thread) === "esperando") waitingCount += 1;
     }
     for (const thread of settled) {

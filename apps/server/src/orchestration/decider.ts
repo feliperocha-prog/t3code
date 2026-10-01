@@ -1020,7 +1020,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           threadId: command.threadId,
           ...(objective !== undefined
             ? objective.length === 0
-              ? { objective: null, objectiveState: null }
+              ? // Cleared by hand stays manual: the next title regeneration must
+                // not fill the slot the user just emptied.
+                { objective: null, objectiveState: { source: "manual" as const } }
               : { objective, objectiveState: { source: "manual" as const } }
             : {}),
           ...(command.title !== undefined
@@ -1264,8 +1266,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       // A generated objective fills an empty slot or replaces an older generated
       // one; it never overwrites what the user typed.
       const acceptsObjective =
-        thread.deletedAt === null &&
-        (!thread.objective || thread.objectiveState?.source !== "manual");
+        thread.deletedAt === null && thread.objectiveState?.source !== "manual";
+      const generatedObjective = command.objective
+        ?.trim()
+        .slice(0, THREAD_OBJECTIVE_MAX_LENGTH)
+        .trimEnd();
       return {
         ...(yield* withEventBase({
           aggregateKind: "thread",
@@ -1286,8 +1291,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
                 },
               }
             : {}),
-          ...(command.objective !== undefined && acceptsObjective
-            ? { objective: command.objective, objectiveState: { source: "generated" as const } }
+          ...(generatedObjective !== undefined && acceptsObjective
+            ? { objective: generatedObjective, objectiveState: { source: "generated" as const } }
             : {}),
           updatedAt: thread.updatedAt,
         },

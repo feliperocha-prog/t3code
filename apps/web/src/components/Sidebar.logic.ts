@@ -882,7 +882,7 @@ export function resolveSidebarThreadStatus(thread: SidebarThreadStatusInput): Si
 // session state always outranks the last reply's STATUS block: a stale
 // "pronto" must never hide a pending approval, and a running turn is
 // working whatever its previous reply said.
-export type SidebarInboxClass = "esperando" | "trabalhando" | "acabou" | "outro";
+export type SidebarInboxClass = "esperando" | "trabalhando" | "acabou";
 
 export function classifySidebarThreadInbox(
   thread: { readonly statusCard?: ThreadStatusCard | null | undefined },
@@ -907,10 +907,11 @@ export function classifySidebarThreadInbox(
     case "bloqueado":
     case "aguardando":
       return "esperando";
-    case "pronto":
-      return "acabou";
     default:
-      return "outro";
+      // "pronto", a card the parser could not classify, or no card at all
+      // (threads from before the card existed, a short closing reply): an
+      // idle thread that asks nothing of the user is finished.
+      return "acabou";
   }
 }
 

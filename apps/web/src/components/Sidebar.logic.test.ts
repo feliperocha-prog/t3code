@@ -908,11 +908,11 @@ describe("classifySidebarThreadInbox", () => {
     );
   });
 
-  it("leaves idle threads without a meaningful card as other", () => {
-    expect(classifySidebarThreadInbox({}, "ready")).toBe("outro");
-    expect(classifySidebarThreadInbox({ statusCard: undefined }, "ready")).toBe("outro");
-    expect(classifySidebarThreadInbox({ statusCard: null }, "ready")).toBe("outro");
-    expect(classifySidebarThreadInbox(card("outro"), "ready")).toBe("outro");
+  it("treats idle threads without a meaningful card as finished", () => {
+    expect(classifySidebarThreadInbox({}, "ready")).toBe("acabou");
+    expect(classifySidebarThreadInbox({ statusCard: undefined }, "ready")).toBe("acabou");
+    expect(classifySidebarThreadInbox({ statusCard: null }, "ready")).toBe("acabou");
+    expect(classifySidebarThreadInbox(card("outro"), "ready")).toBe("acabou");
   });
 
   it("resolves the live status from the thread shell", () => {
@@ -936,13 +936,13 @@ describe("classifySidebarThreadInbox", () => {
 
 describe("sortSidebarThreadsByInbox", () => {
   const classes = {
-    a: "outro",
+    a: "acabou",
     b: "trabalhando",
     c: "esperando",
     d: "acabou",
     e: "esperando",
     f: "trabalhando",
-    g: "outro",
+    g: "acabou",
   } as const;
   const classify = (id: keyof typeof classes) => classes[id];
 
@@ -962,7 +962,7 @@ describe("sortSidebarThreadsByInbox", () => {
 });
 
 describe("filterSidebarThreadsByInbox", () => {
-  const classes = { a: "esperando", b: "trabalhando", c: "acabou", d: "outro" } as const;
+  const classes = { a: "esperando", b: "trabalhando", c: "acabou", d: "acabou" } as const;
   const classify = (id: keyof typeof classes) => classes[id];
   const all = ["a", "b", "c", "d"] as const;
 
@@ -970,10 +970,10 @@ describe("filterSidebarThreadsByInbox", () => {
     expect(filterSidebarThreadsByInbox(all, "tudo", classify)).toBe(all);
   });
 
-  it("keeps only the chip's class and never shows other", () => {
+  it("keeps only the chip's class", () => {
     expect(filterSidebarThreadsByInbox(all, "esperando", classify)).toEqual(["a"]);
     expect(filterSidebarThreadsByInbox(all, "trabalhando", classify)).toEqual(["b"]);
-    expect(filterSidebarThreadsByInbox(all, "acabou", classify)).toEqual(["c"]);
+    expect(filterSidebarThreadsByInbox(all, "acabou", classify)).toEqual(["c", "d"]);
   });
 });
 
