@@ -1,9 +1,31 @@
 import { Maximize2Icon, Minimize2Icon, PanelBottomIcon, PanelRightIcon } from "lucide-react";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 
 import { Toggle } from "../ui/toggle";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { t } from "~/i18n";
+
+/**
+ * Width of the visible panel toggles, published for headers that sit under
+ * the fixed controls and must reserve room for them. The Terminal toggle
+ * carries a text label, so its width follows the font instead of a constant.
+ */
+export const PANEL_LAYOUT_CONTROLS_WIDTH_VAR = "--panel-layout-controls-width";
+
+function publishControlsWidth(node: HTMLDivElement | null) {
+  if (!node || typeof ResizeObserver === "undefined") return;
+  const root = node.ownerDocument.documentElement;
+  const publish = () => {
+    root.style.setProperty(PANEL_LAYOUT_CONTROLS_WIDTH_VAR, `${node.offsetWidth}px`);
+  };
+  publish();
+  const observer = new ResizeObserver(publish);
+  observer.observe(node);
+  return () => {
+    observer.disconnect();
+    root.style.removeProperty(PANEL_LAYOUT_CONTROLS_WIDTH_VAR);
+  };
+}
 
 interface PanelLayoutControlsProps {
   showTerminalControl?: boolean;
@@ -33,8 +55,10 @@ export const PanelLayoutControls = memo(function PanelLayoutControls({
   onToggleTerminal,
   onToggleRightPanel,
 }: PanelLayoutControlsProps) {
+  const controlsRef = useCallback(publishControlsWidth, []);
   return (
     <div
+      ref={controlsRef}
       className="flex h-full shrink-0 items-center gap-1 [-webkit-app-region:no-drag]"
       data-panel-layout-controls
     >
