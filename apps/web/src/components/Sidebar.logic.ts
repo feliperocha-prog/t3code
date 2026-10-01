@@ -271,6 +271,12 @@ export function planSidebarThreadDrop(input: {
   readonly activeOrder: readonly string[];
   readonly activeKeysById: ReadonlyMap<string, string | null | undefined>;
   readonly activeReorderableKeys?: ReadonlySet<string>;
+  /**
+   * True when the displayed Active order differs from the manual key order
+   * (the inbox groups waiting/working first). A drop that needs more than one
+   * key rewrite would then persist the grouped order over the manual one.
+   */
+  readonly activeOrderDerived?: boolean;
 }): SidebarThreadDropPlan {
   const {
     activeKey,
@@ -304,6 +310,9 @@ export function planSidebarThreadDrop(input: {
         movedId: activeKey,
       });
       if (activeReorderableKeys && assignments.some(({ id }) => !activeReorderableKeys.has(id))) {
+        return { kind: "none" };
+      }
+      if (input.activeOrderDerived === true && assignments.length > 1) {
         return { kind: "none" };
       }
       return {

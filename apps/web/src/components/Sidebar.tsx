@@ -2573,6 +2573,7 @@ export default function Sidebar() {
     pinnedThreads,
     draggableThreadKeys,
     activeReorderableThreadKeys,
+    activeOrderDerived,
     activeThreads,
     snoozedThreads,
     settledThreads,
@@ -2666,11 +2667,12 @@ export default function Sidebar() {
     // Waiting first, then working, then the rest — stable inside each group.
     // Sorted before the optimistic drop order so the rendered order and the
     // drag planner's order come from the same array.
-    const sortedActive = filterSidebarThreadsByInbox(
-      sortSidebarThreadsByInbox(sortThreadsForSidebar(active), classifyLive),
-      inboxFilter,
-      classifyLive,
-    );
+    const manualActive = sortThreadsForSidebar(active);
+    const inboxActive = sortSidebarThreadsByInbox(manualActive, classifyLive);
+    const sortedActive = filterSidebarThreadsByInbox(inboxActive, inboxFilter, classifyLive);
+    // Grouping moved something: a drop may only touch the dragged key, or it
+    // would persist the grouped order as the manual one.
+    const activeOrderDerived = inboxActive.some((thread, index) => thread !== manualActive[index]);
     return {
       pinnedThreads:
         optimisticDrop?.section !== "pinned" || optimisticDrop.order === null
@@ -2685,6 +2687,7 @@ export default function Sidebar() {
       // persist an order nobody saw under "Tudo". Dragging waits for "Tudo".
       draggableThreadKeys: inboxFilter === "tudo" ? draggable : new Set<string>(),
       activeReorderableThreadKeys: inboxFilter === "tudo" ? activeReorderable : new Set<string>(),
+      activeOrderDerived,
       activeThreads:
         optimisticDrop?.section !== "active" || optimisticDrop.order === null
           ? sortedActive
@@ -3618,6 +3621,7 @@ export default function Sidebar() {
             activeOrder: activeKeys,
             activeKeysById,
             activeReorderableKeys: activeReorderableThreadKeys,
+            activeOrderDerived,
           }).kind !== "none"
         );
       },
@@ -3632,6 +3636,7 @@ export default function Sidebar() {
     serverConfigs,
     activeKeys,
     activeReorderableThreadKeys,
+    activeOrderDerived,
     draggedThreadKey,
     draggedFromSection,
     dragActivationY,
@@ -3666,6 +3671,7 @@ export default function Sidebar() {
         activeOrder: activeKeys,
         activeKeysById,
         activeReorderableKeys: activeReorderableThreadKeys,
+        activeOrderDerived,
       });
       if (plan.kind === "none") return;
       if (plan.kind === "settle" && settlingThreadKeysRef.current.has(activeKey)) return;
@@ -3790,6 +3796,7 @@ export default function Sidebar() {
       serverConfigs,
       activeKeys,
       activeReorderableThreadKeys,
+      activeOrderDerived,
       draggableThreadKeys,
       pinThread,
       pinnedKeys,

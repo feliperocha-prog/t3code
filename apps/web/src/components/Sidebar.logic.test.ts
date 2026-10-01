@@ -1589,6 +1589,32 @@ describe("planSidebarThreadDrop", () => {
     expect(plan({ ...input, activeReorderableKeys: new Set() })).toEqual({ kind: "none" });
   });
 
+  it("refuses a multi-key rewrite when the Active order is grouped by inbox state", () => {
+    // Displayed a1, a3, a2 (grouping) over manual keys f, m, t: moving a1 to the
+    // end needs a key after "t" only, so the drop is allowed...
+    const single = plan({
+      activeKey: "a1",
+      activeSection: "active",
+      activeOrderDerived: true,
+      target: { section: "active", pinnedOrder: [], activeOrder: ["a3", "a2", "a1"] },
+    });
+    expect(single.kind).toBe("move-active");
+    if (single.kind !== "move-active") return;
+    expect(single.assignments.map(({ id }) => id)).toEqual(["a1"]);
+    // ...while dropping between inverted neighbours (a3 "t" before a2 "m") would
+    // rewrite the whole section with the grouped order, so nothing is written.
+    const input = {
+      activeKey: "a1",
+      activeSection: "active" as const,
+      target: { section: "active" as const, pinnedOrder: [], activeOrder: ["a3", "a1", "a2"] },
+    };
+    const whole = plan(input);
+    expect(whole.kind).toBe("move-active");
+    if (whole.kind !== "move-active") return;
+    expect(whole.assignments.length).toBeGreaterThan(1);
+    expect(plan({ ...input, activeOrderDerived: true })).toEqual({ kind: "none" });
+  });
+
   it("settles anything dropped on Settled except a settled thread", () => {
     const target = { section: "settled", pinnedOrder: ["p1", "p2", "p3"] } as const;
     expect(plan({ activeKey: "a1", activeSection: "active", target })).toEqual({ kind: "settle" });
