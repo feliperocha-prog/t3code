@@ -33,6 +33,26 @@ const dictionary: Readonly<Record<string, string>> = {
   "State note": "Nota de estado",
   "Note in your vault that the project home reads for where we are, the next step and pitfalls. Relative to the vault folder.":
     "Nota do vault que a página inicial do projeto lê para mostrar onde estamos, o próximo passo e as armadilhas. Caminho relativo à pasta do vault.",
+  // Página inicial do projeto (rascunho sem conversa)
+  "project home|Where we are": "Onde estamos",
+  "project home|Next step": "Próximo passo",
+  "project home|Pitfalls": "Armadilhas",
+  "project home|How to run · how to publish": "Como rodar · como publicar",
+  "project home|from {file}": "do {file}",
+  "project home|Latest conversations": "Últimas conversas",
+  "project home|State note": "Nota de estado",
+  "project home|Set the vault folder in Settings → General":
+    "Configure a pasta do vault em Configurações → Geral",
+  "project home|Open settings": "Abrir configurações",
+  "project home|Reading the state note…": "Lendo a nota de estado…",
+  "project home|No state note. Expected at {path}": "Sem nota de estado. Caminho esperado: {path}",
+  "project home|Nothing in this section yet.": "Nada nesta seção ainda.",
+  "project home|Reading the README…": "Lendo o README…",
+  "project home|No README.md or AGENTS.md in this project.":
+    "Este projeto não tem README.md nem AGENTS.md.",
+  "project home|{file} has no section about running or publishing.":
+    "O {file} não tem seção sobre rodar ou publicar.",
+  "project home|No conversations in this project yet.": "Nenhuma conversa neste projeto ainda.",
 };
 
 export default dictionary;

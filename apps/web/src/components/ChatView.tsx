@@ -374,6 +374,8 @@ import { createPageScrollController, type PageScrollKey } from "./chat/pageScrol
 import { isTimelineScrollTarget } from "./chat/timelineScrollTarget";
 import { DraftHeroHeadline } from "./chat/DraftHeroHeadline";
 import { FirstStepsCards } from "./chat/FirstStepsCards";
+import { ProjectHome } from "./chat/ProjectHome";
+import { resolveStateNotePath } from "./chat/projectHome.logic";
 import { ExpandedImageDialog } from "./chat/ExpandedImageDialog";
 import { PullRequestThreadDialog } from "./PullRequestThreadDialog";
 import { MessagesTimeline } from "./chat/MessagesTimeline";
@@ -10322,8 +10324,21 @@ export default function ChatView(props: ChatViewProps) {
                   </div>
                   {isDraftHeroState ? (
                     // Hangs below the composer so it never moves it; hidden where it would not fit.
-                    <div className="absolute inset-x-0 top-full z-0 pt-2 [@media(max-height:600px)]:hidden">
-                      <FirstStepsCards terminalAvailable={activeProject !== null} />
+                    <div className="absolute inset-x-0 top-full z-0 max-h-[40vh] overflow-y-auto pt-2 [@media(max-height:600px)]:hidden">
+                      {activeProject ? (
+                        <ProjectHome
+                          environmentId={activeProject.environmentId}
+                          projectId={activeProject.id}
+                          workspaceRoot={activeProject.workspaceRoot}
+                          vaultFolder={settings.vaultFolder}
+                          notePath={resolveStateNotePath(
+                            activeProject.workspaceRoot,
+                            activeProjectSettings.settings.projectStateNotePath,
+                          )}
+                        />
+                      ) : (
+                        <FirstStepsCards terminalAvailable={false} />
+                      )}
                     </div>
                   ) : null}
                 </div>
