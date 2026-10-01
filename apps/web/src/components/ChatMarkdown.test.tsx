@@ -805,11 +805,12 @@ describe("ChatMarkdown status cards", () => {
     expect(html).toContain("<pre");
   });
 
-  it("keeps fences that do not open with STATUS, are unclosed or have an empty status", () => {
+  it("keeps fences that do not open with STATUS, are unclosed, have an empty status or no VOCÊ/EU line", () => {
     for (const text of [
       "```\nsome code\nSTATUS: pronto\n```",
       "```\nSTATUS: pronto\nVOCÊ: nada",
       "```\nSTATUS:   \nVOCÊ: nada\n```",
+      "```\nSTATUS: 200 OK\ncontent-type: text/html\n```",
       "STATUS: pronto\nVOCÊ: nada\nEU: nada",
     ]) {
       const html = renderToStaticMarkup(

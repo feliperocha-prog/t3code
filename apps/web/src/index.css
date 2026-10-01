@@ -125,10 +125,13 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --workspace-gutter-end: calc(env(safe-area-inset-right) + var(--workspace-gutter));
   /* Room the chat header keeps clear under the fixed panel toggles: their
      measured width (published by PanelLayoutControls), a 4px gap and the 1px
-     edge inset, less the header gutter beyond the controls' 0.75rem offset.
-     The fallback is two icon-only toggles. */
+     edge inset, less the header gutter beyond the controls' right offset. The
+     offset follows --workspace-controls-right so the native window buttons
+     (.wco) push the reserve along with the toggles. The fallback is two
+     icon-only toggles. */
   --panel-layout-controls-reserve: calc(
-    var(--panel-layout-controls-width, 3.75rem) + 0.75rem + 5px - var(--workspace-gutter)
+    var(--panel-layout-controls-width, 3.75rem) + var(--workspace-controls-right) + 5px -
+      var(--workspace-gutter)
   );
 
   @variant sm {

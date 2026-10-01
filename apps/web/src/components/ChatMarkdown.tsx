@@ -596,11 +596,13 @@ function extractPreCodeMeta(node: unknown): string | undefined {
 
 const STATUS_FENCE_FIRST_LINE = /^\s*\**\s*STATUS\s*\**\s*:/u;
 
-/** The STATUS / VOCÊ / EU block a fence holds, when its first non-empty line is `STATUS:`. */
+/** The STATUS / VOCÊ / EU block a fence holds, when its first non-empty line is `STATUS:`.
+ * A VOCÊ or EU line is required so pasted output such as `STATUS: 200` stays a code block. */
 export function statusCardFromFence(code: string): ParsedStatusCard | null {
   const firstLine = code.split(/\r?\n/).find((line) => line.trim().length > 0);
   if (firstLine === undefined || !STATUS_FENCE_FIRST_LINE.test(firstLine)) return null;
-  return parseStatusCard(code);
+  const card = parseStatusCard(code);
+  return card !== null && (card.voce.length > 0 || card.eu.length > 0) ? card : null;
 }
 
 function codeFenceSource(node: ReactMarkdownExtraProps["node"], text: string): string | null {
