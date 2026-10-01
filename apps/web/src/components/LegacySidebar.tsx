@@ -221,7 +221,7 @@ import {
   type SidebarProjectSnapshot,
 } from "../sidebarProjectGrouping";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 const SIDEBAR_SORT_LABELS: Record<SidebarProjectSortOrder, string> = {
   updated_at: t("Last user message"),
   created_at: t("Created at"),
@@ -1015,6 +1015,7 @@ interface SidebarProjectThreadListProps {
 const SidebarProjectThreadList = memo(function SidebarProjectThreadList(
   props: SidebarProjectThreadListProps,
 ) {
+  const inboxFilter = useUiStateStore((state) => state.sidebarInboxFilter);
   const {
     projectKey,
     projectExpanded,
@@ -1066,7 +1067,11 @@ const SidebarProjectThreadList = memo(function SidebarProjectThreadList(
             data-thread-selection-safe
             className="flex h-8 w-full translate-x-0 items-center px-2 text-left text-xs text-sidebar-muted-foreground/75"
           >
-            <span>{t("No threads yet")}</span>
+            <span>
+              {inboxFilter === "tudo"
+                ? t("No threads yet")
+                : tc("sidebar inbox", "No threads match this filter")}
+            </span>
           </div>
         </SidebarMenuSubItem>
       ) : null}

@@ -2680,8 +2680,11 @@ export default function Sidebar() {
               preferredIds: optimisticDrop.order,
               getId: (thread) => scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
             }),
-      draggableThreadKeys: draggable,
-      activeReorderableThreadKeys: activeReorderable,
+      // A filtered list hides siblings: the drop planner orders by what is
+      // displayed and may rewrite a whole section's keys from it, which would
+      // persist an order nobody saw under "Tudo". Dragging waits for "Tudo".
+      draggableThreadKeys: inboxFilter === "tudo" ? draggable : new Set<string>(),
+      activeReorderableThreadKeys: inboxFilter === "tudo" ? activeReorderable : new Set<string>(),
       activeThreads:
         optimisticDrop?.section !== "active" || optimisticDrop.order === null
           ? sortedActive
