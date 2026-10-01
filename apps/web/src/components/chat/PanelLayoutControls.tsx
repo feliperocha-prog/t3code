@@ -58,14 +58,14 @@ export const PanelLayoutControls = memo(function PanelLayoutControls({
   return (
     <div
       ref={publishControlsWidth}
-      className="flex h-full shrink-0 items-center gap-1 [-webkit-app-region:no-drag]"
+      className="ml-1 flex h-full shrink-0 items-center gap-1 [-webkit-app-region:no-drag]"
       data-panel-layout-controls
     >
       {showTerminalControl ? (
         <Tooltip>
           <TooltipTrigger render={<span className="flex shrink-0" />}>
             <Toggle
-              className="shrink-0 [-webkit-app-region:no-drag]"
+              className="shrink-0 px-2 [-webkit-app-region:no-drag]"
               pressed={terminalOpen}
               onPressedChange={onToggleTerminal}
               aria-label={t("Toggle terminal drawer")}
