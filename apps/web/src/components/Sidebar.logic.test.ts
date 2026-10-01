@@ -10,9 +10,11 @@ import {
   buildBulkTitleRegenerationContextMenuItem,
   buildBulkUnpinContextMenuItem,
   buildMultiSelectThreadContextMenuItems,
+  classifySidebarThreadInbox,
   createThreadJumpHintVisibilityController,
   deleteSelectedThreadEntries,
   filterSidebarProjectScopeItems,
+  filterSidebarThreadsByInbox,
   getSidebarThreadIdsToPrewarm,
   resolveAdjacentThreadId,
   reduceSidebarProjectScopeMenuState,
@@ -25,6 +27,7 @@ import {
   orderItemsByPreferredIds,
   resolveProjectStatusIndicator,
   resolveSidebarRowAccessibility,
+  resolveSidebarThreadInbox,
   resolveSidebarThreadStatus,
   resolveThreadStatusPill,
   resolveWorkingStartedAt,
@@ -40,6 +43,7 @@ import {
   sidebarMarkerId,
   sidebarListItemId,
   sortPinnedThreadsForSidebar,
+  sortSidebarThreadsByInbox,
   sortThreadsForSidebar,
   sortProjectsForSidebar,
   sortScopedProjectsForSidebar,
@@ -55,6 +59,7 @@ import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-searc
 import { sortSettledThreads } from "@t3tools/client-runtime/state/thread-sort";
 import {
   EnvironmentId,
+  MessageId,
   OrchestrationLatestTurn,
   ProjectId,
   ProviderInstanceId,
@@ -851,6 +856,124 @@ describe("resolveSidebarThreadStatus", () => {
 
   it("defaults to ready with no session", () => {
     expect(resolveSidebarThreadStatus({ ...idle, session: null })).toBe("ready");
+  });
+});
+
+describe("classifySidebarThreadInbox", () => {
+  const card = (kind: "pronto" | "bloqueado" | "aguardando" | "outro") => ({
+    statusCard: {
+      kind,
+      status: kind,
+      voce: "",
+      eu: "",
+      messageId: MessageId.make("message-1"),
+    },
+  });
+
+  it("puts approval, input and failed in waiting whatever the card says", () => {
+    for (const status of ["approval", "input", "failed"] as const) {
+      expect(classifySidebarThreadInbox({}, status)).toBe("esperando");
+      expect(classifySidebarThreadInbox(card("pronto"), status)).toBe("esperando");
+      expect(classifySidebarThreadInbox(card("pronto"), status, { isSettled: true })).toBe(
+        "esperando",
+      );
+    }
+  });
+
+  it("puts working and monitoring in working: a running session beats the card", () => {
+    for (const status of ["working", "monitoring"] as const) {
+      expect(classifySidebarThreadInbox({}, status)).toBe("trabalhando");
+      expect(classifySidebarThreadInbox(card("aguardando"), status)).toBe("trabalhando");
+      expect(classifySidebarThreadInbox(card("bloqueado"), status)).toBe("trabalhando");
+      expect(classifySidebarThreadInbox(card("pronto"), status)).toBe("trabalhando");
+    }
+  });
+
+  it("reads a blocked or waiting card as waiting once the session is idle", () => {
+    expect(classifySidebarThreadInbox(card("bloqueado"), "ready")).toBe("esperando");
+    expect(classifySidebarThreadInbox(card("aguardando"), "ready")).toBe("esperando");
+  });
+
+  it("reads a done card as done once the session is idle", () => {
+    expect(classifySidebarThreadInbox(card("pronto"), "ready")).toBe("acabou");
+  });
+
+  it("treats settled threads as done unless a live state needs the user", () => {
+    expect(classifySidebarThreadInbox({}, "ready", { isSettled: true })).toBe("acabou");
+    expect(classifySidebarThreadInbox(card("aguardando"), "ready", { isSettled: true })).toBe(
+      "acabou",
+    );
+    expect(classifySidebarThreadInbox(card("pronto"), "working", { isSettled: true })).toBe(
+      "trabalhando",
+    );
+  });
+
+  it("leaves idle threads without a meaningful card as other", () => {
+    expect(classifySidebarThreadInbox({}, "ready")).toBe("outro");
+    expect(classifySidebarThreadInbox({ statusCard: undefined }, "ready")).toBe("outro");
+    expect(classifySidebarThreadInbox({ statusCard: null }, "ready")).toBe("outro");
+    expect(classifySidebarThreadInbox(card("outro"), "ready")).toBe("outro");
+  });
+
+  it("resolves the live status from the thread shell", () => {
+    const idle = { hasPendingApprovals: false, hasPendingUserInput: false, session: null };
+    expect(resolveSidebarThreadInbox({ ...idle, ...card("aguardando") })).toBe("esperando");
+    expect(
+      resolveSidebarThreadInbox({ ...idle, ...card("pronto"), hasPendingApprovals: true }),
+    ).toBe("esperando");
+    expect(
+      resolveSidebarThreadInbox({
+        ...idle,
+        ...card("aguardando"),
+        backgroundLiveness: "working",
+      }),
+    ).toBe("trabalhando");
+    expect(resolveSidebarThreadInbox({ ...idle, statusCard: null }, { isSettled: true })).toBe(
+      "acabou",
+    );
+  });
+});
+
+describe("sortSidebarThreadsByInbox", () => {
+  const classes = {
+    a: "outro",
+    b: "trabalhando",
+    c: "esperando",
+    d: "acabou",
+    e: "esperando",
+    f: "trabalhando",
+    g: "outro",
+  } as const;
+  const classify = (id: keyof typeof classes) => classes[id];
+
+  it("orders waiting, then working, then the rest, keeping order within each group", () => {
+    expect(
+      sortSidebarThreadsByInbox(["a", "b", "c", "d", "e", "f", "g"] as const, classify),
+    ).toEqual(["c", "e", "b", "f", "a", "d", "g"]);
+  });
+
+  it("returns a new array and leaves an already ordered list unchanged", () => {
+    const input = ["c", "e", "b", "a"] as const;
+    const sorted = sortSidebarThreadsByInbox(input, classify);
+    expect(sorted).toEqual(["c", "e", "b", "a"]);
+    expect(sorted).not.toBe(input);
+    expect(sortSidebarThreadsByInbox([], classify)).toEqual([]);
+  });
+});
+
+describe("filterSidebarThreadsByInbox", () => {
+  const classes = { a: "esperando", b: "trabalhando", c: "acabou", d: "outro" } as const;
+  const classify = (id: keyof typeof classes) => classes[id];
+  const all = ["a", "b", "c", "d"] as const;
+
+  it("keeps the list untouched for everything", () => {
+    expect(filterSidebarThreadsByInbox(all, "tudo", classify)).toBe(all);
+  });
+
+  it("keeps only the chip's class and never shows other", () => {
+    expect(filterSidebarThreadsByInbox(all, "esperando", classify)).toEqual(["a"]);
+    expect(filterSidebarThreadsByInbox(all, "trabalhando", classify)).toEqual(["b"]);
+    expect(filterSidebarThreadsByInbox(all, "acabou", classify)).toEqual(["c"]);
   });
 });
 

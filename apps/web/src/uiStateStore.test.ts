@@ -13,6 +13,7 @@ import {
   resolveProjectExpanded,
   setDefaultAdvertisedEndpointKey,
   setProjectExpanded,
+  setSidebarInboxFilter,
   setSidebarProjectScopeKey,
   setThreadChangedFilesExpanded,
   type UiState,
@@ -23,6 +24,7 @@ function makeUiState(overrides: Partial<UiState> = {}): UiState {
     projectExpandedById: {},
     projectOrder: [],
     sidebarProjectScopeKey: null,
+    sidebarInboxFilter: "tudo",
     threadLastVisitedAtById: {},
     threadChangedFilesExpandedById: {},
     defaultAdvertisedEndpointKey: null,
@@ -156,6 +158,14 @@ describe("uiStateStore pure functions", () => {
     expect(setSidebarProjectScopeKey(scoped, null).sidebarProjectScopeKey).toBeNull();
     expect(setSidebarProjectScopeKey(scoped, "").sidebarProjectScopeKey).toBeNull();
   });
+
+  it("stores the sidebar inbox filter and keeps identity when unchanged", () => {
+    const waiting = setSidebarInboxFilter(makeUiState(), "esperando");
+
+    expect(waiting.sidebarInboxFilter).toBe("esperando");
+    expect(setSidebarInboxFilter(waiting, "esperando")).toBe(waiting);
+    expect(setSidebarInboxFilter(waiting, "tudo").sidebarInboxFilter).toBe("tudo");
+  });
 });
 
 describe("parsePersistedState", () => {
@@ -202,6 +212,7 @@ describe("parsePersistedState", () => {
       },
       defaultAdvertisedEndpointKey: "desktop-core:lan:http",
       sidebarProjectScopeKey: null,
+      sidebarInboxFilter: "tudo",
       pullRequestMergeMethod: "merge",
       threadChangedFilesExpandedById: {
         "environment:thread-1": {
@@ -324,6 +335,7 @@ describe("uiStateStore persistence", () => {
       },
       defaultAdvertisedEndpointKey: "desktop-core:lan:http",
       sidebarProjectScopeKey: null,
+      sidebarInboxFilter: "tudo",
       threadChangedFilesExpansionVersion: 2,
       threadChangedFilesExpandedById: {
         "environment:thread-1": {
@@ -348,6 +360,18 @@ describe("uiStateStore persistence", () => {
     expect(parsePersistedState(persisted).sidebarProjectScopeKey).toBe(
       "github.com/pingdotgg/t3code",
     );
+  });
+
+  it("restores the sidebar inbox filter and falls back to everything on unknown values", () => {
+    persistState(makeUiState({ sidebarInboxFilter: "acabou" }));
+
+    const persisted = JSON.parse(
+      localStorageStub.getItem(PERSISTED_STATE_KEY) ?? "{}",
+    ) as PersistedUiState;
+
+    expect(parsePersistedState(persisted).sidebarInboxFilter).toBe("acabou");
+    expect(parsePersistedState({ sidebarInboxFilter: "later" }).sidebarInboxFilter).toBe("tudo");
+    expect(parsePersistedState({}).sidebarInboxFilter).toBe("tudo");
   });
 
   it("drops the temporary expanded-only migration fallback when rewriting state", () => {

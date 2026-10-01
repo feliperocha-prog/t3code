@@ -6,7 +6,12 @@ import {
   type AtomCommandResult,
 } from "@t3tools/client-runtime/state/runtime";
 import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
-import type { ContextMenuItem, EnvironmentId, ThreadId } from "@t3tools/contracts";
+import type {
+  ContextMenuItem,
+  EnvironmentId,
+  ThreadId,
+  ThreadStatusCard,
+} from "@t3tools/contracts";
 import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "@t3tools/contracts/settings";
 import type { AsyncResult } from "effect/unstable/reactivity";
 import { planPinnedReorder } from "@t3tools/client-runtime/state/thread-sort";
@@ -21,6 +26,7 @@ import {
   type ThreadSortInput,
 } from "../lib/threadSort";
 import type { SidebarThreadSummary, Thread } from "../types";
+import type { SidebarInboxFilter } from "../uiStateStore";
 import { cn } from "../lib/utils";
 import { isLatestTurnSettled } from "../session-logic";
 import { t } from "~/i18n";
@@ -860,6 +866,79 @@ export function resolveSidebarThreadStatus(thread: SidebarThreadStatusInput): Si
     return "monitoring";
   }
   return "ready";
+}
+
+// ── Sidebar inbox ───────────────────────────────────────────────────
+// The chips above the thread list sort threads by whose move it is. Live
+// session state always outranks the last reply's STATUS block: a stale
+// "pronto" must never hide a pending approval, and a running turn is
+// working whatever its previous reply said.
+export type SidebarInboxClass = "esperando" | "trabalhando" | "acabou" | "outro";
+
+export function classifySidebarThreadInbox(
+  thread: { readonly statusCard?: ThreadStatusCard | null | undefined },
+  status: SidebarThreadStatus,
+  options: { readonly isSettled?: boolean } = {},
+): SidebarInboxClass {
+  switch (status) {
+    case "approval":
+    case "input":
+    case "failed":
+      return "esperando";
+    case "working":
+    case "monitoring":
+      return "trabalhando";
+    case "ready":
+      break;
+  }
+  // Settling is the user saying "this is finished", so it outranks whatever
+  // the last reply asked for.
+  if (options.isSettled === true) return "acabou";
+  switch (thread.statusCard?.kind) {
+    case "bloqueado":
+    case "aguardando":
+      return "esperando";
+    case "pronto":
+      return "acabou";
+    default:
+      return "outro";
+  }
+}
+
+export function resolveSidebarThreadInbox(
+  thread: SidebarThreadStatusInput & {
+    readonly statusCard?: ThreadStatusCard | null | undefined;
+  },
+  options: { readonly isSettled?: boolean } = {},
+): SidebarInboxClass {
+  return classifySidebarThreadInbox(thread, resolveSidebarThreadStatus(thread), options);
+}
+
+/** Threads waiting on the user first, then working ones, then the rest; stable within each group. */
+export function sortSidebarThreadsByInbox<T>(
+  threads: readonly T[],
+  classify: (thread: T) => SidebarInboxClass,
+): T[] {
+  const waiting: T[] = [];
+  const working: T[] = [];
+  const rest: T[] = [];
+  for (const thread of threads) {
+    const inboxClass = classify(thread);
+    if (inboxClass === "esperando") waiting.push(thread);
+    else if (inboxClass === "trabalhando") working.push(thread);
+    else rest.push(thread);
+  }
+  return [...waiting, ...working, ...rest];
+}
+
+/** Keeps only the threads of the chip's class; "tudo" returns the list untouched. */
+export function filterSidebarThreadsByInbox<T>(
+  threads: readonly T[],
+  filter: SidebarInboxFilter,
+  classify: (thread: T) => SidebarInboxClass,
+): readonly T[] {
+  if (filter === "tudo") return threads;
+  return threads.filter((thread) => classify(thread) === filter);
 }
 
 /** First VALID timestamp wins: `a ?? b` falls through on null, but a present-

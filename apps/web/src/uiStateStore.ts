@@ -28,6 +28,7 @@ export interface PersistedUiState {
   projectOrderCwds?: string[];
   defaultAdvertisedEndpointKey?: string | null;
   sidebarProjectScopeKey?: string | null;
+  sidebarInboxFilter?: string;
   threadChangedFilesExpansionVersion?: number;
   threadChangedFilesExpandedById?: Record<string, Record<string, boolean>>;
   pullRequestMergeMethod?: string;
@@ -40,6 +41,16 @@ export interface UiProjectState {
   // projects". Lives here so routes that unmount the sidebar (Settings)
   // cannot reset the filter.
   sidebarProjectScopeKey: string | null;
+  // Inbox chip above the thread list ("tudo" shows every thread). Persisted
+  // next to the project scope for the same reason.
+  sidebarInboxFilter: SidebarInboxFilter;
+}
+
+/** Sidebar inbox chips: everything, waiting on the user, in motion, finished. */
+export type SidebarInboxFilter = "tudo" | "esperando" | "trabalhando" | "acabou";
+
+export function isSidebarInboxFilter(value: unknown): value is SidebarInboxFilter {
+  return value === "tudo" || value === "esperando" || value === "trabalhando" || value === "acabou";
 }
 
 export interface UiThreadState {
@@ -62,6 +73,7 @@ const initialState: UiState = {
   projectExpandedById: {},
   projectOrder: [],
   sidebarProjectScopeKey: null,
+  sidebarInboxFilter: "tudo",
   threadLastVisitedAtById: {},
   threadChangedFilesExpandedById: {},
   defaultAdvertisedEndpointKey: null,
@@ -155,6 +167,9 @@ export function parsePersistedState(parsed: PersistedUiState): UiState {
         : {},
     defaultAdvertisedEndpointKey: sanitizeOptionalKey(parsed.defaultAdvertisedEndpointKey),
     sidebarProjectScopeKey: sanitizeOptionalKey(parsed.sidebarProjectScopeKey),
+    sidebarInboxFilter: isSidebarInboxFilter(parsed.sidebarInboxFilter)
+      ? parsed.sidebarInboxFilter
+      : initialState.sidebarInboxFilter,
     pullRequestMergeMethod: isPullRequestMergeMethod(parsed.pullRequestMergeMethod)
       ? parsed.pullRequestMergeMethod
       : initialState.pullRequestMergeMethod,
@@ -229,6 +244,7 @@ export function persistState(state: UiState): void {
         threadLastVisitedAtById: state.threadLastVisitedAtById,
         defaultAdvertisedEndpointKey: state.defaultAdvertisedEndpointKey,
         sidebarProjectScopeKey: state.sidebarProjectScopeKey,
+        sidebarInboxFilter: state.sidebarInboxFilter,
         threadChangedFilesExpansionVersion: THREAD_CHANGED_FILES_EXPANSION_VERSION,
         threadChangedFilesExpandedById: state.threadChangedFilesExpandedById,
         pullRequestMergeMethod: state.pullRequestMergeMethod,
@@ -340,6 +356,16 @@ export function setSidebarProjectScopeKey(state: UiState, projectKey: string | n
   };
 }
 
+export function setSidebarInboxFilter(state: UiState, filter: SidebarInboxFilter): UiState {
+  if (state.sidebarInboxFilter === filter) {
+    return state;
+  }
+  return {
+    ...state,
+    sidebarInboxFilter: filter,
+  };
+}
+
 function setPullRequestMergeMethod(state: UiState, method: PullRequestMergeMethod): UiState {
   return state.pullRequestMergeMethod === method
     ? state
@@ -429,6 +455,7 @@ interface UiStateStore extends UiState {
   setThreadChangedFilesExpanded: (threadId: string, turnId: string, expanded: boolean) => void;
   setDefaultAdvertisedEndpointKey: (key: string | null) => void;
   setSidebarProjectScopeKey: (projectKey: string | null) => void;
+  setSidebarInboxFilter: (filter: SidebarInboxFilter) => void;
   setPullRequestMergeMethod: (method: PullRequestMergeMethod) => void;
   setProjectExpanded: (projectIds: string | readonly string[], expanded: boolean) => void;
   reorderProjects: (
@@ -450,6 +477,7 @@ export const useUiStateStore = create<UiStateStore>((set) => ({
     set((state) => setDefaultAdvertisedEndpointKey(state, key)),
   setSidebarProjectScopeKey: (projectKey) =>
     set((state) => setSidebarProjectScopeKey(state, projectKey)),
+  setSidebarInboxFilter: (filter) => set((state) => setSidebarInboxFilter(state, filter)),
   setPullRequestMergeMethod: (method) => set((state) => setPullRequestMergeMethod(state, method)),
   setProjectExpanded: (projectIds, expanded) =>
     set((state) => setProjectExpanded(state, projectIds, expanded)),
