@@ -112,16 +112,17 @@ export function StatusCard({ view, variant = "default", onReveal, className }: S
     "data-status-card": variant,
     "data-status-tone": view.tone,
   };
-  const renderCard = (children?: ReactNode) =>
-    reveal ? (
-      <button type="button" className={cardClass} onClick={reveal} {...cardProps}>
-        {children}
-      </button>
-    ) : (
-      <div className={cardClass} {...cardProps}>
-        {children}
-      </div>
-    );
+  // The compact card hands this element to TooltipTrigger as `render` and the
+  // body as children. Base UI spreads the element's props last, so an explicit
+  // `children: undefined` here would blank the body: only set it when given.
+  const renderCard = (children?: ReactNode) => {
+    const props = {
+      className: cardClass,
+      ...cardProps,
+      ...(children === undefined ? {} : { children }),
+    };
+    return reveal ? <button type="button" onClick={reveal} {...props} /> : <div {...props} />;
+  };
 
   return (
     <div className={cn("flex min-w-0 flex-col gap-1", variant === "inline" && "my-3", className)}>
