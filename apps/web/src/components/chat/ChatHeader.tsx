@@ -497,13 +497,8 @@ export const ChatHeader = memo(function ChatHeader({
         data-chat-header-actions
         className={cn(
           "flex shrink-0 items-center justify-end gap-2 @3xl/header-actions:gap-3",
-          // Reserve the fixed panel toggles (measured: the Terminal toggle has a
-          // text label) plus a 4px gap and the 1px edge inset. The controls sit
-          // 0.75rem from the edge while the header pads by --workspace-gutter.
-          // The fallback is the two icon-only toggles at sm.
-          rightPanelOpen
-            ? "pr-0"
-            : "pr-[calc(var(--panel-layout-controls-width,3.75rem)_+_0.75rem_+_5px_-_var(--workspace-gutter))]",
+          // Keep clear of the fixed panel toggles (see --panel-layout-controls-reserve).
+          rightPanelOpen ? "pr-0" : "pr-(--panel-layout-controls-reserve)",
           "[[data-panel-animations=true]_&]:motion-safe:transition-[padding-right] [[data-panel-animations=true]_&]:motion-safe:duration-(--panel-animation-duration) [[data-panel-animations=true]_&]:motion-safe:ease-out",
         )}
       >
