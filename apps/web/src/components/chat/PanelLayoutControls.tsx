@@ -1,5 +1,5 @@
 import { Maximize2Icon, Minimize2Icon, PanelBottomIcon, PanelRightIcon } from "lucide-react";
-import { memo, useCallback } from "react";
+import { memo } from "react";
 
 import { Toggle } from "../ui/toggle";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -55,10 +55,9 @@ export const PanelLayoutControls = memo(function PanelLayoutControls({
   onToggleTerminal,
   onToggleRightPanel,
 }: PanelLayoutControlsProps) {
-  const controlsRef = useCallback(publishControlsWidth, []);
   return (
     <div
-      ref={controlsRef}
+      ref={publishControlsWidth}
       className="flex h-full shrink-0 items-center gap-1 [-webkit-app-region:no-drag]"
       data-panel-layout-controls
     >

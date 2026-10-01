@@ -111,7 +111,10 @@ export function ThreadBrief({
               if (committedRef.current) return;
               commit(event.currentTarget.value);
             }}
-            onFocus={(event) => event.currentTarget.select()}
+            onFocus={(event) => {
+              committedRef.current = false;
+              event.currentTarget.select();
+            }}
             onKeyDown={handleKeyDown}
           />
         ) : (
