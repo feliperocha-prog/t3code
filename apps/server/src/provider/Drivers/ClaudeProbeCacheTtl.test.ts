@@ -15,7 +15,8 @@ describe("probeCacheTtl", () => {
   });
 
   it("retries soon when the probe came back without usage limits", () => {
-    expect(probeCacheTtl(Exit.succeed({ email: "a@b.c" }))).toBe(CAPABILITIES_PROBE_RETRY_TTL);
+    const probe: { readonly email: string; readonly usage?: unknown } = { email: "a@b.c" };
+    expect(probeCacheTtl(Exit.succeed(probe))).toBe(CAPABILITIES_PROBE_RETRY_TTL);
   });
 
   it("retries soon when the probe produced nothing", () => {
