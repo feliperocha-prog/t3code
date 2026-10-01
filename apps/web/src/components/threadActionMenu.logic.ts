@@ -1,6 +1,6 @@
 import type { ContextMenuItem } from "@t3tools/contracts";
 import type { SnoozePreset } from "@t3tools/client-runtime/state/thread-settled";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 /**
  * Ids for the per-thread action menu. Snooze presets are dispatched as
@@ -22,6 +22,7 @@ export type ThreadActionMenuId =
   | `snooze:${string}`
   | "unsnooze"
   | "rename"
+  | "edit-objective"
   | "regenerate-title"
   | "mark-unread"
   | "copy"
@@ -60,6 +61,8 @@ export interface ThreadActionMenuState {
     readonly titleRegeneration: boolean;
   };
   readonly snoozePresets: ReadonlyArray<SnoozePreset>;
+  /** The surface can edit the thread objective inline (the chat header). */
+  readonly canEditObjective?: boolean;
 }
 
 /**
@@ -117,6 +120,15 @@ export function buildThreadActionMenuItems(
         ]
       : []),
     { id: "rename", label: t("Rename thread"), icon: "pencil", separatorBefore: true },
+    ...(state.canEditObjective
+      ? [
+          {
+            id: "edit-objective" as const,
+            label: tc("thread objective", "Edit objective"),
+            icon: "pencil",
+          },
+        ]
+      : []),
     ...(state.supports.titleRegeneration
       ? [
           {

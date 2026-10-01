@@ -10,6 +10,7 @@ import {
 import { feedbackBannerItem } from "./chat/ComposerFeedback";
 import { usageLimitsBannerItem } from "./chat/ComposerUsageLimits";
 import { ThreadTabStrip } from "./chat/ThreadTabStrip";
+import { ThreadBrief } from "./chat/ThreadBrief";
 import { derivePendingRequests } from "@t3tools/client-runtime/pending-requests";
 import {
   questionAttachmentDraftId,
@@ -2006,6 +2007,19 @@ export default function ChatView(props: ChatViewProps) {
   );
   const activeThreadKey = activeThreadRef ? scopedThreadKey(activeThreadRef) : null;
   const activeThreadShell = useThreadShell(isServerThread ? activeThreadRef : null);
+  // Objective inline edit, keyed by thread so switching threads drops it.
+  const [objectiveEditThreadKey, setObjectiveEditThreadKey] = useState<string | null>(null);
+  const editingObjective = activeThreadKey !== null && objectiveEditThreadKey === activeThreadKey;
+  const setEditingObjective = useCallback(
+    (editing: boolean) => setObjectiveEditThreadKey(editing ? activeThreadKey : null),
+    [activeThreadKey],
+  );
+  const startObjectiveEdit = useCallback(() => setEditingObjective(true), [setEditingObjective]);
+  // The detail copy lags the shell on generated objectives, so the "proposed
+  // by the AI" note shows only while both agree on the text.
+  const objectiveGenerated =
+    activeServerThread?.objectiveState?.source === "generated" &&
+    (activeServerThread.objective ?? null) === (activeThreadShell?.objective ?? null);
   const [timelineAnchor, setTimelineAnchor] = useState<{
     readonly threadKey: string | null;
     readonly messageId: MessageId | null;
@@ -9889,6 +9903,7 @@ export default function ChatView(props: ChatViewProps) {
             onAddProjectScript={saveProjectScript}
             onUpdateProjectScript={updateProjectScript}
             onDeleteProjectScript={deleteProjectScript}
+            {...(isServerThread ? { onStartObjectiveEdit: startObjectiveEdit } : {})}
           />
         </WorkspacePageHeader>
         <ThreadTabStrip
@@ -9898,6 +9913,16 @@ export default function ChatView(props: ChatViewProps) {
               : null
           }
         />
+        {isServerThread && activeThread && activeThreadShell ? (
+          <ThreadBrief
+            environmentId={activeThread.environmentId}
+            threadId={activeThread.id}
+            shell={activeThreadShell}
+            objectiveGenerated={objectiveGenerated}
+            editingObjective={editingObjective}
+            onEditingObjectiveChange={setEditingObjective}
+          />
+        ) : null}
 
         {/* Main content area with optional plan sidebar */}
         <div className="flex min-h-0 min-w-0 flex-1">

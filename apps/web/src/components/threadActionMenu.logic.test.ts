@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 import { buildThreadActionMenuItems, type ThreadActionMenuState } from "./threadActionMenu.logic";
 
@@ -172,5 +172,17 @@ describe("buildThreadActionMenuItems", () => {
       (item) => item.id === "archive",
     );
     expect(archiveItem?.disabled).toBe(true);
+  });
+
+  it("offers Edit objective right after Rename only where the objective is editable", () => {
+    expect(ids(baseState)).not.toContain("edit-objective");
+
+    const items = buildThreadActionMenuItems({ ...baseState, canEditObjective: true });
+    const renameIndex = items.findIndex((item) => item.id === "rename");
+    expect(items[renameIndex + 1]).toEqual({
+      id: "edit-objective",
+      label: tc("thread objective", "Edit objective"),
+      icon: "pencil",
+    });
   });
 });

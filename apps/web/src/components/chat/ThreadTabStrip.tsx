@@ -28,7 +28,7 @@ import {
 } from "react";
 
 import { isCommandPaletteOpen } from "~/commandPaletteBus";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 import { resolveShortcutCommand } from "~/keybindings";
 import { isTerminalFocused } from "~/lib/terminalFocus";
 import { cn } from "~/lib/utils";
@@ -335,6 +335,11 @@ const ThreadTab = memo(function ThreadTab({
         <TooltipPopup side="bottom">
           <span className="block">{shell.title}</span>
           {project ? <span className="block text-muted-foreground">{project.title}</span> : null}
+          {shell.objective?.trim() ? (
+            <span className="block max-w-80 whitespace-normal text-muted-foreground">
+              {tc("thread objective", "Objective")}: {shell.objective.trim()}
+            </span>
+          ) : null}
         </TooltipPopup>
       </Tooltip>
       {hasFolderConflict ? (

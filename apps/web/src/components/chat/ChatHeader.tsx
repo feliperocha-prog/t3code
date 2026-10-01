@@ -79,6 +79,8 @@ interface ChatHeaderProps {
     input: NewProjectScriptInput,
   ) => Promise<ProjectScriptActionResult>;
   onDeleteProjectScript: (scriptId: string) => Promise<ProjectScriptActionResult>;
+  /** Opens the objective editor under the header; omitted for draft threads. */
+  onStartObjectiveEdit?: (() => void) | undefined;
 }
 
 /**
@@ -145,6 +147,7 @@ export const ChatHeader = memo(function ChatHeader({
   onAddProjectScript,
   onUpdateProjectScript,
   onDeleteProjectScript,
+  onStartObjectiveEdit,
 }: ChatHeaderProps) {
   const { active: panelAnimationsActive, durationMs: panelAnimationDurationMs } =
     usePanelAnimationSettings();
@@ -258,6 +261,7 @@ export const ChatHeader = memo(function ChatHeader({
     threadRef: isServerThread ? activeThreadRef : null,
     projectCwd: activeProjectCwd,
     onStartRename: startRename,
+    onStartObjectiveEdit,
   });
   const titleButtonRef = useRef<HTMLButtonElement | null>(null);
   const titleMenuTimerRef = useRef<number | null>(null);

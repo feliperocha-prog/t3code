@@ -68,8 +68,10 @@ export function useThreadActionMenu(input: {
   /** Fallback for "Copy path" when the thread has no worktree. */
   readonly projectCwd: string | null;
   readonly onStartRename: () => void;
+  /** Shows "Edit objective" and handles it; omitted where the objective is not editable. */
+  readonly onStartObjectiveEdit?: (() => void) | undefined;
 }) {
-  const { threadRef, projectCwd, onStartRename } = input;
+  const { threadRef, projectCwd, onStartRename, onStartObjectiveEdit } = input;
   const router = useRouter();
   const projects = useProjects();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
@@ -156,6 +158,7 @@ export function useThreadActionMenu(input: {
           isRunning: thread.session?.status === "running" && thread.session.activeTurnId != null,
           supports,
           snoozePresets,
+          canEditObjective: onStartObjectiveEdit !== undefined,
         });
         const clicked = await settlePromise(() => api.contextMenu.show(items, position));
         if (clicked._tag === "Failure" || clicked.value === null) return;
@@ -240,6 +243,9 @@ export function useThreadActionMenu(input: {
             return;
           case "rename":
             onStartRename();
+            return;
+          case "edit-objective":
+            onStartObjectiveEdit?.();
             return;
           case "regenerate-title":
             if (isRegeneratingTitle) return;
@@ -342,6 +348,7 @@ export function useThreadActionMenu(input: {
       handleNewThread,
       logicalProjectKeyByPhysicalKey,
       markThreadUnread,
+      onStartObjectiveEdit,
       onStartRename,
       pinThread,
       projectCwd,

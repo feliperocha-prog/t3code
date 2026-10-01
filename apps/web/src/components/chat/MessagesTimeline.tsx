@@ -259,6 +259,7 @@ import {
 } from "../../reviewCommentContext";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 import { ComputerUseAppIcon } from "~/components/Icons";
+import { subscribeTimelineScrollRequests } from "./timelineScrollRequest";
 
 // ---------------------------------------------------------------------------
 // Context — shared state consumed by every row component via Context.
@@ -812,6 +813,19 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   ]);
   const rows = useStableRows(rawRows, listIdentityKey);
   const minimapItems = useMemo(() => deriveTimelineMinimapItems(rows), [rows]);
+  // The status card under the header points at the reply it came from.
+  useEffect(
+    () =>
+      subscribeTimelineScrollRequests((messageId) => {
+        const index = rows.findIndex(
+          (row) => row.kind === "message" && row.message.id === messageId,
+        );
+        if (index < 0) return;
+        onManualNavigation();
+        void listRef.current?.scrollToIndex({ index, animated: true, viewOffset: 24 });
+      }),
+    [listRef, onManualNavigation, rows],
+  );
   const restoreRowIndex =
     restoringThreadPosition && rememberedPosition?.atEnd === false
       ? rows.findIndex((row) => row.id === rememberedPosition.rowId)
