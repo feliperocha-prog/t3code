@@ -273,6 +273,10 @@ export function applyThreadDetailEvent(
           ...(event.payload.titleRegeneration !== undefined
             ? { titleRegeneration: event.payload.titleRegeneration }
             : {}),
+          ...(event.payload.objective !== undefined ? { objective: event.payload.objective } : {}),
+          ...(event.payload.objectiveState !== undefined
+            ? { objectiveState: event.payload.objectiveState }
+            : {}),
           ...(event.payload.modelSelection !== undefined
             ? { modelSelection: event.payload.modelSelection }
             : {}),

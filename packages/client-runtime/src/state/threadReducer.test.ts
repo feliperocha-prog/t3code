@@ -358,6 +358,69 @@ describe("applyThreadDetailEvent", () => {
       },
     );
 
+    it("applies a generated objective and clears it with null", () => {
+      const generated = applyThreadDetailEvent(baseThread, {
+        ...baseEventFields,
+        sequence: 5,
+        occurredAt: "2026-04-01T05:00:00.000Z",
+        aggregateKind: "thread",
+        aggregateId: ThreadId.make("thread-1"),
+        type: "thread.meta-updated",
+        payload: {
+          threadId: ThreadId.make("thread-1"),
+          objective: "Ship the usage page fix",
+          objectiveState: { source: "generated" },
+          updatedAt: "2026-04-01T05:00:00.000Z",
+        },
+      });
+      expect(generated.kind).toBe("updated");
+      if (generated.kind !== "updated") return;
+      expect(generated.thread.objective).toBe("Ship the usage page fix");
+      expect(generated.thread.objectiveState?.source).toBe("generated");
+
+      const cleared = applyThreadDetailEvent(generated.thread, {
+        ...baseEventFields,
+        sequence: 6,
+        occurredAt: "2026-04-01T06:00:00.000Z",
+        aggregateKind: "thread",
+        aggregateId: ThreadId.make("thread-1"),
+        type: "thread.meta-updated",
+        payload: {
+          threadId: ThreadId.make("thread-1"),
+          objective: null,
+          objectiveState: null,
+          updatedAt: "2026-04-01T06:00:00.000Z",
+        },
+      });
+      expect(cleared.kind).toBe("updated");
+      if (cleared.kind !== "updated") return;
+      expect(cleared.thread.objective).toBeNull();
+      expect(cleared.thread.objectiveState).toBeNull();
+    });
+
+    it("keeps the objective when the payload omits it", () => {
+      const result = applyThreadDetailEvent(
+        { ...baseThread, objective: "Keep me", objectiveState: { source: "manual" } },
+        {
+          ...baseEventFields,
+          sequence: 5,
+          occurredAt: "2026-04-01T05:00:00.000Z",
+          aggregateKind: "thread",
+          aggregateId: ThreadId.make("thread-1"),
+          type: "thread.meta-updated",
+          payload: {
+            threadId: ThreadId.make("thread-1"),
+            title: "Renamed",
+            updatedAt: "2026-04-01T05:00:00.000Z",
+          },
+        },
+      );
+      expect(result.kind).toBe("updated");
+      if (result.kind !== "updated") return;
+      expect(result.thread.objective).toBe("Keep me");
+      expect(result.thread.objectiveState?.source).toBe("manual");
+    });
+
     it("patches title and branch", () => {
       const result = applyThreadDetailEvent(
         { ...baseThread, activeOrderKey: "m" },

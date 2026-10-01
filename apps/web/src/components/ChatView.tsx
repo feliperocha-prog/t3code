@@ -2015,11 +2015,7 @@ export default function ChatView(props: ChatViewProps) {
     [activeThreadKey],
   );
   const startObjectiveEdit = useCallback(() => setEditingObjective(true), [setEditingObjective]);
-  // The detail copy lags the shell on generated objectives, so the "proposed
-  // by the AI" note shows only while both agree on the text.
-  const objectiveGenerated =
-    activeServerThread?.objectiveState?.source === "generated" &&
-    (activeServerThread.objective ?? null) === (activeThreadShell?.objective ?? null);
+  const objectiveGenerated = activeServerThread?.objectiveState?.source === "generated";
   const [timelineAnchor, setTimelineAnchor] = useState<{
     readonly threadKey: string | null;
     readonly messageId: MessageId | null;
