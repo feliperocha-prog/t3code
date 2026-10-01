@@ -126,6 +126,7 @@ Entram no `CLAUDE.md` global antes de qualquer instalação:
 
 ## Progresso
 
-- [ ] Base sincronizada com a 0.0.44 e congelada
-- [ ] Regras sem app no CLAUDE.md
-- [ ] Onda 1 · [ ] Onda 2 · [ ] Onda 3 · [ ] Onda 4 · [ ] Onda 5 · [ ] Onda 6
+- [x] Base sincronizada com a 0.0.44 e congelada (30/09, `5b73e70700`, instalada no PC)
+- [x] Regras sem app no CLAUDE.md
+- [~] Onda 1 — construída e revisada em 01/10 (branch `t3top/onda-1`): parser STATUS, objetivo, cartão de estado, filtros da caixa de entrada, página inicial do projeto, notificação ligada por padrão com STATUS, respiro do rótulo Terminal. Revisão achou 7 pontos, todos corrigidos (precedência do STATUS misto, "Status:" em qualquer caixa, thread sem bloco vai pra "Acabou", contador de Esperando inclui adormecidas, teto do objetivo gerado, limpar objetivo trava regeneração, caminho da nota preso ao vault). Instalador do CI gerado; **falta o teste do Felipe** e a junção em `pt-br`.
+- [ ] Onda 2 · [ ] Onda 3 · [ ] Onda 4 · [ ] Onda 5 · [ ] Onda 6
