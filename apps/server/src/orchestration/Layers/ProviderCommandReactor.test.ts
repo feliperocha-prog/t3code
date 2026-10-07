@@ -2845,6 +2845,81 @@ describe("ProviderCommandReactor", () => {
     expect(harness.generateThreadTitle.mock.calls.length).toBe(2);
   });
 
+  it("keeps an objective that landed while a fill was generating", async () => {
+    const seededTitle = "Fix reconnect spinner on resume";
+    const harness = await createHarness({ initialTitle: seededTitle });
+    const fillGeneration = await harness.runEffect(
+      Deferred.make<{ readonly title: string; readonly objective?: string }, never>(),
+    );
+    harness.generateThreadTitle.mockReturnValueOnce(
+      Effect.succeed({ title: "Reconnect spinner resume bug" }),
+    );
+    harness.generateThreadTitle.mockReturnValueOnce(Deferred.await(fillGeneration));
+    const fillLanded = await harness.runEffect(
+      harness.engine.streamDomainEvents.pipe(
+        Stream.filter(
+          (event) =>
+            event.type === "thread.meta-updated" &&
+            (event.commandId?.startsWith("server:thread-objective-refresh:") ?? false),
+        ),
+        Stream.take(1),
+        Stream.toPull,
+        Scope.provide(scope!),
+      ),
+    );
+
+    await harness.runEffect(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.make("cmd-turn-start-fill-race"),
+        threadId: ThreadId.make("thread-1"),
+        message: {
+          messageId: asMessageId("user-message-fill-race"),
+          role: "user",
+          text: "Fix reconnect spinner on resume",
+          attachments: [],
+        },
+        titleSeed: seededTitle,
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
+    );
+    await waitFor(() => harness.generateThreadTitle.mock.calls.length === 1);
+    await harness.drain();
+
+    await harness.runEffect(
+      harness.engine.dispatch({
+        type: "thread.meta.update",
+        commandId: CommandId.make("cmd-fill-race"),
+        threadId: ThreadId.make("thread-1"),
+        fillObjective: true,
+      }),
+    );
+    await waitFor(() => harness.generateThreadTitle.mock.calls.length === 2);
+    // Another generation writes the objective while the fill is still waiting on its own.
+    await harness.runEffect(
+      harness.engine.dispatch({
+        type: "thread.objective.generate.complete",
+        commandId: CommandId.make("cmd-objective-landed-meanwhile"),
+        threadId: ThreadId.make("thread-1"),
+        objective: "Objetivo que chegou antes",
+      }),
+    );
+    await harness.runEffect(
+      Deferred.succeed(fillGeneration, {
+        title: "Ignored",
+        objective: "Objetivo do preenchimento",
+      }),
+    );
+    await harness.runEffect(fillLanded);
+    await harness.drain();
+
+    const readModel = await harness.readModel();
+    const thread = readModel.threads.find((entry) => entry.id === ThreadId.make("thread-1"));
+    expect(thread?.objective).toBe("Objetivo que chegou antes");
+  });
+
   it("generates a worktree branch name for the first turn", async () => {
     const harness = await createHarness();
     const now = "2026-01-01T00:00:00.000Z";
