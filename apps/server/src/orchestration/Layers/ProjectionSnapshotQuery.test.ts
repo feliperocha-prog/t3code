@@ -629,6 +629,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           },
           latestUserMessageAt: "2026-02-24T00:00:04.000Z",
           objective: null,
+          objectiveState: null,
           statusCard: null,
           hasPendingApprovals: true,
           hasPendingUserInput: false,

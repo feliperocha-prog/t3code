@@ -1,5 +1,5 @@
 import { assert, it } from "@effect/vitest";
-import { ThreadStatusCard } from "@t3tools/contracts";
+import { MessageId, ThreadStatusCard } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
@@ -9,6 +9,7 @@ import { runMigrations } from "../Migrations.ts";
 import backfillStatusCards from "./056_BackfillProjectionThreadStatusCards.ts";
 
 const decodeCard = Schema.decodeUnknownSync(Schema.fromJsonString(ThreadStatusCard));
+const encodeCard = Schema.encodeSync(Schema.fromJsonString(ThreadStatusCard));
 
 const reply = (status: string) => `Feito.\n\nSTATUS: ${status}\nVOCÊ: testar\nEU: nada`;
 
@@ -105,12 +106,12 @@ it.layer(NodeSqliteClient.layer({ filename: ":memory:" }))(
         });
 
         // A card the projector already wrote stays as it is.
-        const existingCard = JSON.stringify({
+        const existingCard = encodeCard({
           kind: "pronto",
           status: "pronto",
           voce: "nada",
           eu: "nada",
-          messageId: "c-1",
+          messageId: MessageId.make("c-1"),
         });
         yield* insertThread("thread-carded", existingCard);
         yield* insertMessage({

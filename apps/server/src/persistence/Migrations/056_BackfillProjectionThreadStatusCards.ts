@@ -1,6 +1,21 @@
 import { parseStatusCard } from "@t3tools/shared/statusCard";
 import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
+
+// The card as the projector stores it, frozen here so later schema changes leave
+// this migration alone.
+const encodeStatusCard = Schema.encodeSync(
+  Schema.fromJsonString(
+    Schema.Struct({
+      kind: Schema.String,
+      status: Schema.String,
+      voce: Schema.String,
+      eu: Schema.String,
+      messageId: Schema.String,
+    }),
+  ),
+);
 
 // 055 left every existing thread without a status card until its next reply.
 // Fill it the way the projector does: from the latest completed assistant
@@ -41,7 +56,7 @@ export default Effect.gen(function* () {
     if (card === null) continue;
     yield* sql`
       UPDATE projection_threads
-      SET status_card_json = ${JSON.stringify({ ...card, messageId: reply.messageId })}
+      SET status_card_json = ${encodeStatusCard({ ...card, messageId: reply.messageId })}
       WHERE thread_id = ${reply.threadId}
         AND status_card_json IS NULL
     `;
