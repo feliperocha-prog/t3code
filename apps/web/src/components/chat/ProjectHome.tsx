@@ -15,6 +15,7 @@ import ChatMarkdown from "../ChatMarkdown";
 import { useProjectFileQuery } from "../files/projectFilesQueryState";
 import { Button } from "../ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { compactRelativeTimeLabel, findRunSections, readHubDigest } from "./projectHome.logic";
 import {
   resolveStatusCardView,
@@ -63,6 +64,17 @@ function headlineLabel(headline: StatusCardHeadline): string {
 
 function Muted({ children }: { children: ReactNode }) {
   return <p className="text-muted-foreground text-sm leading-relaxed">{children}</p>;
+}
+
+/** Text that shows the underlying error on hover, when there is one. */
+function ErrorHint({ error, children }: { error: string | null; children: ReactNode }) {
+  if (!error) return <span>{children}</span>;
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span />}>{children}</TooltipTrigger>
+      <TooltipPopup>{error}</TooltipPopup>
+    </Tooltip>
+  );
 }
 
 function BlockLabel({ children }: { children: ReactNode }) {
@@ -137,6 +149,16 @@ function ProjectSummaryCard({
   const brief = useProjectBrief(environmentId, noteContents, refreshNonce);
   const digest = useMemo(() => readHubDigest(noteContents ?? ""), [noteContents]);
   const redo = () => setRefreshNonce((nonce) => nonce + 1);
+  const summaryUnavailable = (
+    <>
+      <ErrorHint error={brief.error}>
+        {tc("project home", "Automatic summary unavailable")}
+      </ErrorHint>
+      <Button size="xs" variant="outline" onClick={redo}>
+        {t("Try again")}
+      </Button>
+    </>
+  );
 
   let status: ReactNode = null;
   let body: ReactNode;
@@ -159,13 +181,13 @@ function ProjectSummaryCard({
         {!hasSettled(note) ? (
           tc("project home", "Reading the hub…")
         ) : (
-          <span title={note.error ?? undefined}>
+          <ErrorHint error={note.error ?? null}>
             {tc(
               "project home",
               "Couldn't read the hub at {path}. If it doesn't exist yet, create it there.",
               { path: `${vaultFolder}/${notePath}` },
             )}
-          </span>
+          </ErrorHint>
         )}
       </Muted>
     );
@@ -174,12 +196,7 @@ function ProjectSummaryCard({
     status = brief.isPending ? (
       <span>{tc("project home", "Summarizing…")}</span>
     ) : brief.error !== null ? (
-      <>
-        <span title={brief.error}>{tc("project home", "Automatic summary unavailable")}</span>
-        <Button size="xs" variant="outline" title={brief.error} onClick={redo}>
-          {t("Try again")}
-        </Button>
-      </>
+      summaryUnavailable
     ) : (
       <>
         <span>
@@ -201,16 +218,7 @@ function ProjectSummaryCard({
     body = <HubBlocks where={brief.data.where} next={brief.data.next} risks={brief.data.risks} />;
   } else {
     status =
-      brief.error !== null ? (
-        <>
-          <span title={brief.error}>{tc("project home", "Automatic summary unavailable")}</span>
-          <Button size="xs" variant="outline" title={brief.error} onClick={redo}>
-            {t("Try again")}
-          </Button>
-        </>
-      ) : (
-        <span>{tc("project home", "Summarizing…")}</span>
-      );
+      brief.error !== null ? summaryUnavailable : <span>{tc("project home", "Summarizing…")}</span>;
     const digestEmpty =
       digest.where.length === 0 && digest.next.length === 0 && digest.risks.length === 0;
     body = !digestEmpty ? (
