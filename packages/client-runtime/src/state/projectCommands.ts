@@ -72,6 +72,13 @@ export function createProjectEnvironmentAtoms<R, E>(
       staleTimeMs: 30_000,
       idleTtlMs: 5 * 60_000,
     }),
+    // The server caches briefs by note content; a new `refreshNonce` in the input regenerates.
+    generateBrief: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:projects:generate-brief",
+      tag: WS_METHODS.projectsGenerateBrief,
+      staleTimeMs: Infinity,
+      idleTtlMs: 30 * 60_000,
+    }),
     optimisticFile: (target: OptimisticProjectFileTarget) =>
       optimisticFileFamily(optimisticProjectFileKey(target)),
     create: createEnvironmentCommand(runtime, {

@@ -277,6 +277,16 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
   },
   {
+    id: "chat-text-size",
+    title: t("Conversation text size"),
+    to: "/settings/appearance",
+    searchTerms: [
+      "zoom scale font size messages conversation text bigger smaller ctrl wheel",
+      "Conversation text size",
+      "tamanho texto conversa mensagens zoom aumentar diminuir fonte ctrl roda",
+    ],
+  },
+  {
     id: "panel-animations",
     title: t("Panel animations"),
     to: "/settings/appearance",

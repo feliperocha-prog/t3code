@@ -938,6 +938,9 @@ export const OrchestrationThreadShell = Schema.Struct({
   latestUserMessageAt: Schema.NullOr(IsoDateTime),
   // See OrchestrationThread.objective. Optional so old servers/clients interop.
   objective: Schema.optional(Schema.NullOr(Schema.String)),
+  // The detail subscription carries only message/turn events, so the shell
+  // is where clients learn who wrote the objective.
+  objectiveState: Schema.optional(Schema.NullOr(ThreadObjectiveState)),
   /**
    * Status block of the latest completed assistant message; null when that
    * message had none. Optional so old servers/clients interop.
@@ -1272,6 +1275,13 @@ const ThreadMetaUpdateCommand = Schema.Struct({
   regenerateTitle: Schema.optional(Schema.Literal(true)),
   // An empty string clears the objective.
   objective: Schema.optional(Schema.String),
+  /** Drops a manual objective and lets the server generate one from the conversation. */
+  resetObjective: Schema.optional(Schema.Literal(true)),
+  /**
+   * Asks the server to generate an objective only if the thread has none, leaving an existing
+   * or manual one alone. Sent on its own: it is not activity, so the thread keeps its place.
+   */
+  fillObjective: Schema.optional(Schema.Literal(true)),
   modelSelection: Schema.optional(ModelSelection),
   branch: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   expectedBranch: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
@@ -1282,6 +1292,12 @@ const ThreadMetaUpdateCommand = Schema.Struct({
     (input) =>
       !(input.title !== undefined && input.regenerateTitle === true) ||
       "title and regenerateTitle cannot be specified together",
+  ),
+  Schema.makeFilter(
+    ({ type: _type, commandId: _commandId, threadId: _threadId, fillObjective, ...rest }) =>
+      fillObjective !== true ||
+      Object.values(rest).every((value) => value === undefined) ||
+      "fillObjective cannot be combined with other metadata",
   ),
 );
 
@@ -1646,6 +1662,16 @@ const ThreadTitleGenerateCompleteCommand = Schema.Struct({
   objective: Schema.optional(TrimmedNonEmptyString),
 });
 
+/** Server-generated objective refresh; never touches the title. */
+const ThreadObjectiveGenerateCompleteCommand = Schema.Struct({
+  type: Schema.Literal("thread.objective.generate.complete"),
+  commandId: CommandId,
+  threadId: ThreadId,
+  objective: TrimmedNonEmptyString,
+  /** Fills an empty slot only: another generation that landed meanwhile is kept. */
+  onlyIfEmpty: Schema.optional(Schema.Literal(true)),
+});
+
 const ThreadTitleRefineCommand = Schema.Struct({
   type: Schema.Literal("thread.title.refine"),
   commandId: CommandId,
@@ -1704,6 +1730,7 @@ const InternalOrchestrationCommand = Schema.Union([
   ThreadRevertCompleteCommand,
   ThreadTitleRegenerationCompleteCommand,
   ThreadTitleGenerateCompleteCommand,
+  ThreadObjectiveGenerateCompleteCommand,
   ThreadTitleRefineCommand,
   ThreadPullRequestSyncCommand,
   ThreadPullRequestLinkSyncCommand,
@@ -1894,6 +1921,8 @@ export const ThreadMetaUpdatedPayload = Schema.Struct({
   /** Null clears the objective. */
   objective: Schema.optional(Schema.NullOr(Schema.String)),
   objectiveState: Schema.optional(Schema.NullOr(ThreadObjectiveState)),
+  /** Intent marker consumed by the objective reactor after a reset to automatic. */
+  regenerateObjective: Schema.optional(Schema.Literal(true)),
   modelSelection: Schema.optional(ModelSelection),
   branch: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   worktreePath: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),

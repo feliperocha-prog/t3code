@@ -65,6 +65,8 @@ export interface ThreadTitleGenerationInput {
   message: string;
   /** Present when replacing an existing title from the current thread history. */
   previousTitle?: string | undefined;
+  /** Present when re-evaluating the objective; the model keeps it unless the goal changed. */
+  previousObjective?: string | undefined;
   attachments?: ReadonlyArray<ChatAttachment> | undefined;
   /** What model and provider to use for generation. */
   modelSelection: ModelSelection;
@@ -75,6 +77,20 @@ export interface ThreadTitleGenerationResult {
   needsRefinement?: boolean | undefined;
   /** Raw one-line goal from the model; the caller trims and bounds it. */
   objective?: string | undefined;
+}
+
+export interface ProjectBriefGenerationInput {
+  cwd: string;
+  /** Raw contents of the project's state note. */
+  noteContents: string;
+  /** What model and provider to use for generation. */
+  modelSelection: ModelSelection;
+}
+
+export interface ProjectBriefGenerationResult {
+  where: string;
+  next: ReadonlyArray<string>;
+  risks: ReadonlyArray<string>;
 }
 
 /**
@@ -108,6 +124,11 @@ export class TextGeneration extends Context.Service<
     readonly generateThreadTitle: (
       input: ThreadTitleGenerationInput,
     ) => Effect.Effect<ThreadTitleGenerationResult, TextGenerationError>;
+
+    /** Summarize a project's state note into a short plain-language brief. */
+    readonly generateProjectBrief: (
+      input: ProjectBriefGenerationInput,
+    ) => Effect.Effect<ProjectBriefGenerationResult, TextGenerationError>;
   }
 >()("t3/textGeneration/TextGeneration") {}
 
@@ -115,7 +136,8 @@ type TextGenerationOp =
   | "generateCommitMessage"
   | "generatePrContent"
   | "generateBranchName"
-  | "generateThreadTitle";
+  | "generateThreadTitle"
+  | "generateProjectBrief";
 
 const resolveInstance = (
   registry: ProviderInstanceRegistry.ProviderInstanceRegistry["Service"],
@@ -167,6 +189,10 @@ export const make = Effect.gen(function* () {
             return yield* textGeneration.generateThreadTitle({ ...input, linkedContext });
           }),
         ),
+      ),
+    generateProjectBrief: (input) =>
+      resolveInstance(registry, "generateProjectBrief", input.modelSelection.instanceId).pipe(
+        Effect.flatMap((textGeneration) => textGeneration.generateProjectBrief(input)),
       ),
   });
 });

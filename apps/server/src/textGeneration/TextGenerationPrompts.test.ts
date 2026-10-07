@@ -4,6 +4,7 @@ import {
   buildBranchNamePrompt,
   buildCommitMessagePrompt,
   buildPrContentPrompt,
+  buildProjectBriefPrompt,
   buildThreadTitlePrompt,
 } from "./TextGenerationPrompts.ts";
 import {
@@ -228,6 +229,54 @@ describe("buildThreadTitlePrompt", () => {
       `Thread contents:\n[Earlier content truncated]\n\n${retainedContext}`,
     );
     expect(result.prompt.match(/\[Earlier content truncated\]/g)).toHaveLength(1);
+  });
+
+  it("asks to keep the current objective unless the goal changed", () => {
+    const result = buildThreadTitlePrompt({
+      message: "USER:\nNow also fix the footer",
+      previousTitle: "Fix checkout",
+      previousObjective: "Make checkout work on mobile",
+    });
+
+    expect(result.prompt).toContain('The current objective is "Make checkout work on mobile".');
+    expect(result.prompt).toContain("Return it unchanged, character for character");
+  });
+
+  it("omits the objective instruction when the current objective is blank", () => {
+    const result = buildThreadTitlePrompt({
+      message: "USER:\nNow also fix the footer",
+      previousTitle: "Fix checkout",
+      previousObjective: "   ",
+    });
+
+    expect(result.prompt).not.toContain("The current objective is");
+  });
+});
+
+describe("buildProjectBriefPrompt", () => {
+  it("appends the state note to the brief instructions", () => {
+    const result = buildProjectBriefPrompt({ noteContents: "## Estado\nLanding B2B no ar" });
+
+    expect(result.prompt).toContain("State note:\n## Estado\nLanding B2B no ar");
+  });
+
+  it("cuts the note at 24,000 characters", () => {
+    const result = buildProjectBriefPrompt({ noteContents: `${"a".repeat(24_000)}TAIL` });
+
+    expect(result.prompt).toContain("a".repeat(24_000));
+    expect(result.prompt).not.toContain("TAIL");
+  });
+
+  it("requires every brief field in the strict response schema", () => {
+    const { outputSchema } = buildProjectBriefPrompt({ noteContents: "x" });
+    expect(toJsonSchemaObject(outputSchema)).toMatchObject({
+      required: ["where", "next", "risks"],
+      properties: {
+        where: { type: "string" },
+        next: { type: "array" },
+        risks: { type: "array" },
+      },
+    });
   });
 });
 

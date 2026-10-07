@@ -30,6 +30,9 @@ describe("typography settings restore", () => {
         fontFamilyCode: "Fira Code",
       }),
     ).toEqual(["Interface font", "Code font"]);
+    expect(
+      getChangedTypographySettingLabels({ ...DEFAULT_UNIFIED_SETTINGS, chatTextScale: 1.2 }),
+    ).toEqual(["Conversation text size"]);
   });
 });
 

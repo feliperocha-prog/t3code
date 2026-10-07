@@ -44,7 +44,9 @@ function render(props: Partial<ComponentProps<typeof ThreadBrief>> = {}) {
       environmentId={EnvironmentId.make("env-1")}
       threadId={ThreadId.make("thread-1")}
       shell={shell()}
+      hasUserMessage={false}
       objectiveGenerated={false}
+      objectiveManual={false}
       editingObjective={false}
       onEditingObjectiveChange={() => undefined}
       {...props}
@@ -53,18 +55,17 @@ function render(props: Partial<ComponentProps<typeof ThreadBrief>> = {}) {
 }
 
 describe("ThreadBrief", () => {
-  it("invites the user to set an objective and shows an empty status", () => {
+  it("invites the user to write an objective and hides the status line when there is none", () => {
     const html = render();
 
-    expect(html).toContain(tc("thread objective", "Set this conversation's objective"));
+    expect(html).toContain(tc("thread objective", "No objective yet — click to write one"));
     expect(html).toContain(tc("thread objective", "Edit objective"));
-    expect(html).not.toContain(tc("thread objective", "· proposed by the AI, click to edit"));
-    expect(html).toContain('data-status-card="compact"');
-    expect(html).toContain(tc("status card", "No status"));
-    expect(html).not.toContain(tc("status card", "↑ from the last reply · click to go to it"));
+    expect(html).not.toContain(tc("thread objective", "automatic"));
+    expect(html).not.toContain("data-status-card");
+    expect(html).not.toContain(tc("status card", "No status"));
   });
 
-  it("marks an AI objective and links the card to its reply", () => {
+  it("marks an AI objective and makes the status strip go to its reply", () => {
     const html = render({
       objectiveGenerated: true,
       shell: shell({
@@ -80,11 +81,19 @@ describe("ThreadBrief", () => {
     });
 
     expect(html).toContain("Subir a LP nova");
-    expect(html).toContain(tc("thread objective", "· proposed by the AI, click to edit"));
+    expect(html).toContain(tc("thread objective", "automatic"));
+    expect(html).not.toContain(tc("thread objective", "written by you"));
+    expect(html).toContain('data-status-card="strip"');
     expect(html).toContain('data-status-tone="waiting"');
     expect(html).toContain("aprovar o deploy");
-    expect(html).toContain(tc("status card", "↑ from the last reply · click to go to it"));
-    expect(html).toContain("<button");
+    expect(html).toMatch(/<button[^>]*data-status-card="strip"/);
+  });
+
+  it("labels an objective the user wrote", () => {
+    const html = render({ objectiveManual: true, shell: shell({ objective: "Subir a LP" }) });
+
+    expect(html).toContain(tc("thread objective", "written by you"));
+    expect(html).not.toContain(tc("thread objective", "automatic"));
   });
 
   it("edits the objective in a capped input", () => {
@@ -93,5 +102,17 @@ describe("ThreadBrief", () => {
     expect(html).toContain('maxLength="200"');
     expect(html).toContain('value="Subir a LP"');
     expect(html).toContain(`aria-label="${tc("thread objective", "Conversation objective")}"`);
+    expect(html).not.toContain(tc("thread objective", "Back to automatic"));
+  });
+
+  it("offers going back to automatic only while editing a manual objective", () => {
+    const html = render({
+      editingObjective: true,
+      objectiveManual: true,
+      shell: shell({ objective: "Subir a LP" }),
+    });
+
+    expect(html).toContain(tc("thread objective", "Back to automatic"));
+    expect(html).toContain("data-objective-reset");
   });
 });

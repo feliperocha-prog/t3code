@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  HUB_SECTION_SYNONYMS,
   clipSectionBody,
+  compactRelativeTimeLabel,
   defaultStateNotePath,
-  findH2Section,
+  findHubSection,
   findRunSections,
   normalizeHeading,
   projectFolderName,
+  readHubDigest,
   resolveStateNotePath,
+  toPlainItems,
+  toPlainText,
 } from "./projectHome.logic";
 
 describe("projectFolderName", () => {
@@ -45,45 +50,174 @@ describe("normalizeHeading", () => {
     expect(normalizeHeading("  PRÓXIMO   Passo ")).toBe("proximo passo");
     expect(normalizeHeading("Estado (30/09)")).toBe("estado");
   });
+
+  it("drops every parenthetical group, trailing punctuation and leading symbols", () => {
+    expect(normalizeHeading("Estado — 02/10")).toBe("estado");
+    expect(normalizeHeading("Próximos passos (Onda 2):")).toBe("proximos passos");
+    expect(normalizeHeading("✅ Pendente")).toBe("pendente");
+    expect(normalizeHeading("Estado anterior (25/09)")).toBe("estado anterior");
+  });
 });
 
-describe("findH2Section", () => {
+describe("findHubSection", () => {
   const hub = [
     "# t3code",
     "",
     "## Estado anterior (25/09)",
     "velho",
-    "## Estado (30/09)",
+    "## Estado (02/10)",
     "",
     "Onda 1 em revisão.",
     "",
-    "## Próximo passo",
+    "## Armadilhas que migraram junto",
+    "não é esta",
+    "## Pendente",
     "Abrir o PR.",
+    "## Armadilhas",
+    "- cuidado",
     "# Outro H1",
     "fora",
   ].join("\n");
 
   it("matches the current state heading, not the older one", () => {
-    expect(findH2Section(hub, "Estado")).toBe("Onda 1 em revisão.");
+    expect(findHubSection(hub, HUB_SECTION_SYNONYMS.where)).toBe("Onda 1 em revisão.");
   });
 
-  it("matches without accents and stops at the next H1", () => {
-    expect(findH2Section(hub, "proximo passo")).toBe("Abrir o PR.");
+  it("matches a synonym and not a heading that only starts with one", () => {
+    expect(findHubSection(hub, HUB_SECTION_SYNONYMS.next)).toBe("Abrir o PR.");
+    expect(findHubSection(hub, HUB_SECTION_SYNONYMS.risks)).toBe("- cuidado");
   });
 
   it("returns null for a missing section and for an empty file", () => {
-    expect(findH2Section(hub, "Armadilhas")).toBeNull();
-    expect(findH2Section("", "Estado")).toBeNull();
+    expect(findHubSection("## O que é\nx", HUB_SECTION_SYNONYMS.risks)).toBeNull();
+    expect(findHubSection("", HUB_SECTION_SYNONYMS.where)).toBeNull();
   });
 
   it("ignores headings inside fenced code", () => {
     const note = ["## Armadilhas", "```md", "## Estado", "```", "cuidado"].join("\n");
-    expect(findH2Section(note, "Estado")).toBeNull();
-    expect(findH2Section(note, "Armadilhas")).toBe("```md\n## Estado\n```\ncuidado");
+    expect(findHubSection(note, HUB_SECTION_SYNONYMS.where)).toBeNull();
   });
 
   it("returns null for a section with an empty body", () => {
-    expect(findH2Section("## Armadilhas\n\n## Estado\nok", "Armadilhas")).toBeNull();
+    expect(findHubSection("## Armadilhas\n\n## Estado\nok", HUB_SECTION_SYNONYMS.risks)).toBeNull();
+  });
+});
+
+describe("toPlainText", () => {
+  it("cleans the real t3code hub state paragraph", () => {
+    expect(
+      toPlainText(
+        "`pt-br` em `5b73e70700` = **base fechada** (v0.0.44 + 118 chaves pt-BR, CI `fork-verificar.yml` verde). Plano T3 Top encerrado em 29/09 → v3 em ondas.",
+      ),
+    ).toBe(
+      "pt-br em = base fechada (v0.0.44 + 118 chaves pt-BR, CI verde). Plano T3 Top encerrado em 29/09 → v3 em ondas.",
+    );
+  });
+
+  it("drops loose and inline commit hashes", () => {
+    expect(toPlainText("branch `t3top/onda-1` em `60a3e0f1f9` (worktree `x/y`), 29 commits")).toBe(
+      "branch em (worktree), 29 commits",
+    );
+    expect(toPlainText("commit 60a3e0f1f9 subiu; decade e 2026 ficam")).toBe(
+      "commit subiu; decade e 2026 ficam",
+    );
+  });
+
+  it("keeps the text of wiki links and markdown links", () => {
+    expect(toPlainText("ver [[Projetos/t3code/HUB|hub]] e [[Projetos/t3code/HUB]]")).toBe(
+      "ver hub e HUB",
+    );
+    expect(toPlainText("abrir o [PR #12](https://github.com/x/y/pull/12)")).toBe("abrir o PR #12");
+  });
+
+  it("drops file paths in inline code but keeps plain code words", () => {
+    expect(toPlainText("mexi em `apps/web/src/x.ts` e rodei `vp test`")).toBe(
+      "mexi em e rodei vp test",
+    );
+    expect(toPlainText("função `t()` e `.env.local`")).toBe("função t() e");
+    expect(toPlainText("Base em `v0.0.44`, Node `22.x`, versão `1.2.3`")).toBe(
+      "Base em v0.0.44, Node 22.x, versão 1.2.3",
+    );
+    expect(toPlainText("`v2.x` e `Effect.gen`, ver `README.md` e `fork-verificar.yml`")).toBe(
+      "v2.x e Effect.gen, ver e",
+    );
+  });
+
+  it("removes emphasis without touching snake_case", () => {
+    expect(toPlainText("**Congelado** no _original_, ~~velho~~, *agora* em snake_case_word")).toBe(
+      "Congelado no original, velho, agora em snake_case_word",
+    );
+  });
+
+  it("cuts long items at 180 characters with an ellipsis", () => {
+    const cut = toPlainText("a ".repeat(150));
+    expect(cut.length).toBeLessThanOrEqual(180);
+    expect(cut.endsWith("…")).toBe(true);
+  });
+});
+
+describe("toPlainItems", () => {
+  it("splits list entries and paragraphs, up to the limit", () => {
+    const section = [
+      "- **Congelado** no original",
+      "  continua aqui",
+      "- [ ] tarefa aberta",
+      "",
+      "Parágrafo solto",
+      "na linha seguinte.",
+      "",
+      "1. quarto",
+      "2. quinto",
+    ].join("\n");
+    expect(toPlainItems(section, 4)).toEqual([
+      "Congelado no original continua aqui",
+      "tarefa aberta",
+      "Parágrafo solto na linha seguinte.",
+      "quarto",
+    ]);
+  });
+
+  it("drops code blocks, rules and items left empty, and reads tables as cells", () => {
+    const section = [
+      "```bash",
+      "vp i",
+      "```",
+      "---",
+      "- `abc1234def`",
+      "| Item | Estado |",
+      "|---|---|",
+      "| PR | aberto |",
+      "### Subtítulo",
+    ].join("\n");
+    expect(toPlainItems(section, 5)).toEqual(["Item · Estado", "PR · aberto", "Subtítulo"]);
+  });
+});
+
+describe("readHubDigest", () => {
+  it("reads the three blocks with their limits and leaves a missing one empty", () => {
+    const hub = [
+      "## Estado (02/10)",
+      "Onda 1 instalada em `60a3e0f1f9`.",
+      "## Próximo passo",
+      "- um",
+      "- dois",
+      "- três",
+      "- quatro",
+      "- cinco",
+    ].join("\n");
+    expect(readHubDigest(hub)).toEqual({
+      where: ["Onda 1 instalada em."],
+      next: ["um", "dois", "três", "quatro"],
+      risks: [],
+    });
+  });
+});
+
+describe("compactRelativeTimeLabel", () => {
+  it("matches the sidebar's compact labels", () => {
+    expect(compactRelativeTimeLabel("5m ago", "agora")).toBe("5m");
+    expect(compactRelativeTimeLabel("just now", "agora")).toBe("agora");
+    expect(compactRelativeTimeLabel("", "agora")).toBe("");
   });
 });
 

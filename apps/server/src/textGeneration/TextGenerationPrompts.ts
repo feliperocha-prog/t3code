@@ -213,6 +213,7 @@ export interface ThreadTitlePromptInput {
   linkedContext?: string | undefined;
   message: string;
   previousTitle?: string | undefined;
+  previousObjective?: string | undefined;
   attachments?: ReadonlyArray<ChatAttachment> | undefined;
   policy?: TextGenerationPolicy | undefined;
 }
@@ -247,11 +248,17 @@ Editorial rules:
 - Local git history is not evidence of what a linked PR or issue is about. Never title the thread after branch names, commit messages, or merged commits found in the checkout.
 - If a linked PR or issue cannot be read, fall back to the user's stated action plus its number, such as "Take Over PR 8588". This is the one case where a PR or issue number belongs in the title.`;
 
-function regenerateThreadTitlePrompt(previousTitle: string): string {
+function regenerateThreadTitlePrompt(
+  previousTitle: string,
+  previousObjective: string | undefined,
+): string {
+  const objectiveInstruction = previousObjective?.trim()
+    ? `\nThe current objective is ${JSON.stringify(previousObjective)}. Return it unchanged, character for character, unless the user clearly changed what they want to achieve; only then write the new one.`
+    : "";
   return `Regenerate the title for an existing T3 Code thread so the user can recognize it weeks later.
 The previous title was ${JSON.stringify(previousTitle)}.
 Return JSON with keys title, objective and needsRefinement. Set needsRefinement to false.
-Set objective to one sentence of at most 120 characters stating what the user wants to achieve, in the same language the user writes in (Portuguese when they write in Portuguese), without a trailing period and without naming models or tools.
+Set objective to one sentence of at most 120 characters stating what the user wants to achieve, in the same language the user writes in (Portuguese when they write in Portuguese), without a trailing period and without naming models or tools.${objectiveInstruction}
 
 Determine the title in this order:
 1. Read the USER messages first. Identify the latest explicit durable goal. The original subject remains the subject until the user clearly changes what the thread is about.
@@ -320,7 +327,7 @@ export function buildThreadTitlePrompt(input: ThreadTitlePromptInput) {
     prompt = `${INITIAL_THREAD_TITLE_PROMPT}\n\nUser message:\n${message}${threadTitlePromptSuffix(input)}`;
   } else {
     const message = preserveMessageEnd(input.message);
-    prompt = `${regenerateThreadTitlePrompt(input.previousTitle)}\n\nThread contents:\n${message}${threadTitlePromptSuffix(input)}`;
+    prompt = `${regenerateThreadTitlePrompt(input.previousTitle, input.previousObjective)}\n\nThread contents:\n${message}${threadTitlePromptSuffix(input)}`;
   }
   const outputSchema = Schema.Struct({
     title: Schema.String,
@@ -328,6 +335,36 @@ export function buildThreadTitlePrompt(input: ThreadTitlePromptInput) {
     // every key, and a model that omits it must still yield a title.
     objective: Schema.String.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
     needsRefinement: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  });
+
+  return { prompt, outputSchema };
+}
+
+// ---------------------------------------------------------------------------
+// Project brief
+// ---------------------------------------------------------------------------
+
+export interface ProjectBriefPromptInput {
+  noteContents: string;
+}
+
+const PROJECT_BRIEF_NOTE_MAX_CHARS = 24_000;
+
+const PROJECT_BRIEF_PROMPT = `You summarize a project's state note for its owner, who is not a developer. Read the note below and return JSON with keys where, next and risks, all written in Brazilian Portuguese, in plain everyday language.
+- where: 2 to 3 short sentences saying what the project is and where it stands now. At most 350 characters.
+- next: up to 4 items, one short sentence each (at most 120 characters), the concrete pending steps, most important first. Use an empty array if the note shows nothing pending.
+- risks: up to 3 items (at most 120 characters each): what can go wrong or must not be forgotten. Use an empty array if there is none.
+Rules: no commit hashes, file paths, branch names, variable or function names, URLs, wiki-links or markdown formatting. Translate technical facts into their effect on the work or the business. Keep dates as dd/mm. Never invent anything that is not in the note. When the note contradicts itself, prefer the newest information.`;
+
+export function buildProjectBriefPrompt(input: ProjectBriefPromptInput) {
+  const note = input.noteContents.slice(0, PROJECT_BRIEF_NOTE_MAX_CHARS);
+  const prompt = `${PROJECT_BRIEF_PROMPT}\n\nState note:\n${note}`;
+  const outputSchema = Schema.Struct({
+    // Defaulted rather than optional: strict structured-output modes require
+    // every key, and a model that omits one must still yield a brief.
+    where: Schema.String.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+    next: Schema.Array(Schema.String).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
+    risks: Schema.Array(Schema.String).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
   });
 
   return { prompt, outputSchema };

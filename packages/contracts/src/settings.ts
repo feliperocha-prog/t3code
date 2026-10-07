@@ -138,6 +138,20 @@ export const PromptFontSize = Schema.Int.check(
 export type PromptFontSize = typeof PromptFontSize.Type;
 export const DEFAULT_PROMPT_FONT_SIZE: PromptFontSize = 14;
 
+/**
+ * Zoom of the conversation text only (messages and tool rows), applied with
+ * CSS zoom inside each timeline row. Ctrl + mouse wheel over the conversation
+ * steps it by CHAT_TEXT_SCALE_STEP.
+ */
+export const MIN_CHAT_TEXT_SCALE = 0.8;
+export const MAX_CHAT_TEXT_SCALE = 1.8;
+export const CHAT_TEXT_SCALE_STEP = 0.1;
+export const ChatTextScale = Schema.Number.check(
+  Schema.isBetween({ minimum: MIN_CHAT_TEXT_SCALE, maximum: MAX_CHAT_TEXT_SCALE }),
+);
+export type ChatTextScale = typeof ChatTextScale.Type;
+export const DEFAULT_CHAT_TEXT_SCALE: ChatTextScale = 1;
+
 export const MIN_CODE_FONT_SIZE = 10;
 export const MAX_CODE_FONT_SIZE = 18;
 export const CodeFontSize = Schema.Int.check(
@@ -385,6 +399,9 @@ export const ClientSettingsSchema = Schema.Struct({
   ),
   fontSizePrompt: PromptFontSize.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_PROMPT_FONT_SIZE)),
+  ),
+  chatTextScale: ChatTextScale.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_CHAT_TEXT_SCALE)),
   ),
   fontSizeCode: CodeFontSize.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_CODE_FONT_SIZE)),
@@ -1632,6 +1649,7 @@ export const ClientSettingsPatch = Schema.Struct({
   onboardingCompletedAt: Schema.optionalKey(Schema.NullOr(Schema.String)),
   fontSizeInterface: Schema.optionalKey(InterfaceFontSize),
   fontSizePrompt: Schema.optionalKey(PromptFontSize),
+  chatTextScale: Schema.optionalKey(ChatTextScale),
   fontSizeCode: Schema.optionalKey(CodeFontSize),
   fontSizeTerminal: Schema.optionalKey(TerminalFontSize),
   fontFamilyCode: Schema.optionalKey(FontFamilyPreference),

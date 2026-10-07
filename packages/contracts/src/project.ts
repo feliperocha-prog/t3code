@@ -1,5 +1,6 @@
 import * as Schema from "effect/Schema";
 import {
+  IsoDateTime,
   NonNegativeInt,
   PositiveInt,
   TrimmedNonEmptyString,
@@ -303,5 +304,33 @@ export class ProjectWriteFileError extends Schema.TaggedError<ProjectWriteFileEr
         decodedProjectErrorMessage(props) ??
         `Failed to write workspace file '${props.relativePath}' in '${props.cwd}'.`,
     } as any);
+  }
+}
+
+export const PROJECT_BRIEF_NOTE_MAX_LENGTH = 64_000;
+
+export const ProjectBriefInput = Schema.Struct({
+  noteContents: Schema.String.check(Schema.isMaxLength(PROJECT_BRIEF_NOTE_MAX_LENGTH)),
+  // Any new value bypasses the cached brief for the same note and regenerates it.
+  refreshNonce: Schema.optional(Schema.Number),
+});
+export type ProjectBriefInput = typeof ProjectBriefInput.Type;
+
+export const ProjectBrief = Schema.Struct({
+  where: Schema.String,
+  next: Schema.Array(Schema.String),
+  risks: Schema.Array(Schema.String),
+  generatedAt: IsoDateTime,
+});
+export type ProjectBrief = typeof ProjectBrief.Type;
+
+export class ProjectBriefError extends Schema.TaggedError<ProjectBriefError>()(
+  "ProjectBriefError",
+  {
+    detail: Schema.String,
+  },
+) {
+  override get message(): string {
+    return this.detail;
   }
 }

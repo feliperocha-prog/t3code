@@ -162,6 +162,7 @@ import * as ResourceAttribution from "./resourceTelemetry/ResourceAttribution.ts
 import * as ResourceMonitorBinary from "./resourceTelemetry/ResourceMonitorBinary.ts";
 import * as ResourceTelemetry from "./resourceTelemetry/ResourceTelemetry.ts";
 import * as UsageLimitSources from "./usage/UsageLimitSources.ts";
+import * as ProjectBrief from "./projectBrief/ProjectBrief.ts";
 import * as UsageService from "./usage/UsageService.ts";
 import { OrchestrationLayerLive } from "./orchestration/runtimeLayer.ts";
 import {
@@ -508,7 +509,15 @@ const ProviderInstallationRefreshLive = Layer.effectDiscard(
   }),
 );
 
+// Its own TextGeneration instance: text generation is stateless routing over the provider
+// instance registry, so this does not depend on the Git layers exposing theirs.
+const ProjectBriefLayerLive = ProjectBrief.layer.pipe(
+  Layer.provide(TextGeneration.layer.pipe(Layer.provide(SourceControlProviderRegistryLayerLive))),
+  Layer.provide(ServerSettingsLayerLive),
+);
+
 const RuntimeCoreDependenciesLive = ReactorLayerLive.pipe(
+  Layer.provideMerge(ProjectBriefLayerLive),
   Layer.provideMerge(ProviderInstallationRefreshLive),
   Layer.provideMerge(ReplayMarkers.layer),
   Layer.provideMerge(ProviderAuthServiceLive),

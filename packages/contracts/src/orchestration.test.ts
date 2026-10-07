@@ -1124,6 +1124,18 @@ it.effect("accepts a title regeneration intent in thread.meta.update", () =>
   }),
 );
 
+it.effect("accepts fillObjective in thread.meta.update only on its own", () =>
+  Effect.gen(function* () {
+    const command = { type: "thread.meta.update", commandId: "cmd-fill", threadId: "thread-1" };
+    const alone = yield* decodeOrchestrationCommand({ ...command, fillObjective: true });
+    assert.strictEqual(alone.type === "thread.meta.update" && alone.fillObjective, true);
+    const combined = yield* Effect.exit(
+      decodeOrchestrationCommand({ ...command, fillObjective: true, objective: "Subir a LP" }),
+    );
+    assert.strictEqual(combined._tag, "Failure");
+  }),
+);
+
 it.effect("accepts thread.pull-request.link and .unlink commands", () =>
   Effect.gen(function* () {
     const link = yield* decodeOrchestrationCommand({

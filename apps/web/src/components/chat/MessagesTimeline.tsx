@@ -242,6 +242,7 @@ import { ContextChip, ContextChipLabel, type ContextChipKind } from "../ContextC
 import { createContextPresentationRegistry } from "../contextPresentationRegistry";
 import { useOpenPrLink } from "~/lib/openPullRequestLink";
 import { useClientSettings } from "~/hooks/useSettings";
+import { ChatTextScaleIndicator, useChatTextZoomWheel } from "./ChatTextZoom";
 import type { ChatMarkdownContextReference } from "../ChatMarkdown";
 import { useMediaQuery } from "~/hooks/useMediaQuery";
 import { cn } from "~/lib/utils";
@@ -953,6 +954,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   const [timelineViewportElement, setTimelineViewportElement] = useState<HTMLDivElement | null>(
     null,
   );
+  useChatTextZoomWheel(timelineViewportElement);
   // Re-measure the minimap gutter when the chat column changes width without a viewport resize.
   const chatWidth = useClientSettings((settings) => settings.chatWidth);
   const {
@@ -1304,6 +1306,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               onCite={onCiteAssistantText}
             />
           ) : null}
+          <ChatTextScaleIndicator />
           <LegendList<MessagesTimelineRow>
             ref={listRef}
             data={rows}
@@ -1697,6 +1700,7 @@ type TimelineWorkEntry = Extract<MessagesTimelineRow, { kind: "work" }>["grouped
 type TimelineRow = MessagesTimelineRow;
 
 const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: TimelineRow }) {
+  const chatTextScale = useClientSettings((settings) => settings.chatTextScale);
   const isExpandedToolGroup = row.kind === "work" && row.isExpandedToolGroup;
   const isExpandedToolGroupHeader =
     (row.kind === "work-toggle" && row.expanded) || (row.kind === "work-live" && row.expanded);
@@ -1736,32 +1740,38 @@ const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: Time
       }
       data-message-role={row.kind === "message" ? row.message.role : undefined}
     >
-      {row.kind === "work" ? (
-        <WorkGroupSection
-          anchorKey={row.id}
-          groupedEntries={row.groupedEntries}
-          isExpandedToolGroup={row.isExpandedToolGroup}
-          displayLabel={row.displayLabel}
-        />
-      ) : null}
-      {row.kind === "work-live" ? <LiveWorkEntryTimelineRow row={row} /> : null}
-      {row.kind === "activity-group" ? <ActivityGroupTimelineRow row={row} /> : null}
-      {row.kind === "work-toggle" ? <WorkGroupToggleTimelineRow row={row} /> : null}
-      {row.kind === "turn-fold" ? <TurnFoldTimelineRow row={row} /> : null}
-      {row.kind === "context-compaction" ? <ContextCompactionTimelineRow row={row} /> : null}
-      {row.kind === "message" && row.message.role === "user" ? <UserTimelineRow row={row} /> : null}
-      {row.kind === "message" && row.message.role === "assistant" ? (
-        <AssistantTimelineRow row={row} />
-      ) : null}
-      {row.kind === "message" && row.message.role === "reasoning" ? (
-        <ReasoningTimelineRow row={row} />
-      ) : null}
-      {row.kind === "assistant-meta" ? <AssistantMetaTimelineRow row={row} /> : null}
-      {row.kind === "proposed-plan" ? <ProposedPlanTimelineRow row={row} /> : null}
-      {row.kind === "working" ? <WorkingTimelineRow row={row} /> : null}
-      {row.kind === "thinking" ? <ThinkingTimelineRow /> : null}
-      {row.kind === "worktree-setup" ? <WorktreeSetupTimelineRow row={row} /> : null}
-      {row.kind === "queued-message" ? <QueuedMessageTimelineRow row={row} /> : null}
+      {/* Zoom lives inside the measured row element, so the list measures the
+          zoomed height and the scroll container keeps its own coordinates. */}
+      <div style={chatTextScale === 1 ? undefined : { zoom: chatTextScale }}>
+        {row.kind === "work" ? (
+          <WorkGroupSection
+            anchorKey={row.id}
+            groupedEntries={row.groupedEntries}
+            isExpandedToolGroup={row.isExpandedToolGroup}
+            displayLabel={row.displayLabel}
+          />
+        ) : null}
+        {row.kind === "work-live" ? <LiveWorkEntryTimelineRow row={row} /> : null}
+        {row.kind === "activity-group" ? <ActivityGroupTimelineRow row={row} /> : null}
+        {row.kind === "work-toggle" ? <WorkGroupToggleTimelineRow row={row} /> : null}
+        {row.kind === "turn-fold" ? <TurnFoldTimelineRow row={row} /> : null}
+        {row.kind === "context-compaction" ? <ContextCompactionTimelineRow row={row} /> : null}
+        {row.kind === "message" && row.message.role === "user" ? (
+          <UserTimelineRow row={row} />
+        ) : null}
+        {row.kind === "message" && row.message.role === "assistant" ? (
+          <AssistantTimelineRow row={row} />
+        ) : null}
+        {row.kind === "message" && row.message.role === "reasoning" ? (
+          <ReasoningTimelineRow row={row} />
+        ) : null}
+        {row.kind === "assistant-meta" ? <AssistantMetaTimelineRow row={row} /> : null}
+        {row.kind === "proposed-plan" ? <ProposedPlanTimelineRow row={row} /> : null}
+        {row.kind === "working" ? <WorkingTimelineRow row={row} /> : null}
+        {row.kind === "thinking" ? <ThinkingTimelineRow /> : null}
+        {row.kind === "worktree-setup" ? <WorktreeSetupTimelineRow row={row} /> : null}
+        {row.kind === "queued-message" ? <QueuedMessageTimelineRow row={row} /> : null}
+      </div>
     </div>
   );
 });

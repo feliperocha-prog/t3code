@@ -58,6 +58,7 @@ import {
   isDesktopUpdateButtonDisabled,
   resolveDesktopUpdateButtonAction,
 } from "../../components/desktopUpdate.logic";
+import { CHAT_TEXT_SCALE_LEVELS, formatChatTextScale } from "../chat/chatTextScale";
 import { ProviderModelPicker } from "../chat/ProviderModelPicker";
 import { TraitsPicker } from "../chat/TraitsPicker";
 import {
@@ -686,6 +687,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       settings.fontSizeCode,
       settings.fontSizeInterface,
       settings.fontSizePrompt,
+      settings.chatTextScale,
       settings.fontSizeTerminal,
       settings.glassOpacity,
       settings.panelAnimationDurationMs,
@@ -817,6 +819,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       fontFamilyTerminal: DEFAULT_UNIFIED_SETTINGS.fontFamilyTerminal,
       fontSizeInterface: DEFAULT_UNIFIED_SETTINGS.fontSizeInterface,
       fontSizePrompt: DEFAULT_UNIFIED_SETTINGS.fontSizePrompt,
+      chatTextScale: DEFAULT_UNIFIED_SETTINGS.chatTextScale,
       fontSizeCode: DEFAULT_UNIFIED_SETTINGS.fontSizeCode,
       fontSizeTerminal: DEFAULT_UNIFIED_SETTINGS.fontSizeTerminal,
       browserDefaultViewport: DEFAULT_UNIFIED_SETTINGS.browserDefaultViewport,
@@ -1435,6 +1438,48 @@ export function AppearanceSettingsPanel() {
                   <SelectItem value="comfortable">{t("Comfortable (default)")}</SelectItem>
                   <SelectItem value="wide">{tc("chat width", "Wide")}</SelectItem>
                   <SelectItem value="full">{tc("chat width", "Full")}</SelectItem>
+                </SelectPopup>
+              </Select>
+            </div>
+          }
+        />
+        <SettingsRow
+          {...searchableSetting("chat-text-size")}
+          description={t(
+            "Size of the conversation text only. Ctrl + mouse wheel over the conversation changes it too.",
+          )}
+          resetAction={
+            settings.chatTextScale !== DEFAULT_UNIFIED_SETTINGS.chatTextScale ? (
+              <SettingResetButton
+                label={t("conversation text size")}
+                onClick={() =>
+                  updateSettings({ chatTextScale: DEFAULT_UNIFIED_SETTINGS.chatTextScale })
+                }
+              />
+            ) : null
+          }
+          control={
+            <div className="w-full sm:w-40">
+              <Select
+                value={String(settings.chatTextScale)}
+                onValueChange={(value) => {
+                  const next = CHAT_TEXT_SCALE_LEVELS.find((level) => String(level) === value);
+                  if (next !== undefined) updateSettings({ chatTextScale: next });
+                }}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="w-full min-w-0"
+                  aria-label={t("Conversation text size")}
+                >
+                  <SelectValue>{formatChatTextScale(settings.chatTextScale)}</SelectValue>
+                </SelectTrigger>
+                <SelectPopup align="end" alignItemWithTrigger={false}>
+                  {CHAT_TEXT_SCALE_LEVELS.map((level) => (
+                    <SelectItem key={level} value={String(level)}>
+                      {formatChatTextScale(level)}
+                    </SelectItem>
+                  ))}
                 </SelectPopup>
               </Select>
             </div>

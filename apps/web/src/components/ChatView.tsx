@@ -2017,12 +2017,10 @@ export default function ChatView(props: ChatViewProps) {
     [activeThreadKey],
   );
   const startObjectiveEdit = useCallback(() => setEditingObjective(true), [setEditingObjective]);
-  // ThreadBrief shows the shell's objective text, but only the detail copy
-  // carries objectiveState; the two update separately, so the "proposed by
-  // the AI" note shows only while both agree on the text.
-  const objectiveGenerated =
-    activeServerThread?.objectiveState?.source === "generated" &&
-    (activeServerThread.objective ?? null) === (activeThreadShell?.objective ?? null);
+  // The shell carries the objective and who wrote it; the detail copy only
+  // follows message and turn events, so its objective goes stale.
+  const objectiveGenerated = activeThreadShell?.objectiveState?.source === "generated";
+  const objectiveManual = activeThreadShell?.objectiveState?.source === "manual";
   const [timelineAnchor, setTimelineAnchor] = useState<{
     readonly threadKey: string | null;
     readonly messageId: MessageId | null;
@@ -9921,7 +9919,9 @@ export default function ChatView(props: ChatViewProps) {
             environmentId={activeThread.environmentId}
             threadId={activeThread.id}
             shell={activeThreadShell}
+            hasUserMessage={activeThread.messages.some((message) => message.role === "user")}
             objectiveGenerated={objectiveGenerated}
+            objectiveManual={objectiveManual}
             editingObjective={editingObjective}
             onEditingObjectiveChange={setEditingObjective}
           />
@@ -9952,8 +9952,9 @@ export default function ChatView(props: ChatViewProps) {
                 </div>
               </div>
             ) : null}
-            {/* Banners overlay the timeline without changing its content height. */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col">
+            {/* Banners overlay the timeline without changing its content height, and sit
+                above the draft hero, which takes clicks across the whole column. */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex flex-col">
               <ProviderStatusBanner
                 status={visibleProviderStatus}
                 onDismiss={() => setDismissedProviderStatusBannerKey(providerStatusBannerKey)}
@@ -10089,13 +10090,23 @@ export default function ChatView(props: ChatViewProps) {
               data-chat-composer-overlay="true"
               className={
                 isDraftHeroState
-                  ? "pointer-events-none absolute inset-0 z-20 flex items-center"
+                  ? "absolute inset-0 z-20 flex flex-col overflow-y-auto"
                   : "pointer-events-none absolute inset-x-0 bottom-0 z-20 pt-1.5 sm:pt-2"
               }
             >
+              {isDraftHeroState ? (
+                // The hero scrolls inside the chat column: the composer sits at a fixed
+                // height (room for the headline above it) whatever loads below, and the
+                // project home flows under it without ever spilling over the terminal.
+                <div aria-hidden className="h-1/5 min-h-36 shrink-0" />
+              ) : null}
               <div
                 ref={attachDraftHeroTransitionGroupRef}
-                className="w-full ps-(--workspace-gutter-start) pe-(--workspace-gutter-end)"
+                className={
+                  isDraftHeroState
+                    ? "w-full shrink-0 ps-(--workspace-gutter-start) pe-(--workspace-gutter-end) pb-8"
+                    : "w-full ps-(--workspace-gutter-start) pe-(--workspace-gutter-end)"
+                }
               >
                 <div
                   data-chat-composer-stack="true"
@@ -10323,10 +10334,10 @@ export default function ChatView(props: ChatViewProps) {
                     />
                   </div>
                   {isDraftHeroState ? (
-                    // Hangs below the composer so it never moves it; hidden where it would not fit.
-                    <div className="absolute inset-x-0 top-full z-0 max-h-[40vh] overflow-y-auto pt-2 [@media(max-height:600px)]:hidden">
+                    <div className="mt-4">
                       {activeProject ? (
                         <ProjectHome
+                          key={`${activeProject.environmentId}:${activeProject.id}`}
                           environmentId={activeProject.environmentId}
                           projectId={activeProject.id}
                           workspaceRoot={activeProject.workspaceRoot}

@@ -28,15 +28,18 @@ export function resolveStateNotePath(cwd: string, configured: string): string {
 export const PROJECT_HOME_MAX_LINES = 12;
 
 /**
- * Heading text reduced for comparison: no accents, lower case, and without a
- * trailing parenthetical, so `## Estado (30/09)` matches "estado".
+ * Heading text reduced for comparison: no accents, lower case, without any
+ * parenthetical group and without trailing punctuation or dates, so
+ * `## Estado (30/09)` and `## Estado — 30/09` both match "estado".
  */
 export function normalizeHeading(title: string): string {
   return title
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
-    .replace(/\s*\([^)]*\)\s*$/, "")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/^[^\p{L}\p{N}]+/u, "")
+    .replace(/[\s\d/.,;:!?\-–—]+$/u, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -77,16 +80,183 @@ export function splitH2Sections(markdown: string): MarkdownSection[] {
   return sections.map((section) => ({ title: section.title, body: section.lines.join("\n") }));
 }
 
+/** Heading synonyms of each hub block. A heading matches when its normalized title equals one. */
+export const HUB_SECTION_SYNONYMS = {
+  where: ["estado", "status", "onde estamos"],
+  next: [
+    "proximo passo",
+    "proximos passos",
+    "pendente",
+    "pendentes",
+    "pendencias",
+    "a fazer",
+    "o que falta",
+    "falta",
+    "to do",
+    "todo",
+    "next step",
+    "next steps",
+  ],
+  risks: ["armadilhas", "riscos", "cuidados", "atencao", "pitfalls"],
+} as const satisfies Record<string, readonly string[]>;
+
+/** Items each hub block shows. */
+export const HUB_ITEM_LIMITS = { where: 3, next: 4, risks: 3 } as const;
+
 /**
- * Body of the first H2 whose normalized title equals the wanted one, cut to
- * the box size. Null when the section is missing or empty.
+ * Body of the first H2 whose normalized title equals one of the synonyms, so
+ * `## Estado (02/10)` matches "estado" but `## Estado anterior` does not.
+ * Null when the section is missing or empty.
  */
-export function findH2Section(markdown: string, title: string): string | null {
-  const wanted = normalizeHeading(title);
-  const section = splitH2Sections(markdown).find(
-    (candidate) => normalizeHeading(candidate.title) === wanted,
+export function findHubSection(markdown: string, synonyms: readonly string[]): string | null {
+  const wanted = new Set(synonyms.map(normalizeHeading));
+  const section = splitH2Sections(markdown).find((candidate) =>
+    wanted.has(normalizeHeading(candidate.title)),
   );
-  return section ? clipSectionBody(section.body) : null;
+  if (!section) return null;
+  const body = trimBlankEdges(section.body.split(/\r?\n/)).join("\n");
+  return body.length > 0 ? body : null;
+}
+
+/** Longest plain item, in characters, before it is cut with "…". */
+export const PLAIN_ITEM_MAX_CHARS = 180;
+
+const LIST_MARKER = /^(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/;
+const HEADING_MARKER = /^\s{0,3}#{1,6}\s+/;
+const RULE = /^\s{0,3}(?:[-*_]\s*){3,}$/;
+const TABLE_SEPARATOR = /^\|?\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)*\|?$/;
+const HEX_HASH = /^[0-9a-f]{7,40}$/i;
+// A loose commit hash: hex only, with at least one digit and one letter, so words are safe.
+const LOOSE_HASH = /(?<![\w/])(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}(?![\w/])/gi;
+const FILE_EXTENSION =
+  /(?:^\.[\w.-]+|\.(?:[cm]?[jt]sx?|json|md|mdx|ya?ml|toml|lock|css|scss|html|sql|sh|ps1|py|txt|env|local))$/i;
+
+/** Inline code kept as text, or dropped when it is a hash or a file path. */
+function plainCode(code: string): string {
+  const text = code.trim();
+  if (HEX_HASH.test(text)) return "";
+  if (/[\\/]/.test(text) || FILE_EXTENSION.test(text)) return "";
+  return text;
+}
+
+function wikiLinkText(target: string, alias: string | undefined): string {
+  if (alias !== undefined && alias.trim().length > 0) return alias;
+  const page = target.split("#")[0] ?? target;
+  return (page.split(/[\\/]/).at(-1) ?? page).replace(/\.md$/i, "");
+}
+
+/** One markdown item reduced to plain text: no markup, links, hashes or file paths. Cut at 180 chars. */
+export function toPlainText(text: string): string {
+  const plain = text
+    .replace(/`+([^`]*?)`+/g, (_match, code: string) => plainCode(code))
+    .replace(
+      /!?\[\[([^\]|]*)(?:\|([^\]]*))?\]\]/g,
+      (_match, target: string, alias: string | undefined) => wikiLinkText(target, alias),
+    )
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/(\*\*|__)(.+?)\1/g, "$2")
+    .replace(/~~(.+?)~~/g, "$1")
+    .replace(/(^|[^\w*])\*(?!\s)([^*]+?)\*(?![\w*])/g, "$1$2")
+    .replace(/(^|[^\w])_(?!\s)([^_]+?)_(?!\w)/g, "$1$2")
+    .replace(LOOSE_HASH, "")
+    // Parentheses emptied by the removals above: "( )", "(, x)".
+    .replace(/(^|\s)\(\s*[,;]?\s*\)/g, "$1")
+    .replace(/\(\s*[,;]\s*/g, "(")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,;:.)])/g, "$1")
+    .replace(/\(\s+/g, "(")
+    .trim();
+  if (plain.length <= PLAIN_ITEM_MAX_CHARS) return plain;
+  return `${plain.slice(0, PLAIN_ITEM_MAX_CHARS - 1).trimEnd()}…`;
+}
+
+/**
+ * A hub section split into short plain-text items: each list entry or
+ * paragraph is one item, headings stand alone, code blocks and rules are
+ * dropped, table rows read as their cells joined by "·". First `max` non-empty items.
+ */
+export function toPlainItems(sectionText: string, max: number): string[] {
+  const raw: string[] = [];
+  let current: string[] | null = null;
+  let fence: string | null = null;
+  const close = () => {
+    if (current !== null) raw.push(current.join(" "));
+    current = null;
+  };
+  for (const line of sectionText.split(/\r?\n/)) {
+    const fenceMatch = FENCE.exec(line);
+    if (fenceMatch) {
+      const marker = fenceMatch[1]!;
+      if (fence === null) {
+        close();
+        fence = marker;
+      } else if (marker[0] === fence[0] && marker.length >= fence.length) {
+        fence = null;
+      }
+      continue;
+    }
+    if (fence !== null) continue;
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || RULE.test(line) || /^<!--.*-->$/.test(trimmed)) {
+      close();
+      continue;
+    }
+    if (HEADING_MARKER.test(line)) {
+      close();
+      raw.push(line.replace(HEADING_MARKER, ""));
+      continue;
+    }
+    if (trimmed.startsWith("|")) {
+      close();
+      if (!TABLE_SEPARATOR.test(trimmed)) {
+        const cells = trimmed
+          .replace(/^\||\|$/g, "")
+          .split("|")
+          .map((cell) => cell.trim())
+          .filter((cell) => cell.length > 0);
+        raw.push(cells.join(" · "));
+      }
+      continue;
+    }
+    const content = trimmed.replace(/^>\s?/, "");
+    if (LIST_MARKER.test(content)) {
+      close();
+      current = [content.replace(LIST_MARKER, "")];
+    } else if (current !== null) {
+      current.push(content);
+    } else {
+      current = [content];
+    }
+  }
+  close();
+  const items: string[] = [];
+  for (const item of raw) {
+    if (items.length >= max) break;
+    const plain = toPlainText(item);
+    if (plain.length > 0) items.push(plain);
+  }
+  return items;
+}
+
+export interface HubDigest {
+  readonly where: readonly string[];
+  readonly next: readonly string[];
+  readonly risks: readonly string[];
+}
+
+/** The three hub blocks read straight from the note, without the model. */
+export function readHubDigest(markdown: string): HubDigest {
+  const block = (key: keyof typeof HUB_SECTION_SYNONYMS) => {
+    const section = findHubSection(markdown, HUB_SECTION_SYNONYMS[key]);
+    return section === null ? [] : toPlainItems(section, HUB_ITEM_LIMITS[key]);
+  };
+  return { where: block("where"), next: block("next"), risks: block("risks") };
+}
+
+/** The sidebar's compact relative time: "5m ago" reads "5m", "just now" reads `nowLabel`. */
+export function compactRelativeTimeLabel(label: string, nowLabel: string): string {
+  if (label === "just now") return nowLabel;
+  return label.endsWith(" ago") ? label.slice(0, -4) : label;
 }
 
 const RUN_HEADING = /rodar|run|dev|deploy|publicar|start/i;

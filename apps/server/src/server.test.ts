@@ -119,6 +119,7 @@ import * as CheckpointDiffQuery from "./checkpointing/CheckpointDiffQuery.ts";
 import * as GitManager from "./git/GitManager.ts";
 import * as EnvironmentTheme from "./environmentTheme.ts";
 import * as UsageLimitSources from "./usage/UsageLimitSources.ts";
+import * as ProjectBrief from "./projectBrief/ProjectBrief.ts";
 import * as Keybindings from "./keybindings.ts";
 import * as ExternalLauncher from "./process/externalLauncher.ts";
 import * as RemoteOpenTargets from "./environment/RemoteOpenTargets.ts";
@@ -850,6 +851,7 @@ const buildAppUnderTest = (options?: {
             currentReadiness: () => Effect.succeed(null),
             sessionsForThread: () => Effect.succeed([]),
           }),
+          Layer.mock(ProjectBrief.ProjectBrief)({}),
         ),
       ),
       Layer.provide(

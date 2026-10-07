@@ -85,6 +85,7 @@ type TypographySettings = Pick<
   | "fontSizePrompt"
   | "fontSizeCode"
   | "fontSizeTerminal"
+  | "chatTextScale"
 >;
 
 /** Labels the font rows whose family or size differs from the defaults. */
@@ -105,6 +106,9 @@ export function getChangedTypographySettingLabels(settings: TypographySettings):
     ...(settings.fontFamilyTerminal !== DEFAULT_UNIFIED_SETTINGS.fontFamilyTerminal ||
     settings.fontSizeTerminal !== DEFAULT_UNIFIED_SETTINGS.fontSizeTerminal
       ? ["Terminal font"]
+      : []),
+    ...(settings.chatTextScale !== DEFAULT_UNIFIED_SETTINGS.chatTextScale
+      ? ["Conversation text size"]
       : []),
   ];
 }

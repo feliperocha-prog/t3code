@@ -15,6 +15,7 @@ import {
   buildBranchNamePrompt,
   buildCommitMessagePrompt,
   buildPrContentPrompt,
+  buildProjectBriefPrompt,
   buildThreadTitlePrompt,
 } from "./TextGenerationPrompts.ts";
 import {
@@ -54,7 +55,8 @@ export const makeCursorTextGeneration = Effect.fn("makeCursorTextGeneration")(fu
       | "generateCommitMessage"
       | "generatePrContent"
       | "generateBranchName"
-      | "generateThreadTitle";
+      | "generateThreadTitle"
+      | "generateProjectBrief";
     cwd: string;
     prompt: string;
     outputSchemaJson: S;
@@ -243,6 +245,7 @@ export const makeCursorTextGeneration = Effect.fn("makeCursorTextGeneration")(fu
       const { prompt, outputSchema } = buildThreadTitlePrompt({
         message: input.message,
         previousTitle: input.previousTitle,
+        previousObjective: input.previousObjective,
         linkedContext: input.linkedContext,
         attachments: input.attachments,
       });
@@ -262,10 +265,32 @@ export const makeCursorTextGeneration = Effect.fn("makeCursorTextGeneration")(fu
       } satisfies TextGeneration.ThreadTitleGenerationResult;
     });
 
+  const generateProjectBrief: TextGeneration.TextGeneration["Service"]["generateProjectBrief"] =
+    Effect.fn("CursorTextGeneration.generateProjectBrief")(function* (input) {
+      const { prompt, outputSchema } = buildProjectBriefPrompt({
+        noteContents: input.noteContents,
+      });
+
+      const generated = yield* runCursorJson({
+        operation: "generateProjectBrief",
+        cwd: input.cwd,
+        prompt,
+        outputSchemaJson: outputSchema,
+        modelSelection: input.modelSelection,
+      });
+
+      return {
+        where: generated.where,
+        next: generated.next,
+        risks: generated.risks,
+      } satisfies TextGeneration.ProjectBriefGenerationResult;
+    });
+
   return {
     generateCommitMessage,
     generatePrContent,
     generateBranchName,
     generateThreadTitle,
+    generateProjectBrief,
   } satisfies TextGeneration.TextGeneration["Service"];
 });

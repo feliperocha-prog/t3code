@@ -58,6 +58,7 @@ import {
   type ThreadTitleMessage,
 } from "../../textGeneration/ThreadTitleContext.ts";
 import { canReplaceThreadTitle, DEFAULT_THREAD_TITLE } from "../threadTitles.ts";
+import { shouldRefreshThreadObjective } from "../ThreadObjectiveRefresh.ts";
 import {
   resolveSourceControlWriterModelSelection,
   ServerSettingsService,
@@ -977,6 +978,11 @@ const make = Effect.gen(function* () {
     );
   });
 
+  /** Threads whose first-turn title generation, which also writes the objective, is in flight. */
+  const firstTurnGenerationsInFlight = new Set<ThreadId>();
+  /** Objective requests that arrived during a first-turn generation and wait for it to land. */
+  const objectiveRequestsAwaitingFirstTurn = new Set<ThreadId>();
+
   const maybeGenerateThreadTitleForFirstTurn = Effect.fn("maybeGenerateThreadTitleForFirstTurn")(
     function* (input: {
       readonly threadId: ThreadId;
@@ -1241,6 +1247,88 @@ const make = Effect.gen(function* () {
     processThreadTitleRegenerationSafely,
   );
 
+  /** User-message count each thread was last seen at when a turn settled. */
+  const objectiveRefreshCounts = new Map<ThreadId, number>();
+
+  /**
+   * Keeps a generated objective current as the conversation moves: every third user message
+   * once the turn settles. `force` fills an empty slot right away, after the user resets it to
+   * automatic or opens a conversation that never had one; a slot already filled is left alone.
+   * Only the objective is used from the generation; the title is never touched here.
+   */
+  const maybeRefreshThreadObjective = Effect.fn("maybeRefreshThreadObjective")(function* (input: {
+    readonly threadId: ThreadId;
+    readonly force: boolean;
+  }) {
+    const { threadId, force } = input;
+    // The first turn's own generation writes the objective; a second one would only pay twice.
+    // A forced request waits for it and runs once it lands, in case it left the slot empty.
+    if (firstTurnGenerationsInFlight.has(threadId)) {
+      if (force) objectiveRequestsAwaitingFirstTurn.add(threadId);
+      return;
+    }
+    if (!force) {
+      // Cheap gate on the shell before reading every message.
+      const shell = yield* resolveThreadShell(threadId);
+      if (
+        !shell ||
+        shell.latestTurn?.state !== "completed" ||
+        shell.titleRegeneration != null ||
+        shell.objectiveState?.source === "manual"
+      )
+        return;
+    }
+    const thread = yield* resolveThreadDetail(threadId);
+    if (!thread || thread.deletedAt !== null || thread.objectiveState?.source === "manual") return;
+    if (force && thread.objective?.trim()) return;
+    const userMessageCount = thread.messages.filter((message) => message.role === "user").length;
+    const previousCount = objectiveRefreshCounts.get(threadId);
+    objectiveRefreshCounts.set(threadId, userMessageCount);
+    if (!shouldRefreshThreadObjective({ previousCount, userMessageCount, force })) return;
+
+    const { message, attachments } = formatThreadTitleContext(thread.messages);
+    if (message.length === 0) return;
+    const project = yield* resolveProject(thread.projectId);
+    const cwd =
+      resolveThreadWorkspaceCwd({
+        thread,
+        projects: project ? [project] : [],
+      }) ?? process.cwd();
+    const { textGenerationModelSelection: modelSelection } =
+      yield* projectSettingsForThread(threadId);
+    const previousObjective = thread.objective?.trim() ? thread.objective : undefined;
+    const generated = yield* textGeneration.generateThreadTitle({
+      cwd,
+      message,
+      previousTitle: thread.title,
+      ...(previousObjective !== undefined ? { previousObjective } : {}),
+      ...(attachments.length > 0 ? { attachments } : {}),
+      modelSelection,
+    });
+    const objective = boundGeneratedObjective(generated.objective);
+    if (objective === undefined || objective === thread.objective?.trim()) return;
+    yield* orchestrationEngine.dispatch({
+      type: "thread.objective.generate.complete",
+      commandId: yield* serverCommandId("thread-objective-refresh"),
+      threadId,
+      objective,
+      ...(force ? { onlyIfEmpty: true as const } : {}),
+    });
+  });
+  const threadObjectiveRefreshWorker = yield* makeDrainableWorker(
+    (input: { readonly threadId: ThreadId; readonly force: boolean }) =>
+      maybeRefreshThreadObjective(input).pipe(
+        Effect.catchCauseIf(
+          (cause) => !Cause.hasInterruptsOnly(cause),
+          (cause) =>
+            Effect.logWarning("provider command reactor failed to refresh thread objective", {
+              threadId: input.threadId,
+              cause: Cause.pretty(cause),
+            }),
+        ),
+      ),
+  );
+
   const processTurnStartRequested = Effect.fn("processTurnStartRequested")(function* (
     receivedEvent: Extract<ProviderIntentEvent, { type: "thread.turn-start-requested" }>,
   ) {
@@ -1395,13 +1483,25 @@ const make = Effect.gen(function* () {
         thread.titleState?.source !== "manual" &&
         canReplaceThreadTitle(thread.title, event.payload.titleSeed)
       ) {
+        const threadId = event.payload.threadId;
+        firstTurnGenerationsInFlight.add(threadId);
         yield* maybeGenerateThreadTitleForFirstTurn({
-          threadId: event.payload.threadId,
+          threadId,
           cwd: generationCwd,
           expectedTitle: thread.title,
           expectedVersion: thread.titleState?.version ?? null,
           ...generationInput,
-        }).pipe(Effect.forkScoped);
+        }).pipe(
+          Effect.ensuring(
+            Effect.suspend(() => {
+              firstTurnGenerationsInFlight.delete(threadId);
+              return objectiveRequestsAwaitingFirstTurn.delete(threadId)
+                ? threadObjectiveRefreshWorker.enqueue({ threadId, force: true })
+                : Effect.void;
+            }),
+          ),
+          Effect.forkScoped,
+        );
       }
     }
 
@@ -1824,13 +1924,23 @@ const make = Effect.gen(function* () {
     });
     switch (event.type) {
       case "thread.meta-updated":
+        if (event.payload.regenerateObjective)
+          yield* threadObjectiveRefreshWorker.enqueue({
+            threadId: event.payload.threadId,
+            force: true,
+          });
         if (event.payload.regenerateTitle) yield* threadTitleRegenerationWorker.enqueue(event);
         else if (event.payload.titleState?.needsRefinement)
           yield* maybeRefineThreadTitle(event.payload.threadId);
         return;
       case "thread.session-set":
-        if (event.payload.session.status === "ready")
+        if (event.payload.session.status === "ready") {
           yield* maybeRefineThreadTitle(event.payload.threadId);
+          yield* threadObjectiveRefreshWorker.enqueue({
+            threadId: event.payload.threadId,
+            force: false,
+          });
+        }
         return;
       case "thread.runtime-mode-set": {
         const thread = yield* resolveThreadShell(event.payload.threadId);
@@ -1930,6 +2040,7 @@ const make = Effect.gen(function* () {
       if (
         (event.type === "thread.meta-updated" &&
           (event.payload.regenerateTitle === true ||
+            event.payload.regenerateObjective === true ||
             event.payload.titleState?.needsRefinement === true)) ||
         (event.type === "thread.session-set" && event.payload.session.status === "ready") ||
         event.type === "thread.runtime-mode-set" ||
@@ -1984,6 +2095,7 @@ const make = Effect.gen(function* () {
     drain: Effect.gen(function* () {
       yield* worker.drain;
       yield* threadTitleRegenerationWorker.drain;
+      yield* threadObjectiveRefreshWorker.drain;
     }),
   } satisfies ProviderCommandReactorShape;
 });

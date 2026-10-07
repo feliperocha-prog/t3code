@@ -24,6 +24,7 @@ import {
   buildBranchNamePrompt,
   buildCommitMessagePrompt,
   buildPrContentPrompt,
+  buildProjectBriefPrompt,
   buildThreadTitlePrompt,
 } from "./TextGenerationPrompts.ts";
 import {
@@ -102,7 +103,8 @@ export const makeClaudeTextGeneration = Effect.fn("makeClaudeTextGeneration")(fu
       | "generateCommitMessage"
       | "generatePrContent"
       | "generateBranchName"
-      | "generateThreadTitle",
+      | "generateThreadTitle"
+      | "generateProjectBrief",
     value: unknown,
     detail: string,
   ): Effect.Effect<string, TextGenerationError> =>
@@ -132,7 +134,8 @@ export const makeClaudeTextGeneration = Effect.fn("makeClaudeTextGeneration")(fu
       | "generateCommitMessage"
       | "generatePrContent"
       | "generateBranchName"
-      | "generateThreadTitle";
+      | "generateThreadTitle"
+      | "generateProjectBrief";
     cwd: string;
     prompt: string;
     outputSchemaJson: S;
@@ -392,6 +395,7 @@ export const makeClaudeTextGeneration = Effect.fn("makeClaudeTextGeneration")(fu
       const { prompt, outputSchema } = buildThreadTitlePrompt({
         message: input.message,
         previousTitle: input.previousTitle,
+        previousObjective: input.previousObjective,
         linkedContext: input.linkedContext,
         attachments: input.attachments,
       });
@@ -411,10 +415,32 @@ export const makeClaudeTextGeneration = Effect.fn("makeClaudeTextGeneration")(fu
       };
     });
 
+  const generateProjectBrief: TextGeneration.TextGeneration["Service"]["generateProjectBrief"] =
+    Effect.fn("ClaudeTextGeneration.generateProjectBrief")(function* (input) {
+      const { prompt, outputSchema } = buildProjectBriefPrompt({
+        noteContents: input.noteContents,
+      });
+
+      const generated = yield* runClaudeJson({
+        operation: "generateProjectBrief",
+        cwd: input.cwd,
+        prompt,
+        outputSchemaJson: outputSchema,
+        modelSelection: input.modelSelection,
+      });
+
+      return {
+        where: generated.where,
+        next: generated.next,
+        risks: generated.risks,
+      } satisfies TextGeneration.ProjectBriefGenerationResult;
+    });
+
   return {
     generateCommitMessage,
     generatePrContent,
     generateBranchName,
     generateThreadTitle,
+    generateProjectBrief,
   } satisfies TextGeneration.TextGeneration["Service"];
 });

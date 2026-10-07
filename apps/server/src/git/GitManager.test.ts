@@ -310,6 +310,12 @@ function createTextGeneration(
       Effect.succeed({
         title: "Update workflow",
       }),
+    generateProjectBrief: () =>
+      Effect.succeed({
+        where: "",
+        next: [],
+        risks: [],
+      }),
     ...overrides,
   };
 
@@ -353,6 +359,17 @@ function createTextGeneration(
           (cause) =>
             new TextGenerationError({
               operation: "generateThreadTitle",
+              detail: "fake text generation failed",
+              ...(cause !== undefined ? { cause } : {}),
+            }),
+        ),
+      ),
+    generateProjectBrief: (input) =>
+      implementation.generateProjectBrief(input).pipe(
+        Effect.mapError(
+          (cause) =>
+            new TextGenerationError({
+              operation: "generateProjectBrief",
               detail: "fake text generation failed",
               ...(cause !== undefined ? { cause } : {}),
             }),

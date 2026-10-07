@@ -184,4 +184,148 @@ it.layer(NodeServices.layer)("thread objective decider", (it) => {
       expect(event.payload).toMatchObject({ objective: "Novo objetivo" });
     }),
   );
+
+  const objectiveComplete = (objective: string) =>
+    ({
+      type: "thread.objective.generate.complete",
+      commandId: CommandId.make("objective-refresh"),
+      threadId: THREAD_ID,
+      objective,
+    }) as const;
+
+  it.effect("refreshes a generated objective without touching the title", () =>
+    Effect.gen(function* () {
+      const event = yield* decideFirst({
+        command: objectiveComplete(`  ${"y".repeat(250)}  `),
+        readModel: readModelWith({
+          objective: "Objetivo antigo",
+          objectiveState: { source: "generated" },
+        }),
+      });
+      expect(event.type).toBe("thread.meta-updated");
+      expect(event.payload).toMatchObject({
+        objective: "y".repeat(200),
+        objectiveState: { source: "generated" },
+      });
+      expect(event.payload).not.toHaveProperty("title");
+      expect(event.payload).not.toHaveProperty("titleState");
+    }),
+  );
+
+  it.effect("drops a refreshed objective when the user set one by hand", () =>
+    Effect.gen(function* () {
+      const event = yield* decideFirst({
+        command: objectiveComplete("Objetivo gerado"),
+        readModel: readModelWith({
+          objective: "Meu objetivo",
+          objectiveState: { source: "manual" },
+        }),
+      });
+      expect(event.type).toBe("thread.meta-updated");
+      expect(event.payload).not.toHaveProperty("objective");
+      expect(event.payload).not.toHaveProperty("objectiveState");
+    }),
+  );
+
+  it.effect("drops a refreshed objective for a deleted thread", () =>
+    Effect.gen(function* () {
+      const event = yield* decideFirst({
+        command: objectiveComplete("Objetivo gerado"),
+        readModel: readModelWith({ deletedAt: UPDATED_AT }),
+      });
+      expect(event.payload).not.toHaveProperty("objective");
+    }),
+  );
+
+  it.effect("keeps an objective that landed while a fill was generating", () =>
+    Effect.gen(function* () {
+      const fill = {
+        ...objectiveComplete("Objetivo do preenchimento"),
+        onlyIfEmpty: true,
+      } as const;
+      const landed = yield* decideFirst({
+        command: fill,
+        readModel: readModelWith({
+          objective: "Objetivo do primeiro turno",
+          objectiveState: { source: "generated" },
+        }),
+      });
+      expect(landed.payload).not.toHaveProperty("objective");
+
+      const empty = yield* decideFirst({ command: fill, readModel: readModelWith({}) });
+      expect(empty.payload).toMatchObject({ objective: "Objetivo do preenchimento" });
+    }),
+  );
+
+  it.effect("resets a manual objective back to automatic", () =>
+    Effect.gen(function* () {
+      const event = yield* decideFirst({
+        command: {
+          type: "thread.meta.update",
+          commandId: CommandId.make("reset-objective"),
+          threadId: THREAD_ID,
+          resetObjective: true,
+        },
+        readModel: readModelWith({
+          objective: "Meu objetivo",
+          objectiveState: { source: "manual" },
+        }),
+      });
+      expect(event.payload).toMatchObject({
+        objective: null,
+        objectiveState: null,
+        regenerateObjective: true,
+      });
+    }),
+  );
+
+  it.effect("lets resetObjective win over an objective in the same command", () =>
+    Effect.gen(function* () {
+      const event = yield* decideFirst({
+        command: {
+          type: "thread.meta.update",
+          commandId: CommandId.make("reset-and-set"),
+          threadId: THREAD_ID,
+          objective: "Ignorado",
+          resetObjective: true,
+        },
+        readModel: readModelWith({}),
+      });
+      expect(event.payload).toMatchObject({
+        objective: null,
+        objectiveState: null,
+        regenerateObjective: true,
+      });
+    }),
+  );
+
+  const fillObjective = {
+    type: "thread.meta.update",
+    commandId: CommandId.make("fill-objective"),
+    threadId: THREAD_ID,
+    fillObjective: true,
+  } as const;
+
+  it.effect("fills only an empty automatic objective, keeping the thread's place", () =>
+    Effect.gen(function* () {
+      const empty = yield* decideFirst({ command: fillObjective, readModel: readModelWith({}) });
+      expect(empty.payload).toEqual({
+        threadId: THREAD_ID,
+        regenerateObjective: true,
+        updatedAt: UPDATED_AT,
+      });
+
+      for (const patch of [
+        { objective: "Já tem", objectiveState: { source: "generated" as const } },
+        { objective: null, objectiveState: { source: "manual" as const } },
+        { deletedAt: UPDATED_AT },
+      ]) {
+        const event = yield* decideFirst({
+          command: fillObjective,
+          readModel: readModelWith(patch),
+        });
+        expect(event.payload).toEqual({ threadId: THREAD_ID, updatedAt: UPDATED_AT });
+      }
+    }),
+  );
 });

@@ -21,16 +21,16 @@ describe("SidebarInboxFilter", () => {
     const labels = [...markup.matchAll(/<button[^>]*>(.*?)<\/button>/g)].map((match) =>
       match[1]!.replace(/<[^>]+>/g, ""),
     );
-    expect(labels).toEqual(["Tudo", "Esperando você", "Trabalhando", "Acabou"]);
-    expect(pressedLabels(markup)).toEqual(["Trabalhando"]);
+    expect(labels).toEqual(["Tudo", "Pra você", "Rodando", "Prontas"]);
+    expect(pressedLabels(markup)).toEqual(["Rodando"]);
     expect(markup).toContain('aria-label="Filtrar threads por estado"');
   });
 
   it("shows the waiting counter only on the waiting chip and only above zero", () => {
-    expect(pressedLabels(render("esperando", 3))).toEqual(["Esperando você3"]);
+    expect(pressedLabels(render("esperando", 3))).toEqual(["Pra você3"]);
     const withCount = render("tudo", 3);
-    expect(withCount).toMatch(/Esperando você<span[^>]*>3<\/span>/);
-    expect(withCount.match(/<span/g)?.length).toBe(1);
-    expect(render("tudo", 0)).not.toContain("<span");
+    expect(withCount).toMatch(/Pra você<span[^>]*>3<\/span>/);
+    expect(withCount.match(/>3<\/span>/g)?.length).toBe(1);
+    expect(render("tudo", 0)).not.toMatch(/>\d+<\/span>/);
   });
 });

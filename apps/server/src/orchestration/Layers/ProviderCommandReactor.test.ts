@@ -2715,6 +2715,136 @@ describe("ProviderCommandReactor", () => {
     },
   );
 
+  it("leaves a reset to automatic during the first turn to that turn's own generation", async () => {
+    const seededTitle = "Fix reconnect spinner on resume";
+    const harness = await createHarness({ initialTitle: seededTitle });
+    const generatedTitle = await harness.runEffect(
+      Deferred.make<{ readonly title: string; readonly objective?: string }, never>(),
+    );
+    harness.generateThreadTitle.mockReturnValue(Deferred.await(generatedTitle));
+    const generationLanded = await harness.runEffect(
+      harness.engine.streamDomainEvents.pipe(
+        Stream.filter(
+          (event) =>
+            event.type === "thread.meta-updated" &&
+            event.payload.objectiveState?.source === "generated",
+        ),
+        Stream.take(1),
+        Stream.toPull,
+        Scope.provide(scope!),
+      ),
+    );
+
+    await harness.runEffect(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.make("cmd-turn-start-reset-during-first"),
+        threadId: ThreadId.make("thread-1"),
+        message: {
+          messageId: asMessageId("user-message-reset-during-first"),
+          role: "user",
+          text: "Fix reconnect spinner on resume",
+          attachments: [],
+        },
+        titleSeed: seededTitle,
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
+    );
+    await waitFor(() => harness.generateThreadTitle.mock.calls.length === 1);
+    await harness.runEffect(
+      harness.engine.dispatch({
+        type: "thread.meta.update",
+        commandId: CommandId.make("cmd-reset-during-first"),
+        threadId: ThreadId.make("thread-1"),
+        resetObjective: true,
+      }),
+    );
+    await harness.drain();
+    expect(harness.generateThreadTitle.mock.calls.length).toBe(1);
+
+    await harness.runEffect(
+      Deferred.succeed(generatedTitle, {
+        title: "Reconnect spinner resume bug",
+        objective: "Corrigir o spinner de reconexão",
+      }),
+    );
+    await harness.runEffect(generationLanded);
+    await harness.drain();
+
+    const readModel = await harness.readModel();
+    const thread = readModel.threads.find((entry) => entry.id === ThreadId.make("thread-1"));
+    expect(thread?.objective).toBe("Corrigir o spinner de reconexão");
+    expect(harness.generateThreadTitle.mock.calls.length).toBe(1);
+  });
+
+  it("fills the objective after the first turn when that turn's generation left it empty", async () => {
+    const seededTitle = "Fix reconnect spinner on resume";
+    const harness = await createHarness({ initialTitle: seededTitle });
+    const generatedTitle = await harness.runEffect(
+      Deferred.make<{ readonly title: string; readonly objective?: string }, never>(),
+    );
+    harness.generateThreadTitle.mockReturnValueOnce(Deferred.await(generatedTitle));
+    harness.generateThreadTitle.mockReturnValue(
+      Effect.succeed({ title: "Ignored", objective: "Corrigir o spinner de reconexão" }),
+    );
+    const objectiveLanded = await harness.runEffect(
+      harness.engine.streamDomainEvents.pipe(
+        Stream.filter(
+          (event) =>
+            event.type === "thread.meta-updated" &&
+            event.payload.objectiveState?.source === "generated",
+        ),
+        Stream.take(1),
+        Stream.toPull,
+        Scope.provide(scope!),
+      ),
+    );
+
+    await harness.runEffect(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.make("cmd-turn-start-fill-during-first"),
+        threadId: ThreadId.make("thread-1"),
+        message: {
+          messageId: asMessageId("user-message-fill-during-first"),
+          role: "user",
+          text: "Fix reconnect spinner on resume",
+          attachments: [],
+        },
+        titleSeed: seededTitle,
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
+    );
+    await waitFor(() => harness.generateThreadTitle.mock.calls.length === 1);
+    await harness.runEffect(
+      harness.engine.dispatch({
+        type: "thread.meta.update",
+        commandId: CommandId.make("cmd-fill-during-first"),
+        threadId: ThreadId.make("thread-1"),
+        fillObjective: true,
+      }),
+    );
+    await harness.drain();
+    expect(harness.generateThreadTitle.mock.calls.length).toBe(1);
+
+    // The first turn's generation brings a title but no objective, so the waiting request runs.
+    await harness.runEffect(
+      Deferred.succeed(generatedTitle, { title: "Reconnect spinner resume bug" }),
+    );
+    await harness.runEffect(objectiveLanded);
+    await harness.drain();
+
+    const readModel = await harness.readModel();
+    const thread = readModel.threads.find((entry) => entry.id === ThreadId.make("thread-1"));
+    expect(thread?.title).toBe("Reconnect spinner resume bug");
+    expect(thread?.objective).toBe("Corrigir o spinner de reconexão");
+    expect(harness.generateThreadTitle.mock.calls.length).toBe(2);
+  });
+
   it("generates a worktree branch name for the first turn", async () => {
     const harness = await createHarness();
     const now = "2026-01-01T00:00:00.000Z";

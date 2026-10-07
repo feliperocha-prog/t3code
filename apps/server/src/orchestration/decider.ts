@@ -928,6 +928,28 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
+      if (command.fillObjective === true) {
+        // Asked when a conversation without an objective is opened. Only an empty, automatic
+        // slot is filled, and opening it is not activity: the thread keeps its place.
+        const fill =
+          thread.deletedAt === null &&
+          !thread.objective?.trim() &&
+          thread.objectiveState?.source !== "manual";
+        return {
+          ...(yield* withEventBase({
+            aggregateKind: "thread",
+            aggregateId: command.threadId,
+            occurredAt: yield* nowIso,
+            commandId: command.commandId,
+          })),
+          type: "thread.meta-updated",
+          payload: {
+            threadId: command.threadId,
+            ...(fill ? { regenerateObjective: true as const } : {}),
+            updatedAt: thread.updatedAt,
+          },
+        };
+      }
       // Old clients only see the derived single link. Unlink that request through
       // the same command path as modern clients, including stack dismissal, while
       // retaining other links they cannot see. Historical metadata events still replay unchanged.
@@ -1018,13 +1040,16 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         type: "thread.meta-updated",
         payload: {
           threadId: command.threadId,
-          ...(objective !== undefined
-            ? objective.length === 0
-              ? // Cleared by hand stays manual: the next title regeneration must
-                // not fill the slot the user just emptied.
-                { objective: null, objectiveState: { source: "manual" as const } }
-              : { objective, objectiveState: { source: "manual" as const } }
-            : {}),
+          ...(command.resetObjective === true
+            ? // Back to automatic: the objective reactor regenerates it from the conversation.
+              { objective: null, objectiveState: null, regenerateObjective: true as const }
+            : objective !== undefined
+              ? objective.length === 0
+                ? // Cleared by hand stays manual: the next title regeneration must
+                  // not fill the slot the user just emptied.
+                  { objective: null, objectiveState: { source: "manual" as const } }
+                : { objective, objectiveState: { source: "manual" as const } }
+              : {}),
           ...(command.title !== undefined
             ? {
                 title: command.title,
@@ -1293,6 +1318,33 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             : {}),
           ...(generatedObjective !== undefined && acceptsObjective
             ? { objective: generatedObjective, objectiveState: { source: "generated" as const } }
+            : {}),
+          updatedAt: thread.updatedAt,
+        },
+      };
+    }
+
+    case "thread.objective.generate.complete": {
+      const thread = yield* requireThread({ readModel, command, threadId: command.threadId });
+      // A refreshed objective never overwrites what the user typed, and a fill never
+      // overwrites one that another generation wrote while it ran.
+      const acceptsObjective =
+        thread.deletedAt === null &&
+        thread.objectiveState?.source !== "manual" &&
+        !(command.onlyIfEmpty === true && thread.objective?.trim());
+      const objective = command.objective.trim().slice(0, THREAD_OBJECTIVE_MAX_LENGTH).trimEnd();
+      return {
+        ...(yield* withEventBase({
+          aggregateKind: "thread",
+          aggregateId: command.threadId,
+          occurredAt: yield* nowIso,
+          commandId: command.commandId,
+        })),
+        type: "thread.meta-updated",
+        payload: {
+          threadId: command.threadId,
+          ...(acceptsObjective && objective.length > 0
+            ? { objective, objectiveState: { source: "generated" as const } }
             : {}),
           updatedAt: thread.updatedAt,
         },

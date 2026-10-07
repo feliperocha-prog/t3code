@@ -26,6 +26,7 @@ import {
   buildBranchNamePrompt,
   buildCommitMessagePrompt,
   buildPrContentPrompt,
+  buildProjectBriefPrompt,
   buildThreadTitlePrompt,
 } from "./TextGenerationPrompts.ts";
 import {
@@ -108,7 +109,8 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
       | "generateCommitMessage"
       | "generatePrContent"
       | "generateBranchName"
-      | "generateThreadTitle",
+      | "generateThreadTitle"
+      | "generateProjectBrief",
     value: unknown,
   ): Effect.Effect<string, TextGenerationError> =>
     encodeJsonString(value).pipe(
@@ -127,7 +129,8 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
       | "generateCommitMessage"
       | "generatePrContent"
       | "generateBranchName"
-      | "generateThreadTitle",
+      | "generateThreadTitle"
+      | "generateProjectBrief",
     attachments: TextGeneration.BranchNameGenerationInput["attachments"],
   ): Effect.fn.Return<MaterializedImageAttachments, TextGenerationError> {
     if (!attachments || attachments.length === 0) {
@@ -169,7 +172,8 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
       | "generateCommitMessage"
       | "generatePrContent"
       | "generateBranchName"
-      | "generateThreadTitle";
+      | "generateThreadTitle"
+      | "generateProjectBrief";
     cwd: string;
     prompt: string;
     outputSchemaJson: S;
@@ -415,6 +419,7 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
       const { prompt, outputSchema } = buildThreadTitlePrompt({
         message: input.message,
         previousTitle: input.previousTitle,
+        previousObjective: input.previousObjective,
         linkedContext: input.linkedContext,
         attachments: input.attachments,
       });
@@ -435,10 +440,32 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
       } satisfies TextGeneration.ThreadTitleGenerationResult;
     });
 
+  const generateProjectBrief: TextGeneration.TextGeneration["Service"]["generateProjectBrief"] =
+    Effect.fn("CodexTextGeneration.generateProjectBrief")(function* (input) {
+      const { prompt, outputSchema } = buildProjectBriefPrompt({
+        noteContents: input.noteContents,
+      });
+
+      const generated = yield* runCodexJson({
+        operation: "generateProjectBrief",
+        cwd: input.cwd,
+        prompt,
+        outputSchemaJson: outputSchema,
+        modelSelection: input.modelSelection,
+      });
+
+      return {
+        where: generated.where,
+        next: generated.next,
+        risks: generated.risks,
+      } satisfies TextGeneration.ProjectBriefGenerationResult;
+    });
+
   return {
     generateCommitMessage,
     generatePrContent,
     generateBranchName,
     generateThreadTitle,
+    generateProjectBrief,
   } satisfies TextGeneration.TextGeneration["Service"];
 });

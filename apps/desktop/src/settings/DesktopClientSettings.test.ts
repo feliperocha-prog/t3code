@@ -48,6 +48,7 @@ const clientSettings: ClientSettings = {
   fontSizeCode: 13,
   fontSizeInterface: 16,
   fontSizePrompt: 14,
+  chatTextScale: 1.2,
   fontSizeTerminal: 12,
   fontSmoothing: true,
   glassOpacity: 80,
