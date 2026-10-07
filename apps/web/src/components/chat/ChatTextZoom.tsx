@@ -11,7 +11,8 @@ import { cn } from "~/lib/utils";
 
 import { formatChatTextScale, stepChatTextScale } from "./chatTextScale";
 
-/** Wheel distance (px) per 10% step, so one notch of a mouse wheel is about one step. */
+/** Wheel distance (px) that makes one 10% step. A mouse notch reports more than this in a
+ * single event; a trackpad pinch reports small deltas that add up to it. */
 const WHEEL_STEP_DELTA = 50;
 /** Firefox reports some wheels in lines; this converts them to pixels. */
 const WHEEL_LINE_PX = 16;
@@ -34,16 +35,13 @@ export function useChatTextZoomWheel(element: HTMLElement | null): void {
       if (delta === 0) return;
       if (Math.sign(delta) !== Math.sign(accumulated)) accumulated = 0;
       accumulated += delta;
-      const steps = Math.trunc(accumulated / WHEEL_STEP_DELTA);
-      if (steps === 0) return;
-      accumulated -= steps * WHEEL_STEP_DELTA;
+      // One step per notch: a notch of 100px or more is still a single 10% step.
+      if (Math.abs(accumulated) < WHEEL_STEP_DELTA) return;
+      accumulated = 0;
       // Wheel up (negative delta) makes the text bigger.
-      const direction = steps < 0 ? 1 : -1;
+      const direction = delta < 0 ? 1 : -1;
       const current = getClientSettings().chatTextScale;
-      let next = current;
-      for (let index = 0; index < Math.abs(steps); index += 1) {
-        next = stepChatTextScale(next, direction);
-      }
+      const next = stepChatTextScale(current, direction);
       if (next !== current) void updateSettings({ chatTextScale: next });
     };
     element.addEventListener("wheel", onWheel, { passive: false });

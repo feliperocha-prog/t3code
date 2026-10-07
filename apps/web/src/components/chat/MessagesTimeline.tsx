@@ -68,6 +68,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
@@ -955,6 +956,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     null,
   );
   useChatTextZoomWheel(timelineViewportElement);
+  const chatTextScale = useClientSettings((settings) => settings.chatTextScale);
   // Re-measure the minimap gutter when the chat column changes width without a viewport resize.
   const chatWidth = useClientSettings((settings) => settings.chatWidth);
   const {
@@ -1297,6 +1299,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         <div
           ref={setTimelineViewportElement}
           className="relative h-full min-h-0"
+          style={{ "--chat-text-scale": chatTextScale } as CSSProperties}
           data-assistant-citation-viewport="true"
         >
           {onCiteAssistantText && citationThreadRef ? (
@@ -1699,8 +1702,12 @@ function TimelineMinimapNavigationButton({
 type TimelineWorkEntry = Extract<MessagesTimelineRow, { kind: "work" }>["groupedEntries"][number];
 type TimelineRow = MessagesTimelineRow;
 
+// Zoom lives inside the measured row element, so the list measures the zoomed height and the
+// scroll container keeps its own coordinates. The size comes from a CSS variable on the
+// timeline viewport: a change restyles the rows without re-rendering any of them.
+const TIMELINE_ROW_ZOOM_STYLE: CSSProperties = { zoom: "var(--chat-text-scale, 1)" };
+
 const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: TimelineRow }) {
-  const chatTextScale = useClientSettings((settings) => settings.chatTextScale);
   const isExpandedToolGroup = row.kind === "work" && row.isExpandedToolGroup;
   const isExpandedToolGroupHeader =
     (row.kind === "work-toggle" && row.expanded) || (row.kind === "work-live" && row.expanded);
@@ -1740,9 +1747,7 @@ const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: Time
       }
       data-message-role={row.kind === "message" ? row.message.role : undefined}
     >
-      {/* Zoom lives inside the measured row element, so the list measures the
-          zoomed height and the scroll container keeps its own coordinates. */}
-      <div style={chatTextScale === 1 ? undefined : { zoom: chatTextScale }}>
+      <div style={TIMELINE_ROW_ZOOM_STYLE}>
         {row.kind === "work" ? (
           <WorkGroupSection
             anchorKey={row.id}
