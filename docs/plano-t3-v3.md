@@ -53,6 +53,16 @@ transforma em cartão, botão e lista.
 
 **Como testar**: criar conversa → ver objetivo; mandar tarefa → cartão muda pra "trabalhando"; IA responde com STATUS → cartão atualiza; filtro "Esperando você" só mostra o que pede ação; abrir o projeto MATRIX → página inicial com o hub.
 
+**Desenho técnico (fechado 30/09, worktree `t3code-wt/onda-1`, branch `t3top/onda-1`)**
+
+- **Cartão de estado** nasce no servidor: ao gravar uma resposta completa da IA (`thread.message-sent`, role assistant, não streaming), o projetor extrai o **último** bloco `STATUS: / VOCÊ: / EU:` do texto e guarda no modelo leve da thread (`statusCard`: tipo `pronto | bloqueado | aguardando | outro`, os 3 textos cortados em 200 caracteres, id da mensagem). Parser compartilhado em `packages/shared` (servidor e web usam o mesmo). Campo opcional no contrato (cliente novo × servidor velho). Cliente não precisa de nada: o shell inteiro já é reenviado.
+- **Objetivo** é campo novo da thread (`objective`), editável pelo mesmo comando de renomear (`thread.meta.update`), gravado no shell. Sem campo na criação: a linha aparece no cabeçalho assim que a conversa existe; se ficar vazia, a **mesma** chamada que gera o título no 1º turno devolve também `objective` (JSON `{title, objective, needsRefinement}`), sem custo extra. Editar à mão trava (`objectiveState.source = "manual"`).
+- **Caixa de entrada**: filtro ao lado do escopo de projeto, 4 valores: Tudo (padrão) · Esperando você · Trabalhando · Acabou. Classificação a partir do shell: Esperando você = aprovação pendente, input pendente, falha, ou `statusCard` bloqueado/aguardando; Trabalhando = sessão rodando/iniciando; Acabou = `statusCard` pronto sem sessão rodando, ou concluída. Dentro da seção ativa, "Esperando você" sobe primeiro. Seção "Concluídas" começa recolhida.
+- **Página inicial do projeto**: configuração global "Pasta do vault" + por projeto "Nota de estado (relativa ao vault)", padrão `Projetos/<nome da pasta>/HUB.md`. Leitura pelo RPC de arquivo que já existe, com `cwd` = pasta do vault (ele só valida que o caminho não escapa da pasta). Renderiza as seções `## Estado`, `## Próximo passo`, `## Armadilhas` do hub; do README/AGENTS.md só as seções cujo título casa com rodar/run/deploy/publicar; e as 3 últimas conversas do projeto com o cartão de estado de cada uma. Fica na tela de rascunho (sem conversa), abaixo do compositor, no lugar dos cartões "primeiros passos".
+- **Notificação**: padrão passa de `off` pra `notifications`; o aviso de "terminou / precisa de você" leva o texto do `statusCard`.
+- Bloco STATUS na própria resposta vira cartão compacto (só quando o bloco de código fechou; só na resposta da IA, não em raciocínio/review).
+- Mobile não muda (campos opcionais; ele ignora).
+
 ## Onda 2 — Sem terminal
 
 **O que você vê**
@@ -126,7 +136,7 @@ Entram no `CLAUDE.md` global antes de qualquer instalação:
 
 ## Progresso
 
-- [x] Base sincronizada com a 0.0.44 e congelada (30/09, `5b73e70700`, instalada no PC)
-- [x] Regras sem app no CLAUDE.md
-- [~] Onda 1 — construída e revisada em 01/10 (branch `t3top/onda-1`): parser STATUS, objetivo, cartão de estado, filtros da caixa de entrada, página inicial do projeto, notificação ligada por padrão com STATUS, respiro do rótulo Terminal. Revisão achou 7 pontos, todos corrigidos (precedência do STATUS misto, "Status:" em qualquer caixa, thread sem bloco vai pra "Acabou", contador de Esperando inclui adormecidas, teto do objetivo gerado, limpar objetivo trava regeneração, caminho da nota preso ao vault). Instalador do CI gerado; **falta o teste do Felipe** e a junção em `pt-br`.
+- [x] Base sincronizada com a 0.0.44 e congelada (30/09: `pt-br` em `5b73e70700`; CI Linux em `85ffc074bd`: typecheck e todos os testes verdes, instalador verde; instalada no PC)
+- [x] Regras sem app no CLAUDE.md (30/09)
+- [x] Onda 1 — construída e revisada em 01/10: parser STATUS, objetivo, cartão de estado, filtros da caixa de entrada, página inicial do projeto, notificação ligada por padrão com STATUS. Teste do Felipe em 06/10 ("ok, mas não boa") → Onda 1.5 em 07/10: resumo do projeto escrito pela IA, objetivo automático com trava manual, faixa STATUS e filtros numa linha, Ctrl+roda só no texto da conversa. Aprovada pelo Felipe em 07/10 e juntada em `pt-br`.
 - [ ] Onda 2 · [ ] Onda 3 · [ ] Onda 4 · [ ] Onda 5 · [ ] Onda 6
