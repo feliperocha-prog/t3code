@@ -11,6 +11,7 @@ import { feedbackBannerItem } from "./chat/ComposerFeedback";
 import { usageLimitsBannerItem } from "./chat/ComposerUsageLimits";
 import { ThreadTabStrip } from "./chat/ThreadTabStrip";
 import { ThreadBrief } from "./chat/ThreadBrief";
+import { statusCardAnswered } from "./chat/statusCard.logic";
 import { derivePendingRequests } from "@t3tools/client-runtime/pending-requests";
 import {
   questionAttachmentDraftId,
@@ -540,7 +541,7 @@ import {
   ATTACHMENT_ONLY_BOOTSTRAP_PROMPT,
   recallableComposerPrompt,
 } from "./chat/composerPromptHistory";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 const EMPTY_ACTIVITIES: OrchestrationThreadActivity[] = [];
 const EMPTY_QUEUED_MESSAGES: QueuedComposerMessage[] = [];
@@ -7305,6 +7306,28 @@ export default function ChatView(props: ChatViewProps) {
       sendCtx.selectedPromptEffort,
     ),
   });
+  // Yes / No under a waiting STATUS. The answer goes through the send queue, so
+  // the buttons hide while it waits there (see statusCardAnswered).
+  const sendStatusQuickReply = (text: string) => {
+    if (!activeThreadKey || !activeThreadRef || !composerRef.current?.getSendContext()) return;
+    void onSend(undefined, "foreground", { kind: "quick-reply", text });
+  };
+  // "Adjust" under a waiting STATUS: start the answer in the message box. An
+  // empty box gets a lead-in so the reply reads as a correction; a draft in
+  // progress is left as is.
+  const startStatusAdjustment = () => {
+    if (promptRef.current.trim().length === 0) {
+      const nextPrompt = tc("quick reply", "Adjust: ");
+      promptRef.current = nextPrompt;
+      setComposerDraftPrompt(composerDraftTarget, nextPrompt);
+      composerRef.current?.resetCursorState({
+        cursor: collapseExpandedComposerCursor(nextPrompt, nextPrompt.length),
+        prompt: nextPrompt,
+        detectTrigger: false,
+      });
+    }
+    focusComposer();
+  };
   // Puts queued messages back into the composer after Stop or Cancel. Prompts
   // join with blank lines; attachments and contexts are added.
   const restoreQueuedMessagesToComposer = (messages: ReadonlyArray<QueuedComposerMessage>) => {
@@ -7399,23 +7422,28 @@ export default function ChatView(props: ChatViewProps) {
           annotation: PreviewAnnotationPayload;
           image: ComposerImageAttachment | null;
         }
-      | { kind: "review-comment"; comment: ReviewCommentContext },
+      | { kind: "review-comment"; comment: ReviewCommentContext }
+      | { kind: "quick-reply"; text: string },
   ): Promise<void> => {
     e?.preventDefault();
-    // A review comment rides the queued-message path, which never reads or clears
-    // the composer: QueuedMessageSender sends it once the thread is idle, it waits
-    // in the queue like any follow-up while the agent is busy, and a steer goes
-    // out now through the same path as Send now.
-    if (direct?.kind === "review-comment") {
+    // A review comment or a quick reply (Yes / No under a waiting STATUS) rides
+    // the queued-message path, which never reads or clears the composer:
+    // QueuedMessageSender sends it once the thread is idle, it waits in the
+    // queue like any follow-up while the agent is busy, and a steer goes out
+    // now through the same path as Send now.
+    if (direct?.kind === "review-comment" || direct?.kind === "quick-reply") {
       const sendCtx = composerRef.current?.getSendContext();
       if (!activeThreadKey || !activeThreadRef || !sendCtx) return;
       const entry = useQueuedMessageStore.getState().enqueue(activeThreadKey, {
-        prompt: ensureInlineContextReferences("", [reviewCommentContextReference(direct.comment)]),
+        prompt:
+          direct.kind === "review-comment"
+            ? ensureInlineContextReferences("", [reviewCommentContextReference(direct.comment)])
+            : direct.text,
         images: [],
         files: [],
         terminalContexts: [],
         previewAnnotations: [],
-        reviewComments: [direct.comment],
+        reviewComments: direct.kind === "review-comment" ? [direct.comment] : [],
         sendSettings: readComposerSendSettings(sendCtx),
         queuedAfterToolActivityId: latestCompletedToolActivityId(threadActivities),
         createdAt: new Date().toISOString(),
@@ -9924,6 +9952,13 @@ export default function ChatView(props: ChatViewProps) {
             objectiveManual={objectiveManual}
             editingObjective={editingObjective}
             onEditingObjectiveChange={setEditingObjective}
+            statusAnswered={statusCardAnswered(
+              activeThreadShell.statusCard?.messageId ?? null,
+              activeThread.messages,
+              queuedMessages.length,
+            )}
+            onQuickReply={sendStatusQuickReply}
+            onAdjust={startStatusAdjustment}
           />
         ) : null}
 

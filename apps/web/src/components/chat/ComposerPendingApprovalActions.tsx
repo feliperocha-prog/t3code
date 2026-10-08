@@ -9,7 +9,7 @@ import { Button } from "../ui/button";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { composerFloatingLayerProps } from "./composerEventScope";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 interface ComposerPendingApprovalActionsProps {
   requestId: ApprovalRequestId;
@@ -22,11 +22,39 @@ interface ComposerPendingApprovalActionsProps {
 }
 
 const DEFAULT_APPROVAL_OPTIONS = [
-  { decision: "cancel", label: t("Cancel") },
-  { decision: "decline", label: t("Decline") },
-  { decision: "acceptForSession", label: t("Always allow this session") },
-  { decision: "accept", label: t("Approve") },
+  { decision: "cancel", label: "Cancel" },
+  { decision: "decline", label: "Decline" },
+  { decision: "acceptForSession", label: "Always allow this session" },
+  { decision: "accept", label: "Approve" },
 ] satisfies ReadonlyArray<ProviderApprovalOption>;
+
+// The generic wording (ours and the providers') gets plain names; a provider's
+// own wording, such as "Allow once" or "Always allow Safari", is kept as sent.
+const PLAIN_APPROVAL_LABELS: Readonly<Record<string, string>> = {
+  Cancel: t("Cancel"),
+  Decline: tc("approval", "Deny"),
+  Approve: tc("approval", "Allow"),
+  "Always allow this session": tc("approval", "Allow for this conversation"),
+};
+
+const approvalOptionLabel = (option: ProviderApprovalOption) =>
+  PLAIN_APPROVAL_LABELS[option.label] ?? option.label;
+
+// Allowing for the rest of the conversation is a standing decision, so its
+// scope is spelled out unless the provider already attached a warning.
+const approvalOptionHint = (option: ProviderApprovalOption) =>
+  option.warning ??
+  (option.decision === "acceptForSession"
+    ? tc(
+        "approval",
+        "Allows this kind of request until the conversation ends. Other requests still ask.",
+      )
+    : undefined);
+
+const isPrimaryDecision = (option: ProviderApprovalOption) =>
+  option.decision === "decline" ||
+  option.decision === "acceptForSession" ||
+  option.decision === "accept";
 
 export const ComposerPendingApprovalActions = memo(function ComposerPendingApprovalActions({
   requestId,
@@ -34,33 +62,30 @@ export const ComposerPendingApprovalActions = memo(function ComposerPendingAppro
   options = DEFAULT_APPROVAL_OPTIONS,
   onRespondToApproval,
 }: ComposerPendingApprovalActionsProps) {
-  const primaryOptions = options.filter(
-    (option) => option.decision === "decline" || option.decision === "accept",
-  );
-  const moreOptions = options.filter(
-    (option) => option.decision !== "decline" && option.decision !== "accept",
-  );
+  const primaryOptions = options.filter(isPrimaryDecision);
+  const moreOptions = options.filter((option) => !isPrimaryDecision(option));
 
   return (
     <>
       {primaryOptions.map((option) => {
+        const hint = approvalOptionHint(option);
         const button = (
           <Button
             key={option.decision}
             size="xs"
             variant={option.decision === "accept" ? "default" : "outline"}
             disabled={isResponding}
-            aria-description={option.warning}
+            aria-description={hint}
             onClick={() => void onRespondToApproval(requestId, option.decision)}
           >
             {option.warning ? <TriangleAlertIcon className="size-3 shrink-0" /> : null}
-            <span className="max-w-40 truncate">{option.label}</span>
+            <span className="max-w-40 truncate">{approvalOptionLabel(option)}</span>
           </Button>
         );
-        return option.warning ? (
+        return hint ? (
           <Tooltip key={option.decision}>
             <TooltipTrigger render={button} />
-            <TooltipPopup side="top">{option.warning}</TooltipPopup>
+            <TooltipPopup side="top">{hint}</TooltipPopup>
           </Tooltip>
         ) : (
           button
@@ -88,7 +113,9 @@ export const ComposerPendingApprovalActions = memo(function ComposerPendingAppro
                   className="mb-1 last:mb-0"
                 >
                   {option.warning ? <TriangleAlertIcon className="size-3 text-warning" /> : null}
-                  <span className="min-w-0 whitespace-normal wrap-break-word">{option.label}</span>
+                  <span className="min-w-0 whitespace-normal wrap-break-word">
+                    {approvalOptionLabel(option)}
+                  </span>
                 </MenuItem>
               );
               return option.warning ? (

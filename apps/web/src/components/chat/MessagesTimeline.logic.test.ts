@@ -3469,6 +3469,52 @@ describe("deriveMessagesTimelineRows", () => {
     });
   });
 
+  it("keeps approval history visible in its own row after the turn folds", () => {
+    const turnId = TurnId.make("approval-turn");
+    const time = (second: number) => new Date(Date.UTC(2026, 8, 8, 0, 0, second)).toISOString();
+    const approval: WorkLogEntry = {
+      id: "approval-requested",
+      createdAt: time(3),
+      turnId,
+      tone: "info",
+      label: "Command approval requested",
+      requestKind: "command",
+      sourceActivityKind: "approval.requested",
+      approval: {
+        requestId: ApprovalRequestId.make("approval-request"),
+        requestKind: "command",
+        detail: "git push",
+        decision: "accept",
+      },
+    };
+    const tools: WorkLogEntry[] = [1, 2, 4, 5].map((second) => ({
+      id: `tool-${second}`,
+      createdAt: time(second),
+      turnId,
+      tone: "tool",
+      label: "Ran command",
+      command: "git status",
+      toolCallId: `call-${second}`,
+      toolLifecycleStatus: "completed",
+      sourceActivityKind: "tool.completed",
+    }));
+    const input = {
+      timelineEntries: deriveTimelineEntries([], [], [...tools, approval]),
+      latestTurn: { turnId, state: "completed", startedAt: time(0), completedAt: time(6) },
+      isWorking: false,
+      activeTurnStartedAt: null,
+      turnDiffSummaries: [],
+      supportsConversationRollback: false,
+    } satisfies Parameters<typeof deriveMessagesTimelineRows>[0];
+
+    const collapsed = deriveMessagesTimelineRows(input);
+    expect(collapsed.map((row) => row.kind)).toEqual(["turn-fold", "work"]);
+    expect(collapsed.find((row) => row.kind === "work")).toMatchObject({
+      groupedEntries: [approval],
+      isExpandedToolGroup: false,
+    });
+  });
+
   it("deduplicates integration sources and uses the first source icon for the group", () => {
     const chromeSource = {
       key: "browser-use:chrome",

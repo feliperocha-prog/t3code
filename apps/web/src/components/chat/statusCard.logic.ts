@@ -85,3 +85,35 @@ export function resolveStatusCardView(thread: StatusCardThreadInput): StatusCard
   }
   return { ...statusCardViewFromBlock(card), messageId: card.messageId };
 }
+
+/**
+ * Yes / No / Adjust buttons show whenever the last reply waits on the user
+ * ("aguardando") and nothing live outranks it. Deliberately not guessing
+ * whether the question is yes/no: a button that sometimes vanishes reads as a
+ * bug, and "Yes" on an open question is harmless.
+ */
+export function statusCardOffersQuickReplies(view: StatusCardView): boolean {
+  return view.headline.kind === "card" && view.tone === "waiting";
+}
+
+/**
+ * The waiting card was already answered from this client: an answer sits in the
+ * send queue, or a user message came after the card's reply. Derived rather than
+ * remembered, so Stop or removing the queued answer brings the buttons back.
+ */
+export function statusCardAnswered(
+  messageId: MessageId | null,
+  messages: ReadonlyArray<{ readonly id: MessageId; readonly role: string }>,
+  queuedCount: number,
+): boolean {
+  if (queuedCount > 0) return true;
+  if (messageId === null) return false;
+  // Runs on every chat render: walk back from the end, which reaches the card in a few steps.
+  let userAfterCard = false;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]!;
+    if (message.id === messageId) return userAfterCard;
+    if (message.role === "user") userAfterCard = true;
+  }
+  return false;
+}

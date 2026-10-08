@@ -104,15 +104,8 @@ const dictionary: Readonly<Record<string, string>> = {
   "{source} skill": "Skill ({source})",
 
   // Composer: approvals
-  Decline: "Recusar",
-  "Always allow this session": "Sempre permitir nesta sessão",
   Approve: "Aprovar",
   "More approval options": "Mais opções de aprovação",
-  "App access approval": "Aprovação de acesso do app",
-  "Command approval": "Aprovação de comando",
-  "File read approval": "Aprovação de leitura de arquivo",
-  "App permission approval": "Aprovação de permissão do app",
-  "File change approval": "Aprovação de alteração de arquivo",
   "App access request": "Pedido de acesso do app",
   Command: "Comando",
   "File to read": "Arquivo a ler",

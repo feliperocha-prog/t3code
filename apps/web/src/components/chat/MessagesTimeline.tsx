@@ -87,6 +87,7 @@ import {
   workEntryDisplayIndicatesToolFailure,
   workEntrySignalsSevereFailure,
   workLogEntryIsToolLike,
+  type WorkLogApproval,
 } from "../../session-logic";
 import {
   type ChatMessage,
@@ -125,6 +126,10 @@ import {
   MousePointerClickIcon,
   PaintbrushIcon,
   SearchIcon,
+  ShieldAlertIcon,
+  ShieldCheckIcon,
+  ShieldIcon,
+  ShieldXIcon,
   SmartphoneIcon,
   SquarePenIcon,
   TerminalIcon,
@@ -4747,6 +4752,99 @@ function AgentSpawnMemberRow({
   );
 }
 
+const approvalKindLabel: Record<WorkLogApproval["requestKind"], string> = {
+  command: "Command",
+  "file-read": "Read a file",
+  "file-change": "Change a file",
+  permission: "Permission",
+  "mcp-elicitation": "App access",
+};
+
+const approvalStateLabel: Record<WorkLogApproval["decision"], string> = {
+  pending: "waiting for you",
+  accept: "allowed",
+  acceptForSession: "allowed for this conversation",
+  acceptAlways: "allowed always",
+  decline: "denied",
+  cancel: "cancelled",
+  closed: "no answer",
+};
+
+function ApprovalStateIcon({ decision }: { decision: WorkLogApproval["decision"] }) {
+  const className = "block size-4 shrink-0 stroke-2";
+  switch (decision) {
+    case "pending":
+      return <ShieldAlertIcon aria-hidden className={className} />;
+    case "accept":
+    case "acceptForSession":
+    case "acceptAlways":
+      return <ShieldCheckIcon aria-hidden className={className} />;
+    case "decline":
+    case "cancel":
+      return <ShieldXIcon aria-hidden className={className} />;
+    default:
+      return <ShieldIcon aria-hidden className={className} />;
+  }
+}
+
+/**
+ * One fixed-height line per approval request: the decision history. The same
+ * row flips from pending to answered in place, so it never shifts the scroll.
+ * Answering happens in the composer band, never here.
+ */
+function ApprovalHistoryRow({
+  approval,
+  createdAt,
+}: {
+  approval: WorkLogApproval;
+  createdAt: string;
+}) {
+  const { timestampFormat } = use(TimelineRowCtx);
+  const kindLabel = t(approvalKindLabel[approval.requestKind]);
+  const stateLabel = t(approvalStateLabel[approval.decision]);
+  const label = `${kindLabel} · ${stateLabel}`;
+  const detail = approval.detail ?? approval.appName;
+  return (
+    <div className="group/timeline-row relative flex flex-col rounded-md px-0.5 py-0.5">
+      <div className="flex select-none items-center gap-1.5">
+        <span
+          className={cn(
+            "flex size-6 shrink-0 items-center justify-center",
+            approval.decision === "pending" ? "text-warning" : "text-icon-muted",
+          )}
+        >
+          <ApprovalStateIcon decision={approval.decision} />
+        </span>
+        <span className="flex min-w-0 flex-1 items-baseline gap-1.5 text-sm leading-relaxed">
+          <span
+            className={cn(
+              "shrink-0",
+              approval.decision === "pending" ? "font-medium text-warning" : "text-secondary-label",
+            )}
+          >
+            {label}
+          </span>
+          {detail ? (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span className="min-w-0 truncate font-mono text-muted-foreground text-xs" />
+                }
+              >
+                {detail}
+              </TooltipTrigger>
+              <TooltipPopup>
+                <span className="whitespace-pre-wrap break-all font-mono">{detail}</span>
+              </TooltipPopup>
+            </Tooltip>
+          ) : null}
+        </span>
+        <TimelineRowTimestamp createdAt={createdAt} timestampFormat={timestampFormat} />
+      </div>
+    </div>
+  );
+}
+
 const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
   workEntry: TimelineWorkEntry;
   workspaceRoot: string | undefined;
@@ -4764,6 +4862,9 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
         onToggleEntry={props.onToggleEntry}
       />
     );
+  }
+  if (workEntry.approval) {
+    return <ApprovalHistoryRow approval={workEntry.approval} createdAt={workEntry.createdAt} />;
   }
   return (
     <PlainWorkEntryRow

@@ -1,8 +1,14 @@
 import {
+  derivePendingRequests,
   requestKindFromRequestType,
   type PendingApproval,
 } from "@t3tools/client-runtime/pending-requests";
-import { UserInputAttachmentAnswerPayload } from "@t3tools/contracts";
+import {
+  ApprovalRequestId,
+  ProviderApprovalDecision,
+  ProviderRequestKind,
+  UserInputAttachmentAnswerPayload,
+} from "@t3tools/contracts";
 import { foldUserInputActivities } from "@t3tools/client-runtime/work-log/user-input";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
@@ -55,6 +61,8 @@ export {
 
 export interface WorkLogEntry {
   questionAnswer?: UserInputAttachmentAnswerPayload;
+  /** One history row per approval request, kept after the user answers it. */
+  approval?: WorkLogApproval;
   id: string;
   createdAt: string;
   turnId?: TurnId | null;
@@ -92,6 +100,15 @@ export interface WorkLogEntry {
     workflowId: string | null;
     agentTaskIds: ReadonlyArray<string>;
   };
+}
+
+export interface WorkLogApproval {
+  requestId: ApprovalRequestId;
+  requestKind: PendingApproval["requestKind"];
+  detail?: string;
+  appName?: string;
+  /** "closed": resolved without a decision, or no longer pending without a resolution. */
+  decision: "pending" | "closed" | ProviderApprovalDecision;
 }
 
 const workLogCollapseKey = Symbol();
@@ -174,7 +191,8 @@ export function workEntryIndicatesToolNeutralStatus(entry: WorkLogEntry): boolea
   // Spawn CTA rows are never neutral-hidden: mid-run they derive from
   // task.progress (tone "thinking") and the neutral filter was swallowing
   // them exactly while the fleet ran — the one moment they matter most.
-  if (entry.agentSpawn !== undefined) {
+  // Approval history rows carry a requestKind but never a tool status.
+  if (entry.agentSpawn !== undefined || entry.approval !== undefined) {
     return false;
   }
   if (!workLogEntryIsToolLike(entry)) {
@@ -466,8 +484,19 @@ export function deriveWorkLogEntries(
       if (toolUseId) agentLaunchToolIds.add(toolUseId);
     }
   }
+  const approvalHistory = collectApprovalHistory(ordered);
   const entries: DerivedWorkLogEntry[] = [];
   for (const activity of foldUserInputActivities(ordered)) {
+    if (approvalActivityKinds.has(activity.kind)) {
+      // One row per request, at the request: its outcome folds into that row.
+      const approval = approvalHistory.byActivity.get(activity);
+      if (approval) {
+        entries.push(toApprovalWorkLogEntry(activity, approval));
+        continue;
+      }
+      const requestId = approvalRequestIdOf(activity);
+      if (requestId !== null && approvalHistory.requestedIds.has(requestId)) continue;
+    }
     if (
       isWorktreeSetupActivity(activity.kind) &&
       (activity.tone !== "error" || activity.kind === "worktree-setup")
@@ -538,6 +567,122 @@ function isPlanBoundaryToolActivity(activity: OrchestrationThreadActivity): bool
 }
 
 const decodeQuestionAttachmentAnswer = Schema.decodeUnknownOption(UserInputAttachmentAnswerPayload);
+
+const isApprovalRequestId = Schema.is(ApprovalRequestId);
+const isProviderRequestKind = Schema.is(ProviderRequestKind);
+const isProviderApprovalDecision = Schema.is(ProviderApprovalDecision);
+
+// A failed reply keeps its own row: its text says why and what to do next.
+const approvalActivityKinds: ReadonlySet<OrchestrationThreadActivity["kind"]> = new Set([
+  "approval.requested",
+  "approval.resolved",
+]);
+
+interface ApprovalHistory {
+  /** The first `approval.requested` activity of each request and its current state. */
+  byActivity: Map<OrchestrationThreadActivity, WorkLogApproval>;
+  requestedIds: Set<ApprovalRequestId>;
+}
+
+function approvalRequestIdOf(activity: OrchestrationThreadActivity): ApprovalRequestId | null {
+  const requestId = asRecord(activity.payload)?.requestId;
+  return isApprovalRequestId(requestId) ? requestId : null;
+}
+
+function approvalRequestKindOf(
+  payload: Record<string, unknown>,
+): PendingApproval["requestKind"] | null {
+  return isProviderRequestKind(payload.requestKind)
+    ? payload.requestKind
+    : requestKindFromRequestType(payload.requestType);
+}
+
+/** Pairs each approval request with its outcome. Pending state comes from the shared reducer. */
+function collectApprovalHistory(
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
+): ApprovalHistory {
+  const byActivity = new Map<OrchestrationThreadActivity, WorkLogApproval>();
+  const requestedIds = new Set<ApprovalRequestId>();
+  const resolvedById = new Map<
+    ApprovalRequestId,
+    { decision: WorkLogApproval["decision"]; requestKind: PendingApproval["requestKind"] | null }
+  >();
+  const requested: Array<{
+    activity: OrchestrationThreadActivity;
+    requestId: ApprovalRequestId;
+    payload: Record<string, unknown>;
+  }> = [];
+  for (const activity of activities) {
+    if (activity.kind !== "approval.requested" && activity.kind !== "approval.resolved") continue;
+    const payload = asRecord(activity.payload);
+    const requestId = payload?.requestId;
+    if (!payload || !isApprovalRequestId(requestId)) continue;
+    // Not user-facing approvals; they keep their plain work-log rows.
+    if (
+      payload.requestType === "tool_user_input" ||
+      payload.requestType === "auth_tokens_refresh"
+    ) {
+      continue;
+    }
+    if (activity.kind === "approval.resolved") {
+      resolvedById.set(requestId, {
+        decision: isProviderApprovalDecision(payload.decision) ? payload.decision : "closed",
+        requestKind: approvalRequestKindOf(payload),
+      });
+    } else {
+      requested.push({ activity, requestId, payload });
+    }
+  }
+  if (requested.length === 0) return { byActivity, requestedIds };
+
+  const pendingById = new Map(
+    derivePendingRequests(activities).approvals.map(
+      (approval) => [approval.requestId, approval] as const,
+    ),
+  );
+  for (const { activity, requestId, payload } of requested) {
+    if (requestedIds.has(requestId)) continue;
+    requestedIds.add(requestId);
+    const resolved = resolvedById.get(requestId);
+    const pending = pendingById.get(requestId);
+    const detail = asTrimmedString(payload.detail);
+    const appName = asTrimmedString(payload.appName);
+    byActivity.set(activity, {
+      requestId,
+      requestKind:
+        approvalRequestKindOf(payload) ??
+        resolved?.requestKind ??
+        pending?.requestKind ??
+        "command",
+      ...(detail ? { detail } : {}),
+      ...(appName ? { appName } : {}),
+      decision: resolved ? resolved.decision : pending ? "pending" : "closed",
+    });
+  }
+  return { byActivity, requestedIds };
+}
+
+const approvalWorkLogEntryByActivity = new WeakMap<
+  OrchestrationThreadActivity,
+  DerivedWorkLogEntry
+>();
+
+/** Reuses the row object while its state holds, so the timeline keeps its cheap append path. */
+function toApprovalWorkLogEntry(
+  activity: OrchestrationThreadActivity,
+  approval: WorkLogApproval,
+): DerivedWorkLogEntry {
+  const cached = approvalWorkLogEntryByActivity.get(activity);
+  if (
+    cached?.approval?.decision === approval.decision &&
+    cached.approval.requestKind === approval.requestKind
+  ) {
+    return cached;
+  }
+  const entry: DerivedWorkLogEntry = { ...toDerivedWorkLogEntry(activity), approval };
+  approvalWorkLogEntryByActivity.set(activity, entry);
+  return entry;
+}
 
 function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWorkLogEntry {
   const cachedEntry = derivedWorkLogEntryByActivity.get(activity);

@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
 
 import { ComposerPendingApprovalPanel } from "./ComposerPendingApprovalPanel";
-import { t } from "~/i18n";
+import { tc } from "~/i18n";
 
 describe("ComposerPendingApprovalPanel", () => {
   it("keeps the complete command readable in the compact row", () => {
@@ -37,7 +37,7 @@ describe("ComposerPendingApprovalPanel", () => {
       />,
     );
 
-    expect(markup).toContain(t("File read approval"));
+    expect(markup).toContain(tc("approval", "The agent wants to read a file"));
   });
 
   it("shows the app name and message for an MCP access request", () => {

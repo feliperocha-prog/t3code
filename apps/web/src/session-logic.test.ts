@@ -476,6 +476,77 @@ describe("workEntryIndicatesToolNeutralStatus", () => {
   );
 });
 
+describe("deriveWorkLogEntries approval history", () => {
+  const requested = (requestId: string) =>
+    makeActivity({
+      id: `requested-${requestId}`,
+      createdAt: "2026-02-23T00:00:01.000Z",
+      kind: "approval.requested",
+      summary: "Command approval requested",
+      tone: "approval",
+      payload: {
+        requestId,
+        requestKind: "command",
+        requestType: "command_execution_approval",
+        detail: "git push origin main",
+      },
+      turnId: "turn-1",
+    });
+
+  it("folds the resolution into the request row", () => {
+    const entries = deriveWorkLogEntries([
+      requested("req-1"),
+      makeActivity({
+        id: "resolved-req-1",
+        createdAt: "2026-02-23T00:00:02.000Z",
+        kind: "approval.resolved",
+        summary: "Approval resolved",
+        tone: "approval",
+        payload: {
+          requestId: "req-1",
+          requestKind: "command",
+          requestType: "command_execution_approval",
+          decision: "accept",
+        },
+        turnId: "turn-1",
+      }),
+    ]);
+
+    expect(entries.map((entry) => entry.id)).toEqual(["requested-req-1"]);
+    expect(entries[0]?.approval).toEqual({
+      requestId: "req-1",
+      requestKind: "command",
+      detail: "git push origin main",
+      decision: "accept",
+    });
+  });
+
+  it("marks a request still waiting on the user as pending", () => {
+    const entries = deriveWorkLogEntries([requested("req-2")]);
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.approval?.decision).toBe("pending");
+  });
+
+  it("closes a request the provider reports as stale and keeps the failure row", () => {
+    const entries = deriveWorkLogEntries([
+      requested("req-3"),
+      makeActivity({
+        id: "failed-req-3",
+        createdAt: "2026-02-23T00:00:02.000Z",
+        kind: "provider.approval.respond.failed",
+        summary: "Provider approval response failed",
+        tone: "error",
+        payload: { requestId: "req-3", detail: "Stale pending approval request: req-3" },
+        turnId: "turn-1",
+      }),
+    ]);
+
+    expect(entries.map((entry) => entry.id)).toEqual(["requested-req-3", "failed-req-3"]);
+    expect(entries[0]?.approval?.decision).toBe("closed");
+  });
+});
+
 describe("deriveWorkLogEntries", () => {
   it("keeps the latest task progress without emitting plan-update log entries", () => {
     const activities = [

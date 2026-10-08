@@ -1,7 +1,12 @@
 import { MessageId, type OrchestrationSession, ThreadId } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
-import { resolveStatusCardView, type StatusCardThreadInput } from "./statusCard.logic";
+import {
+  resolveStatusCardView,
+  statusCardAnswered,
+  statusCardOffersQuickReplies,
+  type StatusCardThreadInput,
+} from "./statusCard.logic";
 
 function session(status: OrchestrationSession["status"]): OrchestrationSession {
   return {
@@ -122,5 +127,51 @@ describe("resolveStatusCardView", () => {
 
   it("works without a session", () => {
     expect(resolveStatusCardView({ ...idle, session: null, statusCard: card }).tone).toBe("done");
+  });
+});
+
+describe("statusCardOffersQuickReplies", () => {
+  const offers = (input: StatusCardThreadInput) =>
+    statusCardOffersQuickReplies(resolveStatusCardView(input));
+
+  it("offers quick replies only while the last reply waits on the user", () => {
+    expect(offers({ ...idle, statusCard: { ...card, kind: "aguardando" } })).toBe(true);
+    expect(offers({ ...idle, statusCard: card })).toBe(false);
+    expect(offers({ ...idle, statusCard: { ...card, kind: "bloqueado" } })).toBe(false);
+    expect(offers({ ...idle, statusCard: { ...card, kind: "outro" } })).toBe(false);
+    expect(offers(idle)).toBe(false);
+  });
+
+  it("hides them while a live state outranks the card", () => {
+    const waiting = { ...idle, statusCard: { ...card, kind: "aguardando" as const } };
+    expect(offers({ ...waiting, session: session("running") })).toBe(false);
+    expect(offers({ ...waiting, hasPendingApprovals: true })).toBe(false);
+  });
+});
+
+describe("statusCardAnswered", () => {
+  const cardId = MessageId.make("assistant-1");
+  const messages = [
+    { id: MessageId.make("user-1"), role: "user" },
+    { id: cardId, role: "assistant" },
+  ];
+
+  it("counts an answer waiting in the send queue", () => {
+    expect(statusCardAnswered(cardId, messages, 1)).toBe(true);
+  });
+
+  it("counts a user message after the card's reply", () => {
+    expect(
+      statusCardAnswered(cardId, [...messages, { id: MessageId.make("user-2"), role: "user" }], 0),
+    ).toBe(true);
+  });
+
+  it("offers the buttons again once the queued answer is taken back", () => {
+    expect(statusCardAnswered(cardId, messages, 0)).toBe(false);
+  });
+
+  it("ignores user messages from before the card", () => {
+    expect(statusCardAnswered(MessageId.make("missing"), messages, 0)).toBe(false);
+    expect(statusCardAnswered(null, messages, 0)).toBe(false);
   });
 });

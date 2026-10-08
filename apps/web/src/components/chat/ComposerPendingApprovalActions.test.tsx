@@ -3,10 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
 
 import { ComposerPendingApprovalActions } from "./ComposerPendingApprovalActions";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 
 describe("ComposerPendingApprovalActions", () => {
-  it("keeps the main decisions visible and secondary decisions in the menu", () => {
+  it("keeps deny, allow and allow-for-this-conversation visible and cancel in the menu", () => {
     const markup = renderToStaticMarkup(
       <ComposerPendingApprovalActions
         requestId={ApprovalRequestId.make("approval-1")}
@@ -15,10 +15,10 @@ describe("ComposerPendingApprovalActions", () => {
       />,
     );
 
-    expect(markup).toContain(`>${t("Decline")}<`);
-    expect(markup).toContain(`>${t("Approve")}<`);
+    expect(markup).toContain(`>${tc("approval", "Deny")}<`);
+    expect(markup).toContain(`>${tc("approval", "Allow")}<`);
+    expect(markup).toContain(`>${tc("approval", "Allow for this conversation")}<`);
     expect(markup).not.toContain(`>${t("Cancel")}<`);
-    expect(markup).not.toContain(t("Always allow this session"));
   });
 
   it("keeps secondary provider labels out of the compact action row", () => {
@@ -36,8 +36,7 @@ describe("ComposerPendingApprovalActions", () => {
     );
 
     expect(markup).not.toContain("Always allow Safari");
-    expect(markup).toContain(">Approve<");
-    expect(markup).not.toContain(t("Always allow this session"));
+    expect(markup).toContain(`>${tc("approval", "Allow")}<`);
   });
 
   it("preserves provider labels for the main decisions", () => {
@@ -55,7 +54,7 @@ describe("ComposerPendingApprovalActions", () => {
 
     expect(markup).toContain("Allow once");
     expect(markup).toContain("Deny");
-    expect(markup).not.toContain(`>${t("Approve")}<`);
-    expect(markup).not.toContain(`>${t("Decline")}<`);
+    expect(markup).not.toContain(`>${tc("approval", "Allow")}<`);
+    expect(markup).not.toContain(`>${tc("approval", "Deny")}<`);
   });
 });

@@ -13,6 +13,7 @@ import { ComposerControl, ComposerControlIcon } from "./ComposerControl";
 import { useComposerMenuProps } from "./composerEventScope";
 import { useComposerMenuState } from "./useComposerMenuState";
 import { t } from "~/i18n";
+import { runtimeModeConfig, runtimeModeOptions } from "./runtimeModeConfig";
 
 export const CompactComposerControlsMenu = memo(function CompactComposerControlsMenu(props: {
   interactionMode: ProviderInteractionMode;
@@ -80,10 +81,11 @@ export const CompactComposerControlsMenu = memo(function CompactComposerControls
             props.onRuntimeModeChange(value as RuntimeMode);
           }}
         >
-          <MenuRadioItem value="approval-required">{t("Supervised")}</MenuRadioItem>
-          <MenuRadioItem value="auto-accept-edits">{t("Auto-accept edits")}</MenuRadioItem>
-          <MenuRadioItem value="auto">{t("Auto")}</MenuRadioItem>
-          <MenuRadioItem value="full-access">{t("Full access")}</MenuRadioItem>
+          {runtimeModeOptions.map((mode) => (
+            <MenuRadioItem key={mode} value={mode}>
+              {runtimeModeConfig[mode].label}
+            </MenuRadioItem>
+          ))}
         </MenuRadioGroup>
       </MenuPopup>
     </Menu>

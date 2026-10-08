@@ -49,6 +49,9 @@ function render(props: Partial<ComponentProps<typeof ThreadBrief>> = {}) {
       objectiveManual={false}
       editingObjective={false}
       onEditingObjectiveChange={() => undefined}
+      statusAnswered={false}
+      onQuickReply={() => undefined}
+      onAdjust={() => undefined}
       {...props}
     />,
   );

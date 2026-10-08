@@ -1,7 +1,11 @@
 import { DESKTOP_PASTE_AS_TEXT_EVENT } from "../../lib/desktopPasteAsText";
 import { isLocalEnvironmentDisabled } from "../../localEnvironment";
 import { usePrimaryEnvironmentId } from "../../state/environments";
-import { runtimeModeConfig, runtimeModeOptions } from "./runtimeModeConfig";
+import {
+  runtimeModeConfig,
+  runtimeModeOptions,
+  runtimeModeStillAsksNote,
+} from "./runtimeModeConfig";
 import { useRightPanelStore } from "~/rightPanelStore";
 import { AttachmentFilePreview } from "../files/AttachmentFilePreview";
 import { Dialog, DialogPopup, DialogTitle } from "../ui/dialog";
@@ -1166,6 +1170,9 @@ const ComposerFooterModeControls = memo(function ComposerFooterModeControls(prop
                       <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
                         <OptionIcon className="size-3.5 shrink-0 text-muted-foreground" />
                         {option.label}
+                        <span className="font-normal text-muted-foreground text-xs">
+                          {option.technicalLabel}
+                        </span>
                       </span>
                       <span className="text-muted-foreground text-xs leading-4">
                         {option.description}
@@ -1175,6 +1182,9 @@ const ComposerFooterModeControls = memo(function ComposerFooterModeControls(prop
                 </SelectItem>
               );
             })}
+            <p className="w-0 min-w-full border-t px-2 pt-2 pb-1.5 text-muted-foreground text-xs leading-4">
+              {runtimeModeStillAsksNote}
+            </p>
           </SelectPopup>
         </Select>
         <TooltipPopup side="top">{runtimeModeOption.description}</TooltipPopup>

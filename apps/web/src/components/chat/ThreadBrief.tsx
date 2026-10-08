@@ -15,7 +15,7 @@ import { Button } from "../ui/button";
 import { toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { StatusCard } from "./StatusCard";
-import { resolveStatusCardView } from "./statusCard.logic";
+import { resolveStatusCardView, statusCardOffersQuickReplies } from "./statusCard.logic";
 import {
   needsMissingObjective,
   resolveObjectiveCommit,
@@ -39,6 +39,12 @@ export interface ThreadBriefProps {
   readonly objectiveManual: boolean;
   readonly editingObjective: boolean;
   readonly onEditingObjectiveChange: (editing: boolean) => void;
+  /** The waiting STATUS was already answered (queued or sent), so Yes / No would answer twice. */
+  readonly statusAnswered: boolean;
+  /** Sends a short answer (Yes / No) as the next message. */
+  readonly onQuickReply: (text: string) => void;
+  /** Puts the cursor in the message box to write an adjustment. */
+  readonly onAdjust: () => void;
 }
 
 /**
@@ -54,6 +60,9 @@ export function ThreadBrief({
   objectiveManual,
   editingObjective,
   onEditingObjectiveChange,
+  statusAnswered,
+  onQuickReply,
+  onAdjust,
 }: ThreadBriefProps) {
   const objective = shell.objective?.trim() ? shell.objective.trim() : null;
   const updateThreadMetadata = useAtomCommand(threadEnvironment.updateMetadata, {
@@ -251,8 +260,48 @@ export function ThreadBrief({
         )}
       </div>
       {view.headline.kind === "none" ? null : (
-        <StatusCard view={view} variant="strip" onReveal={requestTimelineScrollToMessage} />
+        <div className="flex min-w-0 items-center gap-2">
+          <StatusCard
+            view={view}
+            variant="strip"
+            onReveal={requestTimelineScrollToMessage}
+            className="flex-1"
+          />
+          {statusCardOffersQuickReplies(view) && !statusAnswered ? (
+            <QuickReplies onQuickReply={onQuickReply} onAdjust={onAdjust} />
+          ) : null}
+        </div>
       )}
+    </div>
+  );
+}
+
+/** Answers a reply that waits on the user without typing: the label is the message sent. */
+function QuickReplies({
+  onQuickReply,
+  onAdjust,
+}: {
+  readonly onQuickReply: (text: string) => void;
+  readonly onAdjust: () => void;
+}) {
+  const yes = tc("quick reply", "Yes");
+  const no = tc("quick reply", "No");
+  return (
+    <div className="flex shrink-0 items-center gap-1" data-status-quick-replies>
+      <Button size="xs" onClick={() => onQuickReply(yes)}>
+        {yes}
+      </Button>
+      <Button size="xs" variant="outline" onClick={() => onQuickReply(no)}>
+        {no}
+      </Button>
+      <Tooltip>
+        <TooltipTrigger render={<Button size="xs" variant="ghost" onClick={onAdjust} />}>
+          {tc("quick reply", "Adjust")}
+        </TooltipTrigger>
+        <TooltipPopup side="bottom">
+          {tc("quick reply", "Write what to change in the message box")}
+        </TooltipPopup>
+      </Tooltip>
     </div>
   );
 }
