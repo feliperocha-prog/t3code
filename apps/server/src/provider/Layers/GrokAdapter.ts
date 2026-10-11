@@ -1,6 +1,7 @@
 import {
   ApprovalRequestId,
   type GrokSettings,
+  isFullAccessRuntimeMode,
   EventId,
   type ProviderApprovalDecision,
   type ProviderRuntimeEvent,
@@ -1163,11 +1164,10 @@ export function makeGrokAdapter(grokSettings: GrokSettings, options?: GrokAdapte
                       : undefined;
                   const alreadyApproved =
                     approvalKey !== undefined && sessionApprovedOperations.has(approvalKey);
-                  if (input.runtimeMode === "full-access" || alreadyApproved) {
-                    const autoApprovedOptionId =
-                      input.runtimeMode === "full-access"
-                        ? selectAutoApprovedPermissionOption(params)
-                        : selectGrokPermissionOptionId(params, "accept");
+                  if (isFullAccessRuntimeMode(input.runtimeMode) || alreadyApproved) {
+                    const autoApprovedOptionId = isFullAccessRuntimeMode(input.runtimeMode)
+                      ? selectAutoApprovedPermissionOption(params)
+                      : selectGrokPermissionOptionId(params, "accept");
                     if (autoApprovedOptionId !== undefined) {
                       return {
                         outcome: {

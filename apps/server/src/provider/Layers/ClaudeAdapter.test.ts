@@ -7,6 +7,7 @@ import * as NodePath from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type {
+  HookInput,
   Options as ClaudeQueryOptions,
   PermissionMode,
   PermissionResult,
@@ -521,13 +522,182 @@ describe("ClaudeAdapterLive", () => {
 
       const createInput = harness.getLastCreateQueryInput();
       assert.deepEqual(createInput?.options.settingSources, ["user", "project", "local"]);
-      assert.equal(createInput?.options.permissionMode, undefined);
+      assert.equal(createInput?.options.permissionMode, "default");
       assert.equal(createInput?.options.allowDangerouslySkipPermissions, undefined);
     }).pipe(
       Effect.provideService(Random.Random, makeDeterministicRandomService()),
       Effect.provide(harness.layer),
     );
   });
+
+  it.effect.each<{
+    name: string;
+    runtimeMode: RuntimeMode;
+    launchArgs?: string;
+    expectedPermissionMode: PermissionMode;
+    expectsAskHook: boolean;
+  }>([
+    {
+      name: "approval-required",
+      runtimeMode: "approval-required",
+      expectedPermissionMode: "default",
+      expectsAskHook: true,
+    },
+    {
+      name: "full-access",
+      runtimeMode: "full-access",
+      expectedPermissionMode: "bypassPermissions",
+      expectsAskHook: false,
+    },
+    {
+      name: "approval-required with a permission launch arg",
+      runtimeMode: "approval-required",
+      launchArgs: "--permission-mode acceptEdits",
+      expectedPermissionMode: "acceptEdits",
+      expectsAskHook: false,
+    },
+  ])("forces tool approval prompts only in asks-first mode ($name)", (testCase) => {
+    const harness = makeHarness(
+      testCase.launchArgs ? { claudeConfig: { launchArgs: testCase.launchArgs } } : {},
+    );
+    return Effect.gen(function* () {
+      const adapter = yield* ClaudeAdapter;
+      yield* adapter.startSession({
+        threadId: THREAD_ID,
+        provider: ProviderDriverKind.make("claudeAgent"),
+        runtimeMode: testCase.runtimeMode,
+      });
+
+      const options = harness.getLastCreateQueryInput()?.options;
+      assert.equal(options?.permissionMode, testCase.expectedPermissionMode);
+      const preToolUse = options?.hooks?.PreToolUse;
+      if (!testCase.expectsAskHook) {
+        assert.equal(preToolUse, undefined);
+        return;
+      }
+      const hook = preToolUse?.[0]?.hooks[0];
+      assert.ok(hook);
+      const output = yield* Effect.promise(() =>
+        hook(
+          {
+            hook_event_name: "PreToolUse",
+            tool_name: "Bash",
+            tool_input: { command: "ls" },
+          } as unknown as HookInput,
+          "tool-use-1",
+          { signal: new AbortController().signal },
+        ),
+      );
+      assert.deepEqual(output, {
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse",
+          permissionDecision: "ask",
+          permissionDecisionReason: "T3 Code: this conversation is in Asks first mode.",
+        },
+      });
+      const readOutput = yield* Effect.promise(() =>
+        hook(
+          {
+            hook_event_name: "PreToolUse",
+            tool_name: "Read",
+            tool_input: { file_path: "/tmp/a.ts" },
+          } as unknown as HookInput,
+          "tool-use-2",
+          { signal: new AbortController().signal },
+        ),
+      );
+      assert.deepEqual(readOutput, {});
+    }).pipe(
+      Effect.provideService(Random.Random, makeDeterministicRandomService()),
+      Effect.provide(harness.layer),
+    );
+  });
+
+  it.effect("asks-first hook stands down during a plan turn and returns after it", () => {
+    const harness = makeHarness();
+    return Effect.gen(function* () {
+      const adapter = yield* ClaudeAdapter;
+      const session = yield* adapter.startSession({
+        threadId: THREAD_ID,
+        provider: ProviderDriverKind.make("claudeAgent"),
+        runtimeMode: "approval-required",
+      });
+      const hook = harness.getLastCreateQueryInput()?.options?.hooks?.PreToolUse?.[0]?.hooks[0];
+      assert.ok(hook);
+      const runHook = () =>
+        Effect.promise(() =>
+          hook(
+            {
+              hook_event_name: "PreToolUse",
+              tool_name: "Edit",
+              tool_input: { file_path: "/tmp/a.ts" },
+            } as unknown as HookInput,
+            "tool-use-plan",
+            { signal: new AbortController().signal },
+          ),
+        );
+
+      yield* adapter.sendTurn({
+        threadId: session.threadId,
+        input: "plan this for me",
+        interactionMode: "plan",
+        attachments: [],
+      });
+      assert.deepEqual(yield* runHook(), {});
+
+      yield* adapter.sendTurn({
+        threadId: session.threadId,
+        input: "now do it",
+        interactionMode: "default",
+        attachments: [],
+      });
+      const afterPlan = yield* runHook();
+      assert.equal(
+        "hookSpecificOutput" in afterPlan &&
+          afterPlan.hookSpecificOutput?.hookEventName === "PreToolUse"
+          ? afterPlan.hookSpecificOutput.permissionDecision
+          : undefined,
+        "ask",
+      );
+    }).pipe(
+      Effect.provideService(Random.Random, makeDeterministicRandomService()),
+      Effect.provide(harness.layer),
+    );
+  });
+
+  it.effect.each<{ runtimeMode: RuntimeMode; expectsDecisionMaking: boolean }>([
+    { runtimeMode: "full-access-asks", expectsDecisionMaking: true },
+    { runtimeMode: "full-access", expectsDecisionMaking: false },
+    { runtimeMode: "approval-required", expectsDecisionMaking: false },
+  ])(
+    "appends decision-making guidance only for full-access-asks ($runtimeMode)",
+    ({ runtimeMode, expectsDecisionMaking }) => {
+      const harness = makeHarness();
+      return Effect.gen(function* () {
+        const adapter = yield* ClaudeAdapter;
+        yield* adapter.startSession({
+          threadId: THREAD_ID,
+          provider: ProviderDriverKind.make("claudeAgent"),
+          runtimeMode,
+        });
+
+        const options = harness.getLastCreateQueryInput()?.options;
+        const systemPrompt = options?.systemPrompt;
+        const append =
+          systemPrompt && typeof systemPrompt === "object" && "append" in systemPrompt
+            ? systemPrompt.append
+            : undefined;
+        assert.equal(append?.includes("<decision_making>"), expectsDecisionMaking);
+        if (runtimeMode === "full-access-asks") {
+          assert.equal(options?.permissionMode, "bypassPermissions");
+          assert.equal(options?.allowDangerouslySkipPermissions, true);
+        }
+      }).pipe(
+        Effect.provideService(Random.Random, makeDeterministicRandomService()),
+        Effect.provide(harness.layer),
+      );
+    },
+  );
 
   it.effect("uses bypass permissions for full-access claude sessions", () => {
     const harness = makeHarness();
@@ -7567,6 +7737,7 @@ describe("ClaudeAdapterLive", () => {
 
   it.effect.each<{ runtimeMode: RuntimeMode; expectedBase: PermissionMode }>([
     { runtimeMode: "full-access", expectedBase: "bypassPermissions" },
+    { runtimeMode: "full-access-asks", expectedBase: "bypassPermissions" },
     { runtimeMode: "approval-required", expectedBase: "default" },
     { runtimeMode: "auto-accept-edits", expectedBase: "acceptEdits" },
   ])(

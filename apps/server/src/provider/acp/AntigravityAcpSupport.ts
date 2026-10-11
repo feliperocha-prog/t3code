@@ -91,6 +91,7 @@ export const makeAntigravityAcpRuntime = Effect.fn("makeAntigravityAcpRuntime")(
 export function antigravityPermissionMode(runtimeMode: RuntimeMode): string {
   switch (runtimeMode) {
     case "full-access":
+    case "full-access-asks":
       return "yolo";
     case "auto-accept-edits":
       return "auto_edit";

@@ -1,5 +1,12 @@
 import type { RuntimeMode } from "@t3tools/contracts";
-import { type LucideIcon, LockIcon, LockOpenIcon, PenLineIcon, SparklesIcon } from "lucide-react";
+import {
+  type LucideIcon,
+  LockIcon,
+  LockOpenIcon,
+  MessageCircleQuestionIcon,
+  PenLineIcon,
+  SparklesIcon,
+} from "lucide-react";
 import { t, tc } from "~/i18n";
 
 /**
@@ -37,6 +44,15 @@ export const runtimeModeConfig: Record<
     technicalLabel: t("Full access"),
     description: tc("runtime mode", "Runs commands and changes files without asking."),
     icon: LockOpenIcon,
+  },
+  "full-access-asks": {
+    label: tc("runtime mode", "Does everything, asks when unsure"),
+    technicalLabel: t("Full access, asks when unsure"),
+    description: tc(
+      "runtime mode",
+      "Runs commands and changes files without asking, but asks you before strategic or ambiguous decisions.",
+    ),
+    icon: MessageCircleQuestionIcon,
   },
 };
 

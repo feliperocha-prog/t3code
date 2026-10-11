@@ -313,6 +313,30 @@ describe("buildTurnStartParams", () => {
     );
   });
 
+  it.effect("runs full-access-asks with full access and decision-making guidance", () =>
+    Effect.gen(function* () {
+      const asks = yield* buildTurnStartParams({
+        threadId: "provider-thread-1",
+        runtimeMode: "full-access-asks",
+        prompt: "Go",
+        interactionMode: "default",
+      });
+      NodeAssert.equal(asks.approvalPolicy, "never");
+      NodeAssert.deepStrictEqual(asks.sandboxPolicy, { type: "dangerFullAccess" });
+      NodeAssert.ok(asks.additionalContext?.t3_code_runtime?.value.includes("<decision_making>"));
+
+      const fullAccess = yield* buildTurnStartParams({
+        threadId: "provider-thread-1",
+        runtimeMode: "full-access",
+        prompt: "Go",
+        interactionMode: "default",
+      });
+      NodeAssert.ok(
+        !fullAccess.additionalContext?.t3_code_runtime?.value.includes("<decision_making>"),
+      );
+    }),
+  );
+
   it.effect("names the model by display name and slug in the runtime context", () =>
     Effect.gen(function* () {
       const params = yield* buildTurnStartParams({

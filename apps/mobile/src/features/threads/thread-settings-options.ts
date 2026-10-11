@@ -34,6 +34,12 @@ export const RUNTIME_MODE_CHOICES: ReadonlyArray<{
     label: "Full access",
     description: "Allow commands and edits without prompts.",
   },
+  {
+    mode: "full-access-asks",
+    label: "Full access, asks when unsure",
+    description:
+      "Allow commands and edits without prompts; the agent asks before strategic decisions.",
+  },
 ];
 
 export function selectableChoices(

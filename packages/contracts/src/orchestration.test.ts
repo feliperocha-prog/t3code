@@ -35,6 +35,7 @@ import {
   ThreadTurnStartRequestedPayload,
   SnapShotAccessibility,
   isProviderSendTurnSupportedImageMimeType,
+  isFullAccessRuntimeMode,
   PROVIDER_SEND_TURN_MAX_FILE_BYTES,
 } from "./orchestration.ts";
 import { ProviderInstanceId } from "./providerInstance.ts";
@@ -523,6 +524,27 @@ it.effect("preserves explicit provider and runtime mode in thread.turn.start", (
     assert.strictEqual(parsed.modelSelection?.instanceId, "codex");
     assert.strictEqual(parsed.runtimeMode, "full-access");
     assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
+  }),
+);
+
+it.effect("accepts the full-access-asks runtime mode in thread.turn.start", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decodeThreadTurnStartCommand({
+      type: "thread.turn.start",
+      commandId: "cmd-turn-asks",
+      threadId: "thread-1",
+      message: {
+        messageId: "msg-asks",
+        role: "user",
+        text: "hello",
+        attachments: [],
+      },
+      runtimeMode: "full-access-asks",
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    assert.strictEqual(parsed.runtimeMode, "full-access-asks");
+    assert.strictEqual(isFullAccessRuntimeMode(parsed.runtimeMode), true);
+    assert.strictEqual(isFullAccessRuntimeMode("auto"), false);
   }),
 );
 

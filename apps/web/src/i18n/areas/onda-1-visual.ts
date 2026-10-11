@@ -24,8 +24,6 @@ const dictionary: Readonly<Record<string, string>> = {
 
   "Conversation text size": "Tamanho do texto da conversa",
   "conversation text size": "tamanho do texto da conversa",
-  "Size of the conversation text only. Ctrl + mouse wheel over the conversation changes it too.":
-    "Só o tamanho do texto da conversa. Ctrl + roda do mouse sobre a conversa também muda.",
   "chat text scale|Conversation text: {percent}": "Texto da conversa: {percent}",
 };
 

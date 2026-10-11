@@ -24,6 +24,7 @@ function cursorAcpPermissionArgs(runtimeMode?: RuntimeMode): ReadonlyArray<strin
     case "auto":
       return ["--auto-review"];
     case "full-access":
+    case "full-access-asks":
       return ["--force"];
     default:
       return [];

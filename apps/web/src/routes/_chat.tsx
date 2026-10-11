@@ -1,11 +1,17 @@
 import { Outlet, createFileRoute, redirect, useParams } from "@tanstack/react-router";
 import { useAtomValue } from "@effect/atom-react";
 import { useEffect, useMemo } from "react";
+import { DEFAULT_UNIFIED_SETTINGS } from "@t3tools/contracts";
 
 import { isCommandPaletteOpen } from "../commandPaletteBus";
 import { ThreadRouteView } from "../components/ThreadRouteView";
 import { resolveThreadRouteTarget } from "../threadRoutes";
-import { useClientSettings, useLegacySidebarEnabled } from "../hooks/useSettings";
+import {
+  getClientSettings,
+  useClientSettings,
+  useLegacySidebarEnabled,
+  useUpdateClientSettings,
+} from "../hooks/useSettings";
 import { openCommandPalette } from "../commandPaletteBus";
 import { useProjects } from "../state/entities";
 import { usePrimaryEnvironmentId } from "../state/environments";
@@ -26,7 +32,9 @@ import { selectActiveRightPanel, useRightPanelStore } from "../rightPanelStore";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
 import { primaryServerKeybindingsAtom } from "~/state/server";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
+import { stepChatTextScale } from "../components/chat/chatTextScale";
+import { CHAT_WIDTH_LABELS, stepChatWidth } from "../components/chat/chatWidth";
 
 function ChatRouteGlobalShortcuts() {
   const clearSelection = useThreadSelectionStore((state) => state.clearSelection);
@@ -36,6 +44,7 @@ function ChatRouteGlobalShortcuts() {
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const legacySidebarEnabled = useLegacySidebarEnabled();
   const projectGroupingSettings = useClientSettings(selectProjectGroupingSettings);
+  const updateSettings = useUpdateClientSettings();
   const projects = useProjects();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const projectGroupCount = useMemo(
@@ -125,6 +134,42 @@ function ChatRouteGlobalShortcuts() {
         return;
       }
 
+      // Conversation text size (repeat keeps stepping, like holding Ctrl+wheel);
+      // the size pill in the conversation shows the new value.
+      if (
+        command === "chat.textBigger" ||
+        command === "chat.textSmaller" ||
+        command === "chat.textResetSize"
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        const current = getClientSettings().chatTextScale;
+        const next =
+          command === "chat.textResetSize"
+            ? DEFAULT_UNIFIED_SETTINGS.chatTextScale
+            : stepChatTextScale(current, command === "chat.textBigger" ? 1 : -1);
+        if (next !== current) void updateSettings({ chatTextScale: next });
+        return;
+      }
+
+      if (command === "chat.wider" || command === "chat.narrower") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.repeat) return;
+        const current = getClientSettings().chatWidth;
+        const next = stepChatWidth(current, command === "chat.wider" ? 1 : -1);
+        if (next === current) return;
+        void updateSettings({ chatWidth: next });
+        toastManager.add({
+          id: "chat-width",
+          title: tc("chat width", "Conversation width: {width}", {
+            width: CHAT_WIDTH_LABELS[next],
+          }),
+          timeout: 1500,
+        });
+        return;
+      }
+
       if (command === "preview.toggle") {
         event.preventDefault();
         event.stopPropagation();
@@ -186,6 +231,7 @@ function ChatRouteGlobalShortcuts() {
     selectedThreadKeysSize,
     legacySidebarEnabled,
     terminalOpen,
+    updateSettings,
   ]);
 
   return null;

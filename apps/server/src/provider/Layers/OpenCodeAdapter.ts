@@ -1,5 +1,6 @@
 import {
   EventId,
+  isFullAccessRuntimeMode,
   type OpenCodeSettings,
   ProviderDriverKind,
   ProviderInstanceId,
@@ -1820,7 +1821,7 @@ export function makeOpenCodeAdapter(
         if (context.pendingPermissions.has(request.id)) {
           return;
         }
-        if (context.session.runtimeMode === "full-access") {
+        if (isFullAccessRuntimeMode(context.session.runtimeMode)) {
           // Reply outside the event pump so a slow HTTP response cannot hide
           // progress, terminal replies, or the acknowledgment for Stop.
           context.resolvedRequestIds.add(request.id);

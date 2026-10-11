@@ -44,6 +44,21 @@ describe("buildShortcutSheetGroups", () => {
     expect(rows.get("fileViewer.requestChange")?.shortcuts).toEqual(["Ctrl+I"]);
   });
 
+  it("ends the conversation group with the text size and column width shortcuts", () => {
+    const groups = buildShortcutSheetGroups(DEFAULT_RESOLVED_KEYBINDINGS, PLATFORM);
+    const conversationIds = groups
+      .find((group) => group.id === "conversation")
+      ?.rows.map((row) => row.id);
+
+    expect(conversationIds?.slice(-5)).toEqual([
+      "chat.textBigger",
+      "chat.textSmaller",
+      "chat.textResetSize",
+      "chat.wider",
+      "chat.narrower",
+    ]);
+  });
+
   it("shows every binding of a command", () => {
     const rows = rowsById(buildShortcutSheetGroups(DEFAULT_RESOLVED_KEYBINDINGS, PLATFORM));
 

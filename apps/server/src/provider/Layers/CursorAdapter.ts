@@ -7,6 +7,7 @@
 import {
   ApprovalRequestId,
   type CursorSettings,
+  isFullAccessRuntimeMode,
   type ProviderOptionSelection,
   EventId,
   type ProviderApprovalDecision,
@@ -693,7 +694,7 @@ export function makeCursorAdapter(
                     params,
                     "acp.jsonrpc",
                   );
-                  if (input.runtimeMode === "full-access") {
+                  if (isFullAccessRuntimeMode(input.runtimeMode)) {
                     const autoApprovedOptionId = selectAutoApprovedPermissionOption(params);
                     if (autoApprovedOptionId !== undefined) {
                       return {

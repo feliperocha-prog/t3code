@@ -592,6 +592,7 @@ function buildCodexTurnInstructions(input: {
   readonly modelName?: string;
   readonly effort?: EffectCodexSchema.V2TurnStartParams__ReasoningEffort;
   readonly browserToolsAvailable?: boolean | T3CodeToolAvailability;
+  readonly clarifyingQuestions?: boolean;
 }): Pick<CodexTurnStartParamsWithCollaborationMode, "collaborationMode" | "additionalContext"> {
   if (input.interactionMode === undefined) {
     return {};
@@ -608,7 +609,12 @@ function buildCodexTurnInstructions(input: {
       },
     },
     additionalContext: buildCodexAdditionalContext(
-      { model, modelName: input.modelName, reasoningEffort },
+      {
+        model,
+        modelName: input.modelName,
+        reasoningEffort,
+        clarifyingQuestions: input.clarifyingQuestions,
+      },
       input.browserToolsAvailable ?? true,
     ),
   };
@@ -656,6 +662,7 @@ export function buildTurnStartParams(input: {
     ...(input.modelName ? { modelName: input.modelName } : {}),
     ...(input.effort ? { effort: input.effort } : {}),
     browserToolsAvailable: input.browserToolsAvailable ?? true,
+    clarifyingQuestions: input.runtimeMode === "full-access-asks",
   });
 
   return decodeCodexTurnStartParamsWithCollaborationMode({

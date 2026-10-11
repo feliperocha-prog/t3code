@@ -34,4 +34,20 @@ describe("buildRuntimeInstructions", () => {
     expect(instructions).toContain("through the Cursor harness.");
     expect(instructions).not.toContain("reasoning effort");
   });
+
+  it("adds decision-making guidance only when clarifying questions are requested", () => {
+    const withFlag = buildRuntimeInstructions({
+      harness: "Claude Code",
+      clarifyingQuestions: true,
+    });
+    expect(withFlag).toContain("<decision_making>");
+    expect(withFlag.indexOf("</runtime_info>")).toBeLessThan(withFlag.indexOf("<decision_making>"));
+    expect(withFlag.indexOf("</decision_making>")).toBeLessThan(
+      withFlag.indexOf("<pull_request_linking>"),
+    );
+    expect(buildRuntimeInstructions({ harness: "Claude Code" })).not.toContain("<decision_making>");
+    expect(
+      buildRuntimeInstructions({ harness: "Claude Code", clarifyingQuestions: false }),
+    ).not.toContain("<decision_making>");
+  });
 });

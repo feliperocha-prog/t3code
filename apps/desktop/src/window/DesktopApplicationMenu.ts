@@ -253,7 +253,7 @@ export const make = Effect.gen(function* () {
           { label: t("Zoom In"), accelerator: "CmdOrCtrl+=", click: zoomClick("in") },
           {
             label: t("Zoom In"),
-            accelerator: "CmdOrCtrl+Plus",
+            accelerator: "CmdOrCtrl+numadd",
             visible: false,
             click: zoomClick("in"),
           },

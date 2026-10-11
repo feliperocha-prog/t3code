@@ -23,7 +23,6 @@ import {
 import {
   DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE,
   DEFAULT_UNIFIED_SETTINGS,
-  type ChatWidth,
   type DiffLayout,
   type EnvironmentIdentificationMode,
   MAX_APPEARANCE_CONTRAST,
@@ -143,6 +142,7 @@ import {
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { ScopedSwitch } from "./ScopedSwitch";
+import { CHAT_WIDTH_LABELS } from "../chat/chatWidth";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { ThemeLibrary } from "./ThemeSettings";
@@ -200,12 +200,6 @@ const TIMESTAMP_FORMAT_LABELS = {
   "12-hour": t("12-hour"),
   "24-hour": t("24-hour"),
 } as const;
-
-const CHAT_WIDTH_LABELS: Record<ChatWidth, string> = {
-  comfortable: tc("chat width", "Comfortable"),
-  wide: tc("chat width", "Wide"),
-  full: tc("chat width", "Full"),
-};
 
 const DIFF_LAYOUT_LABELS: Record<DiffLayout, string> = {
   stacked: t("Stacked"),
@@ -1413,7 +1407,9 @@ export function AppearanceSettingsPanel() {
         />
         <SettingsRow
           {...searchableSetting("chat-width")}
-          description={t("Set how wide messages and the composer can grow on large screens.")}
+          description={t(
+            "Set how wide messages and the composer can grow on large screens. Ctrl+Shift+. / Ctrl+Shift+, changes it too.",
+          )}
           resetAction={
             settings.chatWidth !== DEFAULT_UNIFIED_SETTINGS.chatWidth ? (
               <SettingResetButton
@@ -1446,7 +1442,7 @@ export function AppearanceSettingsPanel() {
         <SettingsRow
           {...searchableSetting("chat-text-size")}
           description={t(
-            "Size of the conversation text only. Ctrl + mouse wheel over the conversation changes it too.",
+            "Size of the conversation text only. Ctrl + mouse wheel over the conversation, or Ctrl+Shift+= / Ctrl+Shift+-, changes it too.",
           )}
           resetAction={
             settings.chatTextScale !== DEFAULT_UNIFIED_SETTINGS.chatTextScale ? (

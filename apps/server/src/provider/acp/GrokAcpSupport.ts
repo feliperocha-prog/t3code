@@ -39,6 +39,7 @@ export function grokAcpSpawnArgs(runtimeMode?: RuntimeMode): ReadonlyArray<strin
     case "auto":
       return ["--permission-mode", "auto", "agent", "stdio"];
     case "full-access":
+    case "full-access-asks":
       return ["agent", "--always-approve", "stdio"];
     default:
       return ["agent", "stdio"];

@@ -14,6 +14,7 @@ import {
   query,
   getSessionMessages,
   forkSession,
+  type HookCallback,
   type Options as ClaudeQueryOptions,
   type PermissionMode,
   type PermissionResult,
@@ -31,6 +32,7 @@ import { type ClaudeScopedLimitNames, claudeRateLimitEventToUpdate } from "./cla
 import {
   ApprovalRequestId,
   classifyTaskAgentKind,
+  isFullAccessRuntimeMode,
   type CanonicalItemType,
   type CanonicalRequestType,
   type ClaudeSettings,
@@ -225,6 +227,37 @@ const remapClaudeForkTurnBoundaries = (
 };
 
 const PROVIDER = ProviderDriverKind.make("claudeAgent");
+
+/**
+ * Sent in "Asks first" mode. The user's own Claude settings (loaded through
+ * settingSources) can pre-allow tools or default to bypassPermissions; an
+ * "ask" decision from PreToolUse still routes every tool call to canUseTool.
+ */
+interface AskFirstHookState {
+  /** Plan turns rely on the SDK's own plan-mode denial; forcing "ask" there
+   * would open an edit approval inside a planning turn. */
+  planModeActive: boolean;
+}
+
+function makeForceAskPreToolUseHook(state: AskFirstHookState): HookCallback {
+  return async (input) => {
+    // Reading files never needs a prompt; the mode promises to ask before
+    // commands and edits, not before every Read/Grep.
+    if (
+      state.planModeActive ||
+      (input.hook_event_name === "PreToolUse" && isReadOnlyToolName(input.tool_name))
+    ) {
+      return {};
+    }
+    return {
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "ask",
+        permissionDecisionReason: "T3 Code: this conversation is in Asks first mode.",
+      },
+    };
+  };
+}
 type ClaudeTextStreamKind = Extract<
   RuntimeContentStreamKind,
   "assistant_text" | "reasoning_text" | "reasoning_summary_text"
@@ -416,6 +449,7 @@ interface ClaudeSessionContext {
   streamFiber: Fiber.Fiber<void, Error> | undefined;
   readonly startedAt: string;
   readonly basePermissionMode: PermissionMode | undefined;
+  readonly askFirstHookState: AskFirstHookState;
   currentApiModelId: string | undefined;
   /** Effective effort for the session's turns; subagents without an explicit
    * effort override inherit this. */
@@ -4700,7 +4734,7 @@ export const makeClaudeAdapter = Effect.fn("makeClaudeAdapter")(function* (
         }
 
         const runtimeMode = input.runtimeMode ?? "full-access";
-        if (runtimeMode === "full-access") {
+        if (isFullAccessRuntimeMode(runtimeMode)) {
           return {
             behavior: "allow",
             updatedInput: toolInput,
@@ -4877,15 +4911,24 @@ export const makeClaudeAdapter = Effect.fn("makeClaudeAdapter")(function* (
         "auto-accept-edits": "acceptEdits",
         auto: "auto",
         "full-access": "bypassPermissions",
+        "full-access-asks": "bypassPermissions",
       };
       // A permission launch arg is folded into the mode T3 sends rather than
       // passed through: the CLI resolves both inputs together, so argv order
       // never let the user's flag win.
-      const permissionMode =
+      const launchArgPermission =
         (launchArgPermissionMode as PermissionMode | null | undefined) ??
         (launchArgSkipPermissions === null || launchArgSkipPermissions === "true"
           ? "bypassPermissions"
-          : runtimeModeToPermission[input.runtimeMode]);
+          : undefined);
+      // Asks first sends "default" explicitly; left unset, the CLI would inherit
+      // the user's settings defaultMode (often bypassPermissions).
+      const forceAskFirst =
+        launchArgPermission === undefined && input.runtimeMode === "approval-required";
+      const permissionMode =
+        launchArgPermission ??
+        (forceAskFirst ? "default" : runtimeModeToPermission[input.runtimeMode]);
+      const askFirstHookState: AskFirstHookState = { planModeActive: false };
       const settings = {
         ...(typeof thinking === "boolean" ? { alwaysThinkingEnabled: thinking } : {}),
         ...(requestThinkingSummaries ? { showThinkingSummaries: true } : {}),
@@ -4915,7 +4958,11 @@ export const makeClaudeAdapter = Effect.fn("makeClaudeAdapter")(function* (
           type: "preset",
           preset: "claude_code",
           // Model and effort can change after this session-level prompt is set.
-          append: buildRuntimeInstructions({ harness: "Claude Code" }),
+          // A runtime mode change restarts the session, so this stays in sync.
+          append: buildRuntimeInstructions({
+            harness: "Claude Code",
+            clarifyingQuestions: input.runtimeMode === "full-access-asks",
+          }),
         },
         settingSources: [...CLAUDE_SETTING_SOURCES],
         // `ultracode` is a Claude Code setting, not an API effort level. It is
@@ -4936,6 +4983,13 @@ export const makeClaudeAdapter = Effect.fn("makeClaudeAdapter")(function* (
         ...(permissionMode ? { permissionMode } : {}),
         ...(permissionMode === "bypassPermissions"
           ? { allowDangerouslySkipPermissions: true }
+          : {}),
+        ...(forceAskFirst
+          ? {
+              hooks: {
+                PreToolUse: [{ hooks: [makeForceAskPreToolUseHook(askFirstHookState)] }],
+              },
+            }
           : {}),
         ...(Object.keys(settings).length > 0 ? { settings } : {}),
         ...(existingResumeSessionId ? { resume: existingResumeSessionId } : {}),
@@ -5035,6 +5089,7 @@ export const makeClaudeAdapter = Effect.fn("makeClaudeAdapter")(function* (
         streamFiber: undefined,
         startedAt,
         basePermissionMode: permissionMode,
+        askFirstHookState,
         currentApiModelId: apiModelId,
         currentEffort: effectiveEffort ?? undefined,
         resumeSessionId: sessionId,
@@ -5191,11 +5246,13 @@ export const makeClaudeAdapter = Effect.fn("makeClaudeAdapter")(function* (
         try: () => context.query.setPermissionMode("plan"),
         catch: (cause) => toRequestError(input.threadId, "turn/setPermissionMode", cause),
       });
+      context.askFirstHookState.planModeActive = true;
     } else if (input.interactionMode === "default") {
       yield* Effect.tryPromise({
         try: () => context.query.setPermissionMode(context.basePermissionMode ?? "default"),
         catch: (cause) => toRequestError(input.threadId, "turn/setPermissionMode", cause),
       });
+      context.askFirstHookState.planModeActive = false;
     }
 
     const turnId = steeringTurnState?.turnId ?? TurnId.make(yield* randomUUIDv4);

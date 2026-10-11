@@ -52,6 +52,11 @@ const CURATED_GROUPS: ReadonlyArray<CuratedGroup> = [
       { command: "thread.undo", label: () => t("Undo the last conversation action") },
       { command: "modelPicker.toggle", label: () => t("Change model") },
       { command: "commandPalette.toggle", label: () => t("Command palette (search everything)") },
+      { command: "chat.textBigger", label: () => t("Bigger conversation text") },
+      { command: "chat.textSmaller", label: () => t("Smaller conversation text") },
+      { command: "chat.textResetSize", label: () => t("Reset conversation text size") },
+      { command: "chat.wider", label: () => t("Wider conversation column") },
+      { command: "chat.narrower", label: () => t("Narrower conversation column") },
     ],
   },
   {

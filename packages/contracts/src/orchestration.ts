@@ -130,9 +130,13 @@ export const RuntimeMode = Schema.Literals([
   "auto-accept-edits",
   "auto",
   "full-access",
+  "full-access-asks",
 ]);
 export type RuntimeMode = typeof RuntimeMode.Type;
 export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
+/** Modes where the provider runs every tool without permission prompts. */
+export const isFullAccessRuntimeMode = (mode: RuntimeMode): boolean =>
+  mode === "full-access" || mode === "full-access-asks";
 export const ProviderInteractionMode = Schema.Literals(["default", "plan"]);
 export type ProviderInteractionMode = typeof ProviderInteractionMode.Type;
 export const DEFAULT_PROVIDER_INTERACTION_MODE: ProviderInteractionMode = "default";

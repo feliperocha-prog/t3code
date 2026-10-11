@@ -154,8 +154,6 @@ const dictionary: Readonly<Record<string, string>> = {
   // Largura do chat
   "Chat width": "Largura do chat",
   "chat width": "largura do chat",
-  "Set how wide messages and the composer can grow on large screens.":
-    "Define até que largura as mensagens e o campo de texto crescem em telas grandes.",
   "Comfortable (default)": "Confortável (padrão)",
   "chat width|Comfortable": "Confortável",
   "chat width|Wide": "Larga",

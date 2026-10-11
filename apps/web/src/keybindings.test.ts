@@ -1446,6 +1446,39 @@ describe("help shortcuts sheet", () => {
   });
 });
 
+describe("conversation text and width shortcuts", () => {
+  // Shift changes event.key ("+", "_", ")", ">", "<"), so these resolve
+  // through the physical key in event.code.
+  const cases = [
+    { key: "+", code: "Equal", command: "chat.textBigger" },
+    { key: "_", code: "Minus", command: "chat.textSmaller" },
+    { key: ")", code: "Digit0", command: "chat.textResetSize" },
+    { key: ">", code: "Period", command: "chat.wider" },
+    { key: "<", code: "Comma", command: "chat.narrower" },
+  ] as const;
+
+  it.each(cases)("resolves ctrl+shift+$code to $command on Windows", ({ key, code, command }) => {
+    assert.strictEqual(
+      resolveShortcutCommand(
+        event({ key, code, ctrlKey: true, shiftKey: true }),
+        DEFAULT_RESOLVED_KEYBINDINGS,
+        { platform: "Win32" },
+      ),
+      command,
+    );
+  });
+
+  it.each(cases)("leaves ctrl+shift+$code to the focused terminal", ({ key, code }) => {
+    assert.isNull(
+      resolveShortcutCommand(
+        event({ key, code, ctrlKey: true, shiftKey: true }),
+        DEFAULT_RESOLVED_KEYBINDINGS,
+        { platform: "Win32", context: { terminalFocus: true } },
+      ),
+    );
+  });
+});
+
 describe("Usage shortcuts", () => {
   it("scopes letter shortcuts to Usage", () => {
     assert.strictEqual(
