@@ -42,10 +42,34 @@ function shellInvocation(
   return { command: "sh", args: ["-lc", command] };
 }
 
-function outputTail(stdout: string, stderr: string): string {
+function outputTail(stdout: string, stderr: string, maxChars: number): string {
   const combined =
     stderr.length > 0 ? `${stdout}${stdout.endsWith("\n") ? "" : "\n"}${stderr}` : stdout;
-  return combined.slice(-CHECK_SCRIPT_OUTPUT_TAIL_LENGTH);
+  return combined.slice(-maxChars);
+}
+
+/**
+ * Keeps only the last `maxBytes` of a stream. The collected stdout is capped
+ * at its beginning, but the failure a user needs to see is at the end.
+ */
+function tailCollector(maxBytes: number) {
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  return {
+    push(chunk: Uint8Array) {
+      chunks.push(chunk);
+      bytes += chunk.byteLength;
+      while (chunks.length > 1 && bytes - (chunks[0]?.byteLength ?? 0) >= maxBytes) {
+        bytes -= chunks.shift()?.byteLength ?? 0;
+      }
+    },
+    text(): string {
+      return Buffer.concat(chunks).toString("utf8").slice(-maxBytes);
+    },
+    get bytes() {
+      return bytes;
+    },
+  };
 }
 
 export const make = Effect.fn("CheckScript.make")(function* () {
@@ -56,11 +80,15 @@ export const make = Effect.fn("CheckScript.make")(function* () {
   const run = Effect.fn("CheckScript.run")(function* (input: ProjectRunCheckScriptInput) {
     const invocation = shellInvocation(input.command, platform, env);
     const startedAt = yield* Clock.currentTimeMillis;
+    const maxChars = input.maxOutputChars ?? CHECK_SCRIPT_OUTPUT_TAIL_LENGTH;
+    // UTF-8 can use up to 4 bytes per character; keep enough to fill the tail.
+    const stdoutTail = tailCollector(maxChars * 4);
     const output = yield* processRunner
       .run({
         command: invocation.command,
         args: invocation.args,
         cwd: input.cwd,
+        onStdoutChunk: (chunk) => stdoutTail.push(chunk),
         timeout: input.timeoutMs ?? CHECK_SCRIPT_TIMEOUT_DEFAULT_MS,
         maxOutputBytes: MAX_OUTPUT_BYTES,
         outputMode: "truncate",
@@ -73,7 +101,13 @@ export const make = Effect.fn("CheckScript.make")(function* () {
       exitCode: output.code,
       timedOut: output.timedOut,
       durationMs: Math.max(0, Math.round(finishedAt - startedAt)),
-      outputTail: outputTail(output.stdout, output.stderr),
+      outputTail: outputTail(
+        // The collected stdout is cut at its end past MAX_OUTPUT_BYTES; the
+        // streamed tail still has the end, which is where the failure is.
+        stdoutTail.bytes > 0 ? stdoutTail.text() : output.stdout,
+        output.stderr,
+        maxChars,
+      ),
     } satisfies ProjectRunCheckScriptResult;
   });
 

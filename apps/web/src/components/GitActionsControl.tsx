@@ -2203,6 +2203,7 @@ export default function GitActionsControl({
           environmentId={activeEnvironmentId}
           cwd={gitCwd}
           scripts={projectScripts}
+          action={pendingPublishChecklistAction.action}
           actionLabel={gitTermLabel("push")}
           onCancel={() => setPendingPublishChecklistAction(null)}
           onPublish={publishPendingChecklistAction}

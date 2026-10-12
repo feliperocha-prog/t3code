@@ -83,6 +83,27 @@ describe("scanDiffForSecrets", () => {
     expect(kindsOf(patch("src/config.ts", ['api_key = "<insert-your-key>"']))).toEqual([]);
   });
 
+  it("ignores ordinary code that only names a credential", () => {
+    for (const line of [
+      "accessToken: TrimmedNonEmptyString,",
+      "const token = useAuthToken();",
+      "password: hashPassword(input),",
+      'const token = localStorage.getItem("session-token");',
+      "const refreshTokenExpiresAt = computeExpiry(now);",
+    ]) {
+      expect(kindsOf(patch("src/auth.ts", [line]))).toEqual([]);
+    }
+  });
+
+  it("finds a literal credential in a quoted value or an env-style line", () => {
+    expect(kindsOf(patch("src/auth.ts", ['const token = "abcdef0123456789abcdef";']))).toEqual([
+      "assignment",
+    ]);
+    expect(
+      kindsOf(patch(".env", ["HUBSPOT_TOKEN=abcdef0123456789abcdef"], { newFile: true })),
+    ).toEqual(["assignment", "env-file"]);
+  });
+
   it("ignores removed lines, context lines and an edited (not added) env file", () => {
     const diff = [
       "diff --git a/src/config.ts b/src/config.ts",

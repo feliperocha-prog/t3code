@@ -1,5 +1,5 @@
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import type { EnvironmentId, ProjectScript } from "@t3tools/contracts";
+import type { EnvironmentId, GitStackedAction, ProjectScript } from "@t3tools/contracts";
 import { scanDiffForSecrets } from "@t3tools/shared/secretScan";
 import { useEffect, useMemo, useState } from "react";
 
@@ -21,6 +21,8 @@ import { reviewEnvironment } from "~/state/review";
 import { useAtomCommand } from "~/state/use-atom-command";
 
 import { useChangesExplanation } from "../diffs/useChangesExplanation";
+import { Term } from "../ui-terms/Term";
+import type { TermName } from "../ui-terms/terms";
 import { CHECK_STATUS_PRESENTATION } from "../pullRequest/pullRequestPresentation";
 import {
   checklistDecision,
@@ -37,6 +39,8 @@ interface PublishChecklistDialogProps {
   environmentId: EnvironmentId;
   cwd: string;
   scripts: ReadonlyArray<ProjectScript>;
+  /** The guarded action; decides whether uncommitted changes are part of what gets published. */
+  action: GitStackedAction;
   /** Label of the publish button, the action the checklist guards. */
   actionLabel: string;
   onCancel: () => void;
@@ -63,6 +67,12 @@ const STATUS_PRESENTATION = {
 >;
 
 const SECRET_PATHS_SHOWN = 3;
+
+// Rows whose label is a technical word get its explanation on hover.
+const CHECKLIST_ROW_TERM: Partial<Record<ChecklistItemId, TermName>> = {
+  secrets: "secret",
+  build: "build",
+};
 
 function errorText(error: unknown): string {
   if (typeof error === "object" && error !== null && "detail" in error) {
@@ -98,6 +108,7 @@ export function PublishChecklistDialog({
   environmentId,
   cwd,
   scripts,
+  action,
   actionLabel,
   onCancel,
   onPublish,
@@ -109,7 +120,9 @@ export function PublishChecklistDialog({
   const buildCommand = buildScript?.command ?? null;
   const testCommand = testScript?.command ?? null;
 
-  // What gets published: commits ahead of the base plus what this action commits now.
+  // What gets published: commits ahead of the base, plus the working tree only
+  // when this action commits it. A plain push never sends uncommitted files.
+  const commitsWorkingTree = action === "commit_push" || action === "commit_push_pr";
   const diffPreview = useEnvironmentQuery(
     reviewEnvironment.diffPreview({ environmentId, input: { cwd } }),
   );
@@ -118,13 +131,13 @@ export function PublishChecklistDialog({
     if (!sources) return null;
     const ordered = [
       ...sources.filter((source) => source.kind === "branch-range"),
-      ...sources.filter((source) => source.kind === "working-tree"),
+      ...(commitsWorkingTree ? sources.filter((source) => source.kind === "working-tree") : []),
     ];
     return {
       diff: ordered.map((source) => source.diff).join("\n"),
       truncated: ordered.some((source) => source.truncated),
     };
-  }, [diffPreview.data]);
+  }, [diffPreview.data, commitsWorkingTree]);
 
   const secretsRow = useMemo((): ChecklistRow => {
     if (outgoing === null) {
@@ -139,7 +152,12 @@ export function PublishChecklistDialog({
     const partial = outgoing.truncated ? ` ${t("(large change, only part was checked)")}` : "";
     const findings = scanDiffForSecrets(outgoing.diff);
     if (findings.length === 0) {
-      return { id: "secrets", status: "pass", detail: `${t("Nothing found")}${partial}` };
+      // A cut diff may hide a key in the part that was not scanned.
+      return {
+        id: "secrets",
+        status: outgoing.truncated ? "warn" : "pass",
+        detail: `${t("Nothing found")}${partial}`,
+      };
     }
     const places = findings
       .slice(0, SECRET_PATHS_SHOWN)
@@ -286,6 +304,7 @@ export function PublishChecklistDialog({
             {rows.map((row) => {
               const presentation = STATUS_PRESENTATION[row.status];
               const showsOutput = expandedOutput === row.id;
+              const rowTerm = CHECKLIST_ROW_TERM[row.id];
               return (
                 <li key={row.id} className="flex items-start gap-3">
                   <presentation.Icon
@@ -294,7 +313,15 @@ export function PublishChecklistDialog({
                     className={cn("mt-0.5 size-4 shrink-0", presentation.toneClassName)}
                   />
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <span className="text-sm font-medium">{checklistItemLabel(row.id)}</span>
+                    <span className="text-sm font-medium">
+                      {rowTerm ? (
+                        <Term term={rowTerm} variant="hint">
+                          {checklistItemLabel(row.id)}
+                        </Term>
+                      ) : (
+                        checklistItemLabel(row.id)
+                      )}
+                    </span>
                     <span className="text-xs break-words text-muted-foreground">{row.detail}</span>
                     {row.status === "fail" && row.output ? (
                       <div className="flex flex-col items-start gap-1">

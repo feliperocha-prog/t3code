@@ -42,8 +42,10 @@ const TOKEN_PATTERNS: ReadonlyArray<{ readonly kind: SecretFindingKind; readonly
     { kind: "jwt", regex: /eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\./g },
   ];
 
+// Only a literal value counts: a quoted string after a credential-like name,
+// or a `.env`-style line. `token = useAuthToken()` is ordinary code, not a leak.
 const ASSIGNMENT_PATTERN =
-  /(?:password|passwd|secret|api[_-]?key|token|client[_-]?secret)\s*[:=]\s*["']?([A-Za-z0-9/+_-]{12,})/gi;
+  /(?:\b(?:password|passwd|secret|api[_-]?key|token|client[_-]?secret)\s*[:=]\s*["']([A-Za-z0-9/+_-]{12,})["']|^\s*(?:export\s+)?[A-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|KEY|TOKEN)[A-Z0-9_]*\s*=\s*["']?([A-Za-z0-9/+_-]{12,})["']?\s*$)/gim;
 
 // Placeholders that look like assignments but hold no credential.
 const PLACEHOLDER_PREFIXES = ["process.env", "${", "<", "your-", "xxx", "example", "changeme"];
@@ -97,14 +99,14 @@ function scanAddedLine(path: string, line: number | null, text: string): SecretF
   // around it would only repeat the same finding.
   if (findings.length > 0) return findings;
   for (const match of text.matchAll(ASSIGNMENT_PATTERN)) {
-    const value = match[1] ?? "";
+    const value = match[1] ?? match[2] ?? "";
     const matchStart = match.index ?? 0;
     const afterSeparator = text
       .slice(matchStart + match[0].search(/[:=]/) + 1)
       .trimStart()
       .replace(/^["']/, "");
     if (isPlaceholderValue(afterSeparator, value)) continue;
-    const valueStart = matchStart + match[0].length - value.length;
+    const valueStart = text.indexOf(value, matchStart);
     findings.push({
       path,
       line,
