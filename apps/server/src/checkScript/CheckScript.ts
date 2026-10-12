@@ -83,12 +83,14 @@ export const make = Effect.fn("CheckScript.make")(function* () {
     const maxChars = input.maxOutputChars ?? CHECK_SCRIPT_OUTPUT_TAIL_LENGTH;
     // UTF-8 can use up to 4 bytes per character; keep enough to fill the tail.
     const stdoutTail = tailCollector(maxChars * 4);
+    const stderrTail = tailCollector(maxChars * 4);
     const output = yield* processRunner
       .run({
         command: invocation.command,
         args: invocation.args,
         cwd: input.cwd,
         onStdoutChunk: (chunk) => stdoutTail.push(chunk),
+        onStderrChunk: (chunk) => stderrTail.push(chunk),
         timeout: input.timeoutMs ?? CHECK_SCRIPT_TIMEOUT_DEFAULT_MS,
         maxOutputBytes: MAX_OUTPUT_BYTES,
         outputMode: "truncate",
@@ -102,10 +104,10 @@ export const make = Effect.fn("CheckScript.make")(function* () {
       timedOut: output.timedOut,
       durationMs: Math.max(0, Math.round(finishedAt - startedAt)),
       outputTail: outputTail(
-        // The collected stdout is cut at its end past MAX_OUTPUT_BYTES; the
-        // streamed tail still has the end, which is where the failure is.
+        // The collected streams are cut at their end past MAX_OUTPUT_BYTES; the
+        // streamed tails still have the end, which is where the failure is.
         stdoutTail.bytes > 0 ? stdoutTail.text() : output.stdout,
-        output.stderr,
+        stderrTail.bytes > 0 ? stderrTail.text() : output.stderr,
         maxChars,
       ),
     } satisfies ProjectRunCheckScriptResult;

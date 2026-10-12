@@ -45,7 +45,7 @@ const TOKEN_PATTERNS: ReadonlyArray<{ readonly kind: SecretFindingKind; readonly
 // Only a literal value counts: a quoted string after a credential-like name,
 // or a `.env`-style line. `token = useAuthToken()` is ordinary code, not a leak.
 const ASSIGNMENT_PATTERN =
-  /(?:\b(?:password|passwd|secret|api[_-]?key|token|client[_-]?secret)\s*[:=]\s*["']([A-Za-z0-9/+_-]{12,})["']|^\s*(?:export\s+)?[A-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|KEY|TOKEN)[A-Z0-9_]*\s*=\s*["']?([A-Za-z0-9/+_-]{12,})["']?\s*$)/gim;
+  /(?:(?:password|passwd|secret|api[_-]?key|token|client[_-]?secret)["']?\s*[:=]\s*["']([A-Za-z0-9/+_-]{12,})["']|^\s*(?:export\s+)?[A-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|KEY|TOKEN)[A-Z0-9_]*\s*=\s*["']?([A-Za-z0-9/+_=-]{12,})["']?\s*(?:#.*)?$)/gim;
 
 // Placeholders that look like assignments but hold no credential.
 const PLACEHOLDER_PREFIXES = ["process.env", "${", "<", "your-", "xxx", "example", "changeme"];

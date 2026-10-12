@@ -104,6 +104,24 @@ describe("scanDiffForSecrets", () => {
     ).toEqual(["assignment", "env-file"]);
   });
 
+  it("finds a literal credential after a compound or JSON-quoted name", () => {
+    for (const line of [
+      'accessToken: "abcdefghijklmnopq",',
+      'const access_token = "abcdefghijklmnopq";',
+      '"api_key": "abcdefghijklmnopq",',
+    ]) {
+      expect(kindsOf(patch("src/config.json", [line]))).toEqual(["assignment"]);
+    }
+  });
+
+  it("finds an env-style value with base64 padding or a trailing comment", () => {
+    expect(
+      kindsOf(
+        patch(".env", ["AWS_SECRET_ACCESS_KEY=abcdefghijklmnopq== # prod"], { newFile: true }),
+      ),
+    ).toEqual(["assignment", "env-file"]);
+  });
+
   it("ignores removed lines, context lines and an edited (not added) env file", () => {
     const diff = [
       "diff --git a/src/config.ts b/src/config.ts",
