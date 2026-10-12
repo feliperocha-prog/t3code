@@ -9,6 +9,17 @@ describe("parseReviewFindings", () => {
     expect(parseReviewFindings("Revisão: aprovado")).toEqual({ kind: "approved" });
   });
 
+  it("keeps an approval that merely mentions defects or corrections", () => {
+    expect(parseReviewFindings("APROVADO. Nenhum defeito encontrado.")).toEqual({
+      kind: "approved",
+    });
+    expect(parseReviewFindings("APROVADO — nenhuma correção necessária")).toEqual({
+      kind: "approved",
+    });
+    expect(parseReviewFindings("APPROVED, no issues found")).toEqual({ kind: "approved" });
+    expect(parseReviewFindings("LGTM")).toEqual({ kind: "approved" });
+  });
+
   it("reads a negated approval as a finding", () => {
     expect(parseReviewFindings("NÃO APROVADO: falta tratar erro de rede.").kind).toBe("findings");
     expect(parseReviewFindings("Reprovado. Veja abaixo.").kind).toBe("findings");

@@ -12,8 +12,11 @@ export type ReviewFindings =
   | { readonly kind: "approved" }
   | { readonly kind: "findings"; readonly findings: ReadonlyArray<ReviewFinding> };
 
-const APPROVED_PATTERN = /(?<![\p{L}\p{N}_])APROVADO(?![\p{L}\p{N}_])/iu;
-const DEFECT_PATTERN = /QUEBRA QUANDO|CORREÇÃO|DEFEITO|N[ÃA]O APROVADO|REPROVADO|NOT APPROVED/iu;
+const APPROVED_PATTERN = /(?<![\p{L}\p{N}_])(?:APROVADO|APPROVED|LGTM)(?![\p{L}\p{N}_])/iu;
+const NEGATED_PATTERN = /N[ÃA]O APROVADO|REPROVADO|NOT APPROVED/iu;
+// Structural markers the reviewer uses for a defect; a plain word like
+// "defeito" inside an approval sentence must not flip the verdict.
+const DEFECT_PATTERN = /QUEBRA QUANDO:|CORREÇÃO:/iu;
 const LOCATION_PATTERN = /^[^\s]+\.(ts|tsx|js|mjs|py|sql|md|html|json|yml|yaml|css|liquid):\d+/;
 const MARKER_PATTERN = /^(?:- |\d+\.\s?)/;
 
@@ -31,7 +34,13 @@ function toFinding(block: string): ReviewFinding {
 
 export function parseReviewFindings(result: string): ReviewFindings {
   const text = result.trim();
-  if (APPROVED_PATTERN.test(text) && !DEFECT_PATTERN.test(text)) {
+  // The verdict lives on the first line; the rest is commentary.
+  const firstLine = text.split("\n")[0] ?? "";
+  if (
+    APPROVED_PATTERN.test(firstLine) &&
+    !NEGATED_PATTERN.test(firstLine) &&
+    !DEFECT_PATTERN.test(text)
+  ) {
     return { kind: "approved" };
   }
   const blocks = text
