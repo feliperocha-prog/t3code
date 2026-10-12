@@ -2,6 +2,7 @@ import { t } from "~/i18n";
 
 import { Button } from "../ui/button";
 import { Spinner } from "../ui/spinner";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { riskTone } from "./changesExplanation.logic";
 import type { ChangesExplanationState } from "./useChangesExplanation";
 
