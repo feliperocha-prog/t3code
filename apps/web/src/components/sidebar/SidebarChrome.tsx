@@ -31,6 +31,7 @@ import { isSidebarUtilityPage, useNavigateToMainApp } from "./mainAppLocation";
 import { SidebarThreadUndoNotice } from "./SidebarThreadUndoNotice";
 import { SidebarProviderUpdatePill } from "./SidebarProviderUpdatePill";
 import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
+import { UsageCorner } from "./UsageCorner";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 import { primaryServerKeybindingsAtom } from "~/state/server";
 import { t } from "~/i18n";
@@ -246,6 +247,7 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
       <SidebarThreadUndoNotice />
       <SidebarProviderUpdatePill />
       <SidebarUpdateArchitectureWarning />
+      <UsageCorner />
       <SidebarUtilityMenu />
     </SidebarFooter>
   );

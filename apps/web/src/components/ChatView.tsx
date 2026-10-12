@@ -9,6 +9,8 @@ import {
 } from "@t3tools/shared/usageLimits";
 import { feedbackBannerItem } from "./chat/ComposerFeedback";
 import { usageLimitsBannerItem } from "./chat/ComposerUsageLimits";
+import { heavyThreadBannerItem } from "./chat/HeavyThreadNotice";
+import { shouldShowHeavyNotice } from "./chat/heavyThread.logic";
 import { ThreadTabStrip } from "./chat/ThreadTabStrip";
 import { ThreadBrief } from "./chat/ThreadBrief";
 import { statusCardAnswered } from "./chat/statusCard.logic";
@@ -628,6 +630,8 @@ const PreviewPanel = lazy(() =>
 const DiffPanel = lazy(() => import("./DiffPanel"));
 const selectAutoShowFloatingPreview = (settings: { browserAutoShowFloatingPreview: boolean }) =>
   settings.browserAutoShowFloatingPreview;
+const selectHeavyThreadWarningPercent = (settings: { heavyThreadWarningPercent: number }) =>
+  settings.heavyThreadWarningPercent;
 const DevicePanel = lazy(() =>
   import("./device/DevicePanel").then((module) => ({ default: module.DevicePanel })),
 );
@@ -6540,6 +6544,70 @@ export default function ChatView(props: ChatViewProps) {
     resumeCompactionPermanentlyDismissed,
     selectedProvider,
   ]);
+  const heavyThreadWarningPercent = useClientSettings(selectHeavyThreadWarningPercent);
+  // Held per thread: another route key reads as "not dismissed", so switching threads starts fresh.
+  const [heavyNoticeDismissal, setHeavyNoticeDismissal] = useState<{
+    readonly threadKey: string;
+    readonly percent: number;
+  } | null>(null);
+  const heavyNoticeDismissedAtPercent =
+    heavyNoticeDismissal?.threadKey === routeThreadKey ? heavyNoticeDismissal.percent : null;
+  const heavyUsedPercentage = activeContextWindow?.usedPercentage ?? null;
+  const heavyThreadBanner = useMemo<ComposerBannerStackItem | null>(() => {
+    if (
+      !activeProject ||
+      heavyUsedPercentage === null ||
+      !shouldShowHeavyNotice({
+        usedPercentage: heavyUsedPercentage,
+        threshold: heavyThreadWarningPercent,
+        dismissedAtPercent: heavyNoticeDismissedAtPercent,
+      })
+    ) {
+      return null;
+    }
+    const projectRef = scopeProjectRef(activeProject.environmentId, activeProject.id);
+    return heavyThreadBannerItem({
+      id: `heavy-thread:${routeThreadKey}`,
+      usedPercentage: heavyUsedPercentage,
+      // A fresh thread in the same project, in the folder mode this one sends with.
+      onStartNewThread: () => {
+        void handleNewThread(
+          projectRef,
+          resolveBackgroundDraftWorkspaceOptions({
+            envMode: sendEnvMode,
+            branch: activeThreadBranch,
+            startFromOrigin,
+          }),
+        ).catch((error: unknown) => {
+          toastManager.add(
+            stackedThreadToast({
+              type: "error",
+              title: t("Could not create thread"),
+              description: error instanceof Error ? error.message : t("An error occurred."),
+            }),
+          );
+        });
+      },
+      onCompact: () => composerRef.current?.compactContext(),
+      compactDisabled,
+      compactDisabledReason,
+      onDismiss: () =>
+        setHeavyNoticeDismissal({ threadKey: routeThreadKey, percent: heavyUsedPercentage }),
+    });
+  }, [
+    activeProject,
+    activeThreadBranch,
+    compactDisabled,
+    compactDisabledReason,
+    composerRef,
+    handleNewThread,
+    heavyNoticeDismissedAtPercent,
+    heavyThreadWarningPercent,
+    heavyUsedPercentage,
+    routeThreadKey,
+    sendEnvMode,
+    startFromOrigin,
+  ]);
   const handleRestoreThreadBranch = useCallback(() => {
     if (gitStatusQuery.data?.hasWorkingTreeChanges) {
       setBranchRestoreConfirmOpen(true);
@@ -6567,6 +6635,7 @@ export default function ChatView(props: ChatViewProps) {
       backgroundLivenessBannerItem === null ? [] : [backgroundLivenessBannerItem];
     const resumeCompactionItems =
       resumeCompactionBannerItem === null ? [] : [resumeCompactionBannerItem];
+    const heavyThreadItems = heavyThreadBanner === null ? [] : [heavyThreadBanner];
     const wokeThreadItems = wokeThreadBannerItem === null ? [] : [wokeThreadBannerItem];
     const parkedThreadItems = parkedThreadBannerItem === null ? [] : [parkedThreadBannerItem];
     // The user asked for this one, so it leads the notice tier instead of trailing it.
@@ -6579,6 +6648,7 @@ export default function ChatView(props: ChatViewProps) {
         ...projectCloneItems,
         ...systemComposerBannerItems,
         ...backgroundLivenessItems,
+        ...heavyThreadItems,
         ...resumeCompactionItems,
         ...wokeThreadItems,
         ...parkedThreadItems,
@@ -6590,6 +6660,7 @@ export default function ChatView(props: ChatViewProps) {
       ...projectCloneItems,
       ...systemComposerBannerItems,
       ...backgroundLivenessItems,
+      ...heavyThreadItems,
       ...resumeCompactionItems,
       ...wokeThreadItems,
       {
@@ -6644,6 +6715,7 @@ export default function ChatView(props: ChatViewProps) {
     backgroundLivenessBannerItem,
     feedbackBannerItems,
     handleRestoreThreadBranch,
+    heavyThreadBanner,
     isRestoringThreadBranch,
     localCheckoutBranchMismatch,
     parkedThreadBannerItem,
