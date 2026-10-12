@@ -67,12 +67,18 @@ export function ChangesExplanationCard({
                   const tone = riskTone(file.risk);
                   return (
                     <li key={`${index}:${file.path}`} className="flex items-start gap-2">
-                      <span
-                        role="img"
-                        aria-label={tone.label}
-                        title={tone.label}
-                        className={`mt-1 size-2 shrink-0 rounded-full ${tone.dotClassName}`}
-                      />
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <span
+                              role="img"
+                              aria-label={tone.label}
+                              className={`mt-1 size-2 shrink-0 rounded-full ${tone.dotClassName}`}
+                            />
+                          }
+                        />
+                        <TooltipPopup side="top">{tone.label}</TooltipPopup>
+                      </Tooltip>
                       <div className="min-w-0">
                         <p className="truncate font-mono text-2xs text-muted-foreground">
                           {file.path}
