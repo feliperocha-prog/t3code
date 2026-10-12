@@ -16,6 +16,7 @@ import * as ServerConfig from "../config.ts";
 import { resolveAttachmentPath } from "../attachmentStore.ts";
 import {
   buildBranchNamePrompt,
+  buildChangesExplanationPrompt,
   buildCommitMessagePrompt,
   buildPrContentPrompt,
   buildProjectBriefPrompt,
@@ -36,6 +37,7 @@ const OpenCodeTextGenerationOperation = Schema.Literals([
   "generateBranchName",
   "generateThreadTitle",
   "generateProjectBrief",
+  "explainChanges",
 ]);
 
 type OpenCodeTextGenerationOperation = typeof OpenCodeTextGenerationOperation.Type;
@@ -478,11 +480,32 @@ export const makeOpenCodeTextGeneration = Effect.fn("makeOpenCodeTextGeneration"
       } satisfies TextGeneration.ProjectBriefGenerationResult;
     });
 
+  const explainChanges: TextGeneration.TextGeneration["Service"]["explainChanges"] = Effect.fn(
+    "OpenCodeTextGeneration.explainChanges",
+  )(function* (input) {
+    const { prompt, outputSchema } = buildChangesExplanationPrompt({ diff: input.diff });
+
+    const generated = yield* runOpenCodeJson({
+      operation: "explainChanges",
+      cwd: input.cwd,
+      prompt,
+      outputSchemaJson: outputSchema,
+      modelSelection: input.modelSelection,
+    });
+
+    return {
+      summary: generated.summary,
+      files: generated.files,
+      attention: generated.attention,
+    } satisfies TextGeneration.ChangesExplanationGenerationResult;
+  });
+
   return {
     generateCommitMessage,
     generatePrContent,
     generateBranchName,
     generateThreadTitle,
     generateProjectBrief,
+    explainChanges,
   } satisfies TextGeneration.TextGeneration["Service"];
 });

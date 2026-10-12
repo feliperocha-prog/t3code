@@ -163,6 +163,7 @@ import * as ResourceMonitorBinary from "./resourceTelemetry/ResourceMonitorBinar
 import * as ResourceTelemetry from "./resourceTelemetry/ResourceTelemetry.ts";
 import * as UsageLimitSources from "./usage/UsageLimitSources.ts";
 import * as ProjectBrief from "./projectBrief/ProjectBrief.ts";
+import * as ChangesExplanation from "./changesExplanation/ChangesExplanation.ts";
 import * as UsageService from "./usage/UsageService.ts";
 import { OrchestrationLayerLive } from "./orchestration/runtimeLayer.ts";
 import {
@@ -516,8 +517,14 @@ const ProjectBriefLayerLive = ProjectBrief.layer.pipe(
   Layer.provide(ServerSettingsLayerLive),
 );
 
+const ChangesExplanationLayerLive = ChangesExplanation.layer.pipe(
+  Layer.provide(TextGeneration.layer.pipe(Layer.provide(SourceControlProviderRegistryLayerLive))),
+  Layer.provide(ServerSettingsLayerLive),
+);
+
 const RuntimeCoreDependenciesLive = ReactorLayerLive.pipe(
   Layer.provideMerge(ProjectBriefLayerLive),
+  Layer.provideMerge(ChangesExplanationLayerLive),
   Layer.provideMerge(ProviderInstallationRefreshLive),
   Layer.provideMerge(ReplayMarkers.layer),
   Layer.provideMerge(ProviderAuthServiceLive),

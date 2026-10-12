@@ -79,6 +79,13 @@ export function createProjectEnvironmentAtoms<R, E>(
       staleTimeMs: Infinity,
       idleTtlMs: 30 * 60_000,
     }),
+    // The server caches explanations by patch; a new `refreshNonce` in the input regenerates.
+    explainChanges: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:projects:explain-changes",
+      tag: WS_METHODS.projectsExplainChanges,
+      staleTimeMs: Infinity,
+      idleTtlMs: 30 * 60_000,
+    }),
     optimisticFile: (target: OptimisticProjectFileTarget) =>
       optimisticFileFamily(optimisticProjectFileKey(target)),
     create: createEnvironmentCommand(runtime, {

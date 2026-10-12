@@ -369,3 +369,53 @@ export function buildProjectBriefPrompt(input: ProjectBriefPromptInput) {
 
   return { prompt, outputSchema };
 }
+
+// ---------------------------------------------------------------------------
+// Changes explanation
+// ---------------------------------------------------------------------------
+
+export interface ChangesExplanationPromptInput {
+  diff: string;
+}
+
+export const CHANGES_EXPLANATION_DIFF_PROMPT_MAX_CHARS = 60_000;
+
+/** True when the patch is longer than what the explanation prompt sends to the model. */
+export const changesExplanationDiffIsTruncated = (diff: string) =>
+  diff.length > CHANGES_EXPLANATION_DIFF_PROMPT_MAX_CHARS;
+
+const CHANGES_EXPLANATION_PROMPT = `You explain a set of code changes to the person who owns the project. They are not a developer and must decide whether these changes are safe to publish. Read the patch below and return JSON with keys summary, files and attention, all written in Brazilian Portuguese, in plain everyday business language.
+- summary: 2 to 3 short sentences saying what this set of changes does, as a whole, for the people who use the product. At most 500 characters.
+- files: one item per changed file, the most important first, at most 20 items. Each item has path (the file path exactly as it appears in the patch), what (one sentence of at most 160 characters saying what changed in that file and why it matters) and risk. If the patch changes more than 20 files, list the 19 most important and group the rest into one last item whose path is "outros N arquivos" (N = how many were grouped) and whose what describes them together.
+- risk is exactly one of "low", "medium" or "high":
+  - high: touches payments, checkout, login or authentication, the database or a migration, sending e-mails or messages, deploy or CI, deletes data, or changes a price or stock rule.
+  - medium: changes behavior people can see, or logic shared by several parts of the product.
+  - low: text, styling, tests, documentation, or refactoring that does not change behavior.
+- attention: up to 3 items (at most 160 characters each): what is worth testing by hand before publishing, concrete and doable, such as "abrir o checkout com cupom e conferir o total". Use an empty array if nothing needs a manual check.
+Rules: no jargon; no commit hashes, branch names, variable, function or class names in summary, what or attention (only path may carry the real file path). Translate technical facts into their effect on the product or the business. Never invent anything that is not in the patch.`;
+
+export function buildChangesExplanationPrompt(input: ChangesExplanationPromptInput) {
+  const truncated = changesExplanationDiffIsTruncated(input.diff);
+  const diff = input.diff.slice(0, CHANGES_EXPLANATION_DIFF_PROMPT_MAX_CHARS);
+  const truncationNotice = truncated
+    ? "\nThe patch is incomplete: it was cut because it is too long. Explain only what is shown, and say in summary that the explanation covers only part of the changes."
+    : "";
+  const prompt = `${CHANGES_EXPLANATION_PROMPT}${truncationNotice}\n\nPatch:\n${diff}`;
+  const outputSchema = Schema.Struct({
+    // Defaulted rather than optional: strict structured-output modes require
+    // every key, and a model that omits one must still yield an explanation.
+    // `risk` stays a plain string here; values outside low/medium/high are
+    // narrowed by the caller instead of failing the whole response.
+    summary: Schema.String.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+    files: Schema.Array(
+      Schema.Struct({
+        path: Schema.String.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+        what: Schema.String.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+        risk: Schema.String.pipe(Schema.withDecodingDefault(Effect.succeed("low"))),
+      }),
+    ).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
+    attention: Schema.Array(Schema.String).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
+  });
+
+  return { prompt, outputSchema, truncated };
+}

@@ -135,6 +135,7 @@ import * as PortScanner from "./preview/PortScanner.ts";
 import * as WorkspaceEntries from "./workspace/WorkspaceEntries.ts";
 import * as WorkspaceFileSystem from "./workspace/WorkspaceFileSystem.ts";
 import * as ProjectBrief from "./projectBrief/ProjectBrief.ts";
+import * as ChangesExplanation from "./changesExplanation/ChangesExplanation.ts";
 import { readWorkflowScript } from "./orchestration/workflowScriptQuery.ts";
 import * as WorkspacePaths from "./workspace/WorkspacePaths.ts";
 import * as VcsStatusBroadcaster from "./vcs/VcsStatusBroadcaster.ts";
@@ -582,6 +583,7 @@ const makeWsRpcLayer = (
       const workspaceEntries = yield* WorkspaceEntries.WorkspaceEntries;
       const workspaceFileSystem = yield* WorkspaceFileSystem.WorkspaceFileSystem;
       const projectBrief = yield* ProjectBrief.ProjectBrief;
+      const changesExplanation = yield* ChangesExplanation.ChangesExplanation;
       const canReplayPersistedRange = Effect.fnUntraced(function* (
         afterSequence: number,
         headSequence: number,
@@ -3143,6 +3145,10 @@ const makeWsRpcLayer = (
           ),
         [WS_METHODS.projectsGenerateBrief]: (input) =>
           observeRpcEffect(WS_METHODS.projectsGenerateBrief, projectBrief.generate(input), {
+            "rpc.aggregate": "workspace",
+          }),
+        [WS_METHODS.projectsExplainChanges]: (input) =>
+          observeRpcEffect(WS_METHODS.projectsExplainChanges, changesExplanation.explain(input), {
             "rpc.aggregate": "workspace",
           }),
         [WS_METHODS.projectsWriteFile]: (input) =>

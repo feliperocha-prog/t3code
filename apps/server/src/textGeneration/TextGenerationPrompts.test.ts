@@ -1,7 +1,10 @@
+import * as Schema from "effect/Schema";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
   buildBranchNamePrompt,
+  buildChangesExplanationPrompt,
+  CHANGES_EXPLANATION_DIFF_PROMPT_MAX_CHARS,
   buildCommitMessagePrompt,
   buildPrContentPrompt,
   buildProjectBriefPrompt,
@@ -277,6 +280,45 @@ describe("buildProjectBriefPrompt", () => {
         risks: { type: "array" },
       },
     });
+  });
+});
+
+describe("buildChangesExplanationPrompt", () => {
+  it("appends the patch to the explanation instructions", () => {
+    const result = buildChangesExplanationPrompt({ diff: "diff --git a/x.ts b/x.ts\n+novo" });
+
+    expect(result.prompt).toContain("Patch:\ndiff --git a/x.ts b/x.ts\n+novo");
+    expect(result.prompt).not.toContain("The patch is incomplete");
+    expect(result.truncated).toBe(false);
+  });
+
+  it("cuts a long patch, says so in the prompt and marks it truncated", () => {
+    const result = buildChangesExplanationPrompt({
+      diff: `${"a".repeat(CHANGES_EXPLANATION_DIFF_PROMPT_MAX_CHARS)}TAIL`,
+    });
+
+    expect(result.prompt).toContain("a".repeat(CHANGES_EXPLANATION_DIFF_PROMPT_MAX_CHARS));
+    expect(result.prompt).not.toContain("TAIL");
+    expect(result.prompt).toContain("The patch is incomplete");
+    expect(result.truncated).toBe(true);
+  });
+
+  it("requires every key in the strict schema and defaults the ones a model omits", () => {
+    const { outputSchema } = buildChangesExplanationPrompt({ diff: "x" });
+    expect(toJsonSchemaObject(outputSchema)).toMatchObject({
+      required: ["summary", "files", "attention"],
+    });
+
+    const decode = Schema.decodeUnknownSync(outputSchema);
+    expect(decode({ files: [{ path: "a.ts" }] })).toEqual({
+      summary: "",
+      files: [{ path: "a.ts", what: "", risk: "low" }],
+      attention: [],
+    });
+    // An unknown risk survives decoding; the service narrows it.
+    expect(
+      decode({ summary: "s", files: [{ path: "a", what: "w", risk: "critical" }] }).files,
+    ).toEqual([{ path: "a", what: "w", risk: "critical" }]);
   });
 });
 

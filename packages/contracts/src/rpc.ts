@@ -159,6 +159,9 @@ import {
   RelayClientStatusSchema,
 } from "./relayClient.ts";
 import {
+  ChangesExplanation,
+  ChangesExplanationError,
+  ChangesExplanationInput,
   ProjectBrief,
   ProjectBriefError,
   ProjectBriefInput,
@@ -294,6 +297,7 @@ export const WS_METHODS = {
   projectsListEntries: "projects.listEntries",
   projectsReadFile: "projects.readFile",
   projectsGenerateBrief: "projects.generateBrief",
+  projectsExplainChanges: "projects.explainChanges",
   projectsSearchContents: "projects.searchContents",
   projectsSearchEntries: "projects.searchEntries",
   projectsWriteFile: "projects.writeFile",
@@ -998,6 +1002,12 @@ const WsProjectsGenerateBriefRpc = Rpc.make(WS_METHODS.projectsGenerateBrief, {
   error: Schema.Union([ProjectBriefError, EnvironmentAuthorizationError]),
 });
 
+const WsProjectsExplainChangesRpc = Rpc.make(WS_METHODS.projectsExplainChanges, {
+  payload: ChangesExplanationInput,
+  success: ChangesExplanation,
+  error: Schema.Union([ChangesExplanationError, EnvironmentAuthorizationError]),
+});
+
 const WsProjectsWriteFileRpc = Rpc.make(WS_METHODS.projectsWriteFile, {
   payload: ProjectWriteFileInput,
   success: ProjectWriteFileResult,
@@ -1520,6 +1530,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsProjectsListEntriesRpc,
   WsProjectsReadFileRpc,
   WsProjectsGenerateBriefRpc,
+  WsProjectsExplainChangesRpc,
   WsProjectsSearchContentsRpc,
   WsProjectsSearchEntriesRpc,
   WsProjectsWriteFileRpc,

@@ -316,6 +316,12 @@ function createTextGeneration(
         next: [],
         risks: [],
       }),
+    explainChanges: () =>
+      Effect.succeed({
+        summary: "",
+        files: [],
+        attention: [],
+      }),
     ...overrides,
   };
 
@@ -370,6 +376,17 @@ function createTextGeneration(
           (cause) =>
             new TextGenerationError({
               operation: "generateProjectBrief",
+              detail: "fake text generation failed",
+              ...(cause !== undefined ? { cause } : {}),
+            }),
+        ),
+      ),
+    explainChanges: (input) =>
+      implementation.explainChanges(input).pipe(
+        Effect.mapError(
+          (cause) =>
+            new TextGenerationError({
+              operation: "explainChanges",
               detail: "fake text generation failed",
               ...(cause !== undefined ? { cause } : {}),
             }),

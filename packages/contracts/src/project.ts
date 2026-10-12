@@ -334,3 +334,43 @@ export class ProjectBriefError extends Schema.TaggedError<ProjectBriefError>()(
     return this.detail;
   }
 }
+
+export const CHANGES_EXPLANATION_DIFF_MAX_LENGTH = 80_000;
+
+export const ChangesExplanationInput = Schema.Struct({
+  diff: Schema.String.check(Schema.isMaxLength(CHANGES_EXPLANATION_DIFF_MAX_LENGTH)),
+  // Any new value bypasses the cached explanation for the same patch and regenerates it.
+  refreshNonce: Schema.optional(Schema.Number),
+});
+export type ChangesExplanationInput = typeof ChangesExplanationInput.Type;
+
+export const ChangesExplanationRisk = Schema.Literals(["low", "medium", "high"]);
+export type ChangesExplanationRisk = typeof ChangesExplanationRisk.Type;
+
+export const ChangesExplanationFile = Schema.Struct({
+  path: Schema.String,
+  what: Schema.String,
+  risk: ChangesExplanationRisk,
+});
+export type ChangesExplanationFile = typeof ChangesExplanationFile.Type;
+
+export const ChangesExplanation = Schema.Struct({
+  summary: Schema.String,
+  files: Schema.Array(ChangesExplanationFile),
+  attention: Schema.Array(Schema.String),
+  // True when the patch was cut before it reached the model.
+  truncated: Schema.Boolean,
+  generatedAt: IsoDateTime,
+});
+export type ChangesExplanation = typeof ChangesExplanation.Type;
+
+export class ChangesExplanationError extends Schema.TaggedError<ChangesExplanationError>()(
+  "ChangesExplanationError",
+  {
+    detail: Schema.String,
+  },
+) {
+  override get message(): string {
+    return this.detail;
+  }
+}

@@ -72,6 +72,21 @@ const dictionary: Readonly<Record<string, string>> = {
   "deploy state|{count} versions published by others that you haven't brought in yet":
     "{count} versões publicadas por outros que você ainda não trouxe",
   "deploy state|Everything published": "Tudo publicado",
+
+  // Diff panel: "Explain changes" by the text model
+  "Explain changes": "Explicar mudanças",
+  "Diff too large to explain here": "Diff grande demais pra explicar aqui",
+  "What changed": "O que mudou",
+  "Reading the changes…": "Lendo as mudanças…",
+  "Worth testing by hand": "Vale testar na mão",
+  "The patch was large; the explanation covers only the beginning.":
+    "O patch era grande, a explicação cobre só o começo.",
+  "The changes on screen are newer than this explanation.":
+    "As mudanças na tela são mais novas que esta explicação.",
+  Redo: "Refazer",
+  "Low risk": "Risco baixo",
+  "Medium risk": "Risco médio",
+  "High risk": "Risco alto",
 };
 
 export default dictionary;

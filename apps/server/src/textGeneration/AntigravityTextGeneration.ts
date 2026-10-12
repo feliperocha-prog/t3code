@@ -23,6 +23,7 @@ import type { AcpSessionRuntime } from "../provider/acp/AcpSessionRuntime.ts";
 import type * as TextGeneration from "./TextGeneration.ts";
 import {
   buildBranchNamePrompt,
+  buildChangesExplanationPrompt,
   buildCommitMessagePrompt,
   buildPrContentPrompt,
   buildProjectBriefPrompt,
@@ -422,11 +423,30 @@ export const makeAntigravityTextGeneration = Effect.fn("makeAntigravityTextGener
       } satisfies TextGeneration.ProjectBriefGenerationResult;
     });
 
+  const explainChanges: TextGeneration.TextGeneration["Service"]["explainChanges"] = Effect.fn(
+    "AntigravityTextGeneration.explainChanges",
+  )(function* (input) {
+    const { prompt, outputSchema } = buildChangesExplanationPrompt({ diff: input.diff });
+    const generated = yield* runAntigravityJson({
+      operation: "explainChanges",
+      prompt,
+      outputSchema,
+      modelSelection: input.modelSelection,
+    });
+
+    return {
+      summary: generated.summary,
+      files: generated.files,
+      attention: generated.attention,
+    } satisfies TextGeneration.ChangesExplanationGenerationResult;
+  });
+
   return {
     generateCommitMessage,
     generatePrContent,
     generateBranchName,
     generateThreadTitle,
     generateProjectBrief,
+    explainChanges,
   } satisfies TextGeneration.TextGeneration["Service"];
 });

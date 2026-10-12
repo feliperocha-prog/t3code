@@ -24,6 +24,7 @@ import { codexExecLaunchArgs, resolveCodexLaunchArgs } from "../provider/Layers/
 import * as TextGeneration from "./TextGeneration.ts";
 import {
   buildBranchNamePrompt,
+  buildChangesExplanationPrompt,
   buildCommitMessagePrompt,
   buildPrContentPrompt,
   buildProjectBriefPrompt,
@@ -110,7 +111,8 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
       | "generatePrContent"
       | "generateBranchName"
       | "generateThreadTitle"
-      | "generateProjectBrief",
+      | "generateProjectBrief"
+      | "explainChanges",
     value: unknown,
   ): Effect.Effect<string, TextGenerationError> =>
     encodeJsonString(value).pipe(
@@ -130,7 +132,8 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
       | "generatePrContent"
       | "generateBranchName"
       | "generateThreadTitle"
-      | "generateProjectBrief",
+      | "generateProjectBrief"
+      | "explainChanges",
     attachments: TextGeneration.BranchNameGenerationInput["attachments"],
   ): Effect.fn.Return<MaterializedImageAttachments, TextGenerationError> {
     if (!attachments || attachments.length === 0) {
@@ -173,7 +176,8 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
       | "generatePrContent"
       | "generateBranchName"
       | "generateThreadTitle"
-      | "generateProjectBrief";
+      | "generateProjectBrief"
+      | "explainChanges";
     cwd: string;
     prompt: string;
     outputSchemaJson: S;
@@ -461,11 +465,32 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
       } satisfies TextGeneration.ProjectBriefGenerationResult;
     });
 
+  const explainChanges: TextGeneration.TextGeneration["Service"]["explainChanges"] = Effect.fn(
+    "CodexTextGeneration.explainChanges",
+  )(function* (input) {
+    const { prompt, outputSchema } = buildChangesExplanationPrompt({ diff: input.diff });
+
+    const generated = yield* runCodexJson({
+      operation: "explainChanges",
+      cwd: input.cwd,
+      prompt,
+      outputSchemaJson: outputSchema,
+      modelSelection: input.modelSelection,
+    });
+
+    return {
+      summary: generated.summary,
+      files: generated.files,
+      attention: generated.attention,
+    } satisfies TextGeneration.ChangesExplanationGenerationResult;
+  });
+
   return {
     generateCommitMessage,
     generatePrContent,
     generateBranchName,
     generateThreadTitle,
     generateProjectBrief,
+    explainChanges,
   } satisfies TextGeneration.TextGeneration["Service"];
 });

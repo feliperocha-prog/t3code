@@ -13,6 +13,7 @@ import { TextGenerationError } from "@t3tools/contracts";
 import * as TextGeneration from "./TextGeneration.ts";
 import {
   buildBranchNamePrompt,
+  buildChangesExplanationPrompt,
   buildCommitMessagePrompt,
   buildPrContentPrompt,
   buildProjectBriefPrompt,
@@ -56,7 +57,8 @@ export const makeCursorTextGeneration = Effect.fn("makeCursorTextGeneration")(fu
       | "generatePrContent"
       | "generateBranchName"
       | "generateThreadTitle"
-      | "generateProjectBrief";
+      | "generateProjectBrief"
+      | "explainChanges";
     cwd: string;
     prompt: string;
     outputSchemaJson: S;
@@ -286,11 +288,32 @@ export const makeCursorTextGeneration = Effect.fn("makeCursorTextGeneration")(fu
       } satisfies TextGeneration.ProjectBriefGenerationResult;
     });
 
+  const explainChanges: TextGeneration.TextGeneration["Service"]["explainChanges"] = Effect.fn(
+    "CursorTextGeneration.explainChanges",
+  )(function* (input) {
+    const { prompt, outputSchema } = buildChangesExplanationPrompt({ diff: input.diff });
+
+    const generated = yield* runCursorJson({
+      operation: "explainChanges",
+      cwd: input.cwd,
+      prompt,
+      outputSchemaJson: outputSchema,
+      modelSelection: input.modelSelection,
+    });
+
+    return {
+      summary: generated.summary,
+      files: generated.files,
+      attention: generated.attention,
+    } satisfies TextGeneration.ChangesExplanationGenerationResult;
+  });
+
   return {
     generateCommitMessage,
     generatePrContent,
     generateBranchName,
     generateThreadTitle,
     generateProjectBrief,
+    explainChanges,
   } satisfies TextGeneration.TextGeneration["Service"];
 });

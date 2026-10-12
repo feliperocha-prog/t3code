@@ -19,6 +19,7 @@ import {
   FolderTreeIcon,
   PilcrowIcon,
   Rows3Icon,
+  SparklesIcon,
   TextWrapIcon,
 } from "lucide-react";
 import * as Schema from "effect/Schema";
@@ -91,6 +92,9 @@ import { createGitDiffFileContentsLoader } from "../lib/diffFileContents";
 import { useReviewFilePatches } from "./diffs/useReviewFilePatches";
 import { DiffFileLoadingBoundary } from "./diffs/DiffFileLoadingBoundary";
 import { DiffFileStatus } from "./diffs/DiffFileStatus";
+import { ChangesExplanationCard } from "./diffs/ChangesExplanationCard";
+import { explanationIsStale } from "./diffs/changesExplanation.logic";
+import { useChangesExplanation } from "./diffs/useChangesExplanation";
 import { t } from "~/i18n";
 
 type DiffThemeType = "light" | "dark";
@@ -417,6 +421,38 @@ export default function DiffPanel({
           }),
     [lazySource, resolvedTheme, selectedPatch, selectedTurnId],
   );
+  // "Explain changes": generated only on click (it costs tokens), for the patch on screen.
+  // A lazy (truncated) source has no complete patch to send, so it cannot be explained.
+  const canExplainChanges = hasResolvedPatch && !hasNoNetChanges && !lazySource;
+  const [explanationOpen, setExplanationOpen] = useState(false);
+  const [explainedDiff, setExplainedDiff] = useState<string | null>(null);
+  const [explanationNonce, setExplanationNonce] = useState(0);
+  const explanationScope = `${activeThreadId ?? ""}:${selectedTurnId ?? ""}`;
+  const [explanationScopeSeen, setExplanationScopeSeen] = useState(explanationScope);
+  if (explanationScopeSeen !== explanationScope) {
+    // Another thread or turn: the explanation belongs to the previous changes.
+    setExplanationScopeSeen(explanationScope);
+    setExplanationOpen(false);
+    setExplainedDiff(null);
+    setExplanationNonce(0);
+  }
+  const changesExplanation = useChangesExplanation(
+    activeThread?.environmentId ?? null,
+    explanationOpen ? explainedDiff : null,
+    explanationNonce,
+  );
+  const explanationStale = explanationIsStale(
+    explainedDiff,
+    typeof selectedPatch === "string" ? selectedPatch : null,
+  );
+  const explainChanges = () => {
+    if (!canExplainChanges) return;
+    if (selectedPatch !== explainedDiff) {
+      setExplainedDiff(selectedPatch);
+      setExplanationNonce(0);
+    }
+    setExplanationOpen(true);
+  };
   const fileStats = useMemo(
     () => new Map(lazySource?.files?.map((file) => [file.path, file])),
     [lazySource?.files],
@@ -878,6 +914,40 @@ export default function DiffPanel({
             </TooltipPopup>
           </Tooltip>
         )}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              canExplainChanges ? (
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label={t("Explain changes")}
+                  onClick={explainChanges}
+                />
+              ) : (
+                <span className="inline-flex shrink-0" />
+              )
+            }
+          >
+            {canExplainChanges ? (
+              <SparklesIcon className="size-3.5" />
+            ) : (
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label={t("Explain changes")}
+                disabled
+              >
+                <SparklesIcon className="size-3.5" />
+              </Button>
+            )}
+          </TooltipTrigger>
+          <TooltipPopup side="top">
+            {lazySource ? t("Diff too large to explain here") : t("Explain changes")}
+          </TooltipPopup>
+        </Tooltip>
         {diffFileKeys.length > 0 && (
           <Tooltip>
             <TooltipTrigger
@@ -1013,6 +1083,14 @@ export default function DiffPanel({
                 {t("This preview exceeds the size limit. Changes shown are incomplete.")}
                 {selectedGitSource?.files ? ` ${t("Totals include all changes.")}` : ""}
               </p>
+            )}
+            {explanationOpen && (
+              <ChangesExplanationCard
+                explanation={changesExplanation}
+                stale={explanationStale}
+                onRedo={() => setExplanationNonce((nonce) => nonce + 1)}
+                onClose={() => setExplanationOpen(false)}
+              />
             )}
             {selectedPatchError && !renderablePatch && (
               <div className="px-3">

@@ -93,6 +93,21 @@ export interface ProjectBriefGenerationResult {
   risks: ReadonlyArray<string>;
 }
 
+export interface ChangesExplanationGenerationInput {
+  cwd: string;
+  /** Unified patch of the changes on screen. */
+  diff: string;
+  /** What model and provider to use for generation. */
+  modelSelection: ModelSelection;
+}
+
+export interface ChangesExplanationGenerationResult {
+  summary: string;
+  /** `risk` is the model's raw value; the caller narrows it to low/medium/high. */
+  files: ReadonlyArray<{ path: string; what: string; risk: string }>;
+  attention: ReadonlyArray<string>;
+}
+
 /**
  * TextGeneration - Service tag for commit and change request text generation.
  */
@@ -129,6 +144,11 @@ export class TextGeneration extends Context.Service<
     readonly generateProjectBrief: (
       input: ProjectBriefGenerationInput,
     ) => Effect.Effect<ProjectBriefGenerationResult, TextGenerationError>;
+
+    /** Explain a patch in plain language, file by file, with a risk level for each. */
+    readonly explainChanges: (
+      input: ChangesExplanationGenerationInput,
+    ) => Effect.Effect<ChangesExplanationGenerationResult, TextGenerationError>;
   }
 >()("t3/textGeneration/TextGeneration") {}
 
@@ -137,7 +157,8 @@ type TextGenerationOp =
   | "generatePrContent"
   | "generateBranchName"
   | "generateThreadTitle"
-  | "generateProjectBrief";
+  | "generateProjectBrief"
+  | "explainChanges";
 
 const resolveInstance = (
   registry: ProviderInstanceRegistry.ProviderInstanceRegistry["Service"],
@@ -193,6 +214,10 @@ export const make = Effect.gen(function* () {
     generateProjectBrief: (input) =>
       resolveInstance(registry, "generateProjectBrief", input.modelSelection.instanceId).pipe(
         Effect.flatMap((textGeneration) => textGeneration.generateProjectBrief(input)),
+      ),
+    explainChanges: (input) =>
+      resolveInstance(registry, "explainChanges", input.modelSelection.instanceId).pipe(
+        Effect.flatMap((textGeneration) => textGeneration.explainChanges(input)),
       ),
   });
 });

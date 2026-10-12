@@ -22,6 +22,7 @@ import { TextGenerationError } from "@t3tools/contracts";
 import * as TextGeneration from "./TextGeneration.ts";
 import {
   buildBranchNamePrompt,
+  buildChangesExplanationPrompt,
   buildCommitMessagePrompt,
   buildPrContentPrompt,
   buildProjectBriefPrompt,
@@ -104,7 +105,8 @@ export const makeClaudeTextGeneration = Effect.fn("makeClaudeTextGeneration")(fu
       | "generatePrContent"
       | "generateBranchName"
       | "generateThreadTitle"
-      | "generateProjectBrief",
+      | "generateProjectBrief"
+      | "explainChanges",
     value: unknown,
     detail: string,
   ): Effect.Effect<string, TextGenerationError> =>
@@ -135,7 +137,8 @@ export const makeClaudeTextGeneration = Effect.fn("makeClaudeTextGeneration")(fu
       | "generatePrContent"
       | "generateBranchName"
       | "generateThreadTitle"
-      | "generateProjectBrief";
+      | "generateProjectBrief"
+      | "explainChanges";
     cwd: string;
     prompt: string;
     outputSchemaJson: S;
@@ -436,11 +439,32 @@ export const makeClaudeTextGeneration = Effect.fn("makeClaudeTextGeneration")(fu
       } satisfies TextGeneration.ProjectBriefGenerationResult;
     });
 
+  const explainChanges: TextGeneration.TextGeneration["Service"]["explainChanges"] = Effect.fn(
+    "ClaudeTextGeneration.explainChanges",
+  )(function* (input) {
+    const { prompt, outputSchema } = buildChangesExplanationPrompt({ diff: input.diff });
+
+    const generated = yield* runClaudeJson({
+      operation: "explainChanges",
+      cwd: input.cwd,
+      prompt,
+      outputSchemaJson: outputSchema,
+      modelSelection: input.modelSelection,
+    });
+
+    return {
+      summary: generated.summary,
+      files: generated.files,
+      attention: generated.attention,
+    } satisfies TextGeneration.ChangesExplanationGenerationResult;
+  });
+
   return {
     generateCommitMessage,
     generatePrContent,
     generateBranchName,
     generateThreadTitle,
     generateProjectBrief,
+    explainChanges,
   } satisfies TextGeneration.TextGeneration["Service"];
 });
