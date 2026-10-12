@@ -258,6 +258,8 @@ import { formatChatTimestampTooltip, formatDayAwareTimestamp } from "../../times
 
 import { SkillChipIcon, SkillInlineText } from "./SkillInlineText";
 import { deriveAgentSpawnSummary } from "./agentSpawnSummary";
+import { ReviewFindingsList } from "./ReviewFindingsList";
+import { subagentRoleLabel } from "./subagentRole.logic";
 import { formatWorkspaceRelativePath } from "../../filePathDisplay";
 import {
   buildReviewCommentRenderablePatch,
@@ -304,6 +306,8 @@ interface TimelineRowSharedState {
   agentPanelModel: AgentPanelModel;
   expandedSpawnEntryIds: ReadonlySet<string>;
   onOpenAgents: () => void;
+  /** Sends a reviewer finding back to the AI; null where the timeline is paint-only. */
+  onReviewFix: ((text: string, count: number) => void) | null;
   onCancelWorktreeSetup: (() => void) | null;
   onWorktreeSetupWorkLocally: (() => void) | null;
   onOpenWorktreeSetupTerminal: ((terminalId: string) => void) | null;
@@ -412,6 +416,7 @@ interface MessagesTimelineProps {
   ) => boolean;
   agentPanelModel?: AgentPanelModel;
   onOpenAgents?: () => void;
+  onReviewFix?: (text: string, count: number) => void;
   isWorking: boolean;
   isPreparingWorktree?: boolean;
   isCompacting?: boolean;
@@ -496,6 +501,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   activeTurnStartedAt,
   agentPanelModel,
   onOpenAgents = NOOP_OPEN_AGENTS,
+  onReviewFix,
   listRef,
   timelineEntries,
   latestTurn,
@@ -1193,6 +1199,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       agentPanelModel: agentPanelModel ?? EMPTY_AGENT_PANEL_MODEL,
       expandedSpawnEntryIds: paintedExpandedSpawnEntryIds,
       onOpenAgents,
+      onReviewFix: onReviewFix ?? null,
       onCancelWorktreeSetup: onCancelWorktreeSetup ?? null,
       onWorktreeSetupWorkLocally: onWorktreeSetupWorkLocally ?? null,
       onOpenWorktreeSetupTerminal: onOpenWorktreeSetupTerminal ?? null,
@@ -1229,6 +1236,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       agentPanelModel,
       paintedExpandedSpawnEntryIds,
       onOpenAgents,
+      onReviewFix,
       onCancelWorktreeSetup,
       onWorktreeSetupWorkLocally,
       onOpenWorktreeSetupTerminal,
@@ -4654,8 +4662,14 @@ function AgentSpawnMemberRow({
   agent: RuntimeSubagent;
   onToggleEntry?: ((collapsed: boolean) => void) | undefined;
 }) {
+  const { onReviewFix } = use(TimelineRowCtx);
   const [open, setOpen] = useState(false);
   const activeStatus = isActiveSubagentStatus(agent.status);
+  const roleLabel = subagentRoleLabel(agent.role, agent.title);
+  const reviewResult =
+    roleLabel.kind === "reviewing" && agent.status === "completed" && onReviewFix
+      ? agent.result
+      : null;
   const activity = activeStatus
     ? (agent.progress ?? (agent.lastToolName ? `▸ ${agent.lastToolName}` : null))
     : (agent.error ?? agent.result ?? agent.progress ?? null);
@@ -4679,14 +4693,16 @@ function AgentSpawnMemberRow({
       : agent.status === "completed"
         ? meta
         : `${AGENT_MEMBER_STATUS_LABEL[agent.status]} · ${meta}`;
-  const role =
-    agent.role && agent.role.trim().toLowerCase() !== agent.title.trim().toLowerCase()
-      ? agent.role
+  // The task title stays beside the plain name unless it only repeats the role.
+  const taskTitle =
+    roleLabel.technical &&
+    roleLabel.technical.toLowerCase() !== agent.title.trim().toLowerCase() &&
+    agent.title.trim().length > 0
+      ? agent.title
       : null;
+  const modelLabel = formatSubagentModelLabel(agent.model, agent.effort);
   const firstLine = activity?.split("\n").find((line) => line.trim().length > 0) ?? null;
-  const body = [activity?.trim() || null, formatSubagentModelLabel(agent.model, agent.effort)]
-    .filter(Boolean)
-    .join("\n\n");
+  const body = [activity?.trim() || null, modelLabel].filter(Boolean).join("\n\n");
   const canExpand = body.length > 0;
   const toggleOpen = () => {
     onToggleEntry?.(open);
@@ -4697,7 +4713,13 @@ function AgentSpawnMemberRow({
     <div
       role={canExpand ? "button" : undefined}
       tabIndex={canExpand ? 0 : undefined}
-      aria-label={canExpand ? `${agent.title}, ${statusLabel}` : undefined}
+      aria-label={
+        canExpand
+          ? [roleLabel.label, roleLabel.technical, taskTitle, statusLabel]
+              .filter(Boolean)
+              .join(", ")
+          : undefined
+      }
       aria-expanded={canExpand ? open : undefined}
       onClick={canExpand ? toggleOpen : undefined}
       onKeyDown={
@@ -4721,15 +4743,19 @@ function AgentSpawnMemberRow({
           <span
             className={cn(
               "min-w-0 truncate",
+              roleLabel.technical && "shrink-0 font-medium",
               agent.status === "failed" ? failedToolIconClassName : "text-foreground/80",
             )}
           >
-            {agent.title}
+            {roleLabel.label}
           </span>
-          {role ? (
-            <span className="max-w-28 shrink-0 truncate rounded-sm border border-border/60 px-1 font-mono text-3xs text-muted-foreground">
-              {role}
+          {roleLabel.technical ? (
+            <span className="max-w-28 shrink-0 truncate text-xs text-muted-foreground">
+              {roleLabel.technical}
             </span>
+          ) : null}
+          {taskTitle ? (
+            <span className="min-w-0 truncate text-foreground/70">{taskTitle}</span>
           ) : null}
         </p>
         <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground">
@@ -4745,7 +4771,16 @@ function AgentSpawnMemberRow({
           onClick={stopRowToggle}
           onPointerDown={stopRowToggle}
         >
-          <pre className={toolCallExpandedBodyClassName}>{body}</pre>
+          {reviewResult && onReviewFix ? (
+            <div className="flex flex-col gap-2">
+              <ReviewFindingsList result={reviewResult} onFix={onReviewFix} />
+              {modelLabel ? (
+                <p className="font-mono text-2xs text-muted-foreground/70">{modelLabel}</p>
+              ) : null}
+            </div>
+          ) : (
+            <pre className={toolCallExpandedBodyClassName}>{body}</pre>
+          )}
         </div>
       ) : null}
     </div>

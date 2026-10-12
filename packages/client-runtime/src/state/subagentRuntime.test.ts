@@ -293,6 +293,24 @@ describe("foldSubagentActivities", () => {
     expect(new Set(summaries).size).toBe(summaries.length);
   });
 
+  it("keeps a long result whole up to 8000 chars while progress stays at 180", () => {
+    const report = "y".repeat(3000);
+    const huge = "z".repeat(9000);
+    const agents = fold([
+      activity("task.started", { taskId: "task-9", taskType: "local_agent" }),
+      activity("task.progress", { taskId: "task-9", summary: report }),
+      activity("task.completed", { taskId: "task-9", status: "completed", summary: report }),
+      activity("task.started", { taskId: "task-10", taskType: "local_agent" }),
+      activity("task.completed", { taskId: "task-10", status: "completed", summary: huge }),
+    ]);
+    const full = agents.find((agent) => agent.id === "task-9")!;
+    expect(full.result).toBe(report);
+    expect(full.progress!.length).toBeLessThanOrEqual(180);
+    const capped = agents.find((agent) => agent.id === "task-10")!;
+    expect(capped.result!.length).toBe(8000);
+    expect(capped.result!.endsWith("…")).toBe(true);
+  });
+
   it("plan tasks are not agents", () => {
     const agents = fold([activity("task.started", { taskId: "plan-1", taskType: "plan" })]);
     expect(agents).toHaveLength(0);

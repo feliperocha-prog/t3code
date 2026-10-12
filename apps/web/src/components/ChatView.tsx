@@ -7312,6 +7312,23 @@ export default function ChatView(props: ChatViewProps) {
     if (!activeThreadKey || !activeThreadRef || !composerRef.current?.getSendContext()) return;
     void onSend(undefined, "foreground", { kind: "quick-reply", text });
   };
+  // "Fix" under a reviewer finding (timeline and Agents panel): sends the defect
+  // back to the AI as a quick reply. Stable identity through onSendRef so the
+  // timeline row context does not rebuild on every render.
+  const sendReviewFixRequest = useCallback(
+    (findingText: string, count: number) => {
+      if (!activeThreadKey || !activeThreadRef || !composerRef.current?.getSendContext()) return;
+      const lead =
+        count > 1
+          ? tc("review fix", "Fix the defects the reviewer pointed out and tell me what changed:")
+          : tc("review fix", "Fix the defect the reviewer pointed out and tell me what changed:");
+      void onSendRef.current(undefined, "foreground", {
+        kind: "quick-reply",
+        text: [lead, findingText].join("\n\n"),
+      });
+    },
+    [activeThreadKey, activeThreadRef, composerRef],
+  );
   // "Adjust" under a waiting STATUS: start the answer in the message box. An
   // empty box gets a lead-in so the reply reads as a correction; a draft in
   // progress is left as is.
@@ -9786,6 +9803,7 @@ export default function ChatView(props: ChatViewProps) {
         model={agentPanelModel}
         environmentId={activeThreadRef?.environmentId ?? null}
         threadId={activeThreadRef?.threadId ?? null}
+        onReviewFix={sendReviewFixRequest}
       />
     ) : renderedRightPanelSurface?.kind === "device" ? (
       <Suspense fallback={null}>
@@ -10016,6 +10034,7 @@ export default function ChatView(props: ChatViewProps) {
                       onCiteAssistantText: citeAssistantText,
                       agentPanelModel,
                       onOpenAgents: addAgentsSurface,
+                      onReviewFix: sendReviewFixRequest,
                       onUseArtifactTemplate: useArtifactTemplate,
                       ...(activeProject ? { onRunShellCommand: runShellCommand } : {}),
                     }

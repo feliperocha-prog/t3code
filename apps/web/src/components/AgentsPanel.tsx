@@ -22,13 +22,18 @@ import {
 } from "@t3tools/client-runtime/state/subagentRuntime";
 import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
 import { Bot, Braces, Check, ChevronDown, ChevronRight, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { createContext, use, useEffect, useRef, useState } from "react";
 
 import { cn } from "~/lib/utils";
 import { orchestrationEnvironment } from "~/state/orchestration";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Button } from "~/components/ui/button";
 import { t } from "~/i18n";
+import { ReviewFindingsList } from "./chat/ReviewFindingsList";
+import { subagentRoleLabel } from "./chat/subagentRole.logic";
+
+/** Sends a reviewer finding back to the AI; null when the host cannot send. */
+const ReviewFixContext = createContext<((text: string, count: number) => void) | null>(null);
 
 /**
  * In-flight states all present as Working (one steady state, per the
@@ -137,17 +142,29 @@ function agentActivityText(agent: RuntimeSubagent): string | null {
   );
 }
 
-/** Flat, non-interactive agent status line. No unfold. */
+/**
+ * Flat agent status line. No unfold. A settled reviewer adds its findings
+ * below the fixed three-line grid, each with a Fix button.
+ */
 function AgentRow({ agent }: { agent: RuntimeSubagent }) {
+  const onReviewFix = use(ReviewFixContext);
+  const roleLabel = subagentRoleLabel(agent.role, agent.title);
+  const reviewResult =
+    roleLabel.kind === "reviewing" && agent.status === "completed" && onReviewFix
+      ? agent.result
+      : null;
   const visuals = STATUS_VISUALS[agent.status];
   const statusLabel =
     agent.kind === "subagent_batch" && agent.status === "idle" ? t("Idle") : visuals.label;
   const activity = agentActivityText(agent);
   const modelLabel = formatSubagentModelLabel(agent.model, agent.effort);
-  const role =
-    agent.role?.trim().toLocaleLowerCase() === agent.title.trim().toLocaleLowerCase()
-      ? null
-      : agent.role;
+  // The task title stays beside the plain name unless it only repeats the role.
+  const taskTitle =
+    roleLabel.technical &&
+    roleLabel.technical.toLocaleLowerCase() !== agent.title.trim().toLocaleLowerCase() &&
+    agent.title.trim().length > 0
+      ? agent.title
+      : null;
   const metadata = [
     modelLabel,
     agent.usage ? `${formatSubagentTokenCount(agent.usage.totalTokens)} tok` : "— tok",
@@ -157,17 +174,24 @@ function AgentRow({ agent }: { agent: RuntimeSubagent }) {
     agent.activationCount > 1 ? t("run {count}", { count: agent.activationCount }) : null,
   ].filter((value): value is string => value !== null);
 
-  return (
+  const row = (
     <div className="grid h-[3.875rem] grid-cols-[0.375rem_minmax(0,1fr)_auto] grid-rows-[1.25rem_1.125rem_1rem] items-center gap-x-2 rounded-md px-1.5 py-1">
       <span className="col-start-1 row-start-1 flex items-center">
         <StatusDot status={agent.status} />
       </span>
       <span className="col-start-2 row-start-1 flex min-w-0 items-baseline gap-2">
-        <span className="min-w-0 truncate text-sm font-medium">{agent.title}</span>
-        {role ? (
-          <span className="max-w-28 shrink-0 truncate rounded-sm border border-border/60 px-1 font-mono text-3xs text-muted-foreground">
-            {role}
+        <span
+          className={cn("min-w-0 truncate text-sm font-medium", roleLabel.technical && "shrink-0")}
+        >
+          {roleLabel.label}
+        </span>
+        {roleLabel.technical ? (
+          <span className="max-w-28 shrink-0 truncate text-xs text-muted-foreground">
+            {roleLabel.technical}
           </span>
+        ) : null}
+        {taskTitle ? (
+          <span className="min-w-0 truncate text-sm text-foreground/80">{taskTitle}</span>
         ) : null}
       </span>
       <span className="col-start-3 row-start-1 min-w-14 text-right font-mono text-2xs text-muted-foreground/80">
@@ -190,6 +214,15 @@ function AgentRow({ agent }: { agent: RuntimeSubagent }) {
         {metadata.join(" · ")}
       </span>
       <span className="sr-only">{statusLabel}</span>
+    </div>
+  );
+  if (!reviewResult || !onReviewFix) return row;
+  return (
+    <div className="flex flex-col">
+      {row}
+      <div className="px-1.5 pb-2 ps-5">
+        <ReviewFindingsList result={reviewResult} onFix={onReviewFix} />
+      </div>
     </div>
   );
 }
@@ -535,10 +568,12 @@ export function AgentsPanel({
   model,
   environmentId = null,
   threadId = null,
+  onReviewFix,
 }: {
   model: AgentPanelModel;
   environmentId?: EnvironmentId | null;
   threadId?: ThreadId | null;
+  onReviewFix?: (text: string, count: number) => void;
 }) {
   if (!model.hasAgents) {
     return (
@@ -555,45 +590,47 @@ export function AgentsPanel({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-2 p-2">
-          {model.workflows.map((group) => (
-            <WorkflowSection
-              key={group.workflow.id}
-              group={group}
-              environmentId={environmentId}
-              threadId={threadId}
-            />
-          ))}
-          {model.directAgents.length > 0 ? (
-            <section>
-              <div className="px-1.5 pt-1 text-3xs font-medium uppercase tracking-wider text-muted-foreground">
-                {t("Direct spawns")}
-              </div>
-              {model.directAgents.map((agent) => (
-                <AgentRow key={agent.id} agent={agent} />
-              ))}
-            </section>
-          ) : null}
-        </div>
-      </ScrollArea>
-      <footer className="flex items-center justify-between border-t border-border/60 px-3 py-1.5 font-mono text-2xs text-muted-foreground">
-        <span className="flex items-center gap-2">
-          {model.runningCount + model.waitingCount > 0 ? (
-            <span className="text-info-foreground">
-              ● {t("{count} working", { count: model.runningCount + model.waitingCount })}
-            </span>
-          ) : null}
-          {model.idleCount > 0 ? (
-            <span>{t("{count} idle", { count: model.idleCount })}</span>
-          ) : null}
-          {model.settledCount > 0 ? (
-            <span>{t("{count} settled", { count: model.settledCount })}</span>
-          ) : null}
-        </span>
-        <span className="tabular-nums">Σ {formatSubagentTokenCount(model.totalTokens)} tok</span>
-      </footer>
-    </div>
+    <ReviewFixContext value={onReviewFix ?? null}>
+      <div className="flex h-full min-h-0 flex-col">
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="flex flex-col gap-2 p-2">
+            {model.workflows.map((group) => (
+              <WorkflowSection
+                key={group.workflow.id}
+                group={group}
+                environmentId={environmentId}
+                threadId={threadId}
+              />
+            ))}
+            {model.directAgents.length > 0 ? (
+              <section>
+                <div className="px-1.5 pt-1 text-3xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {t("Direct spawns")}
+                </div>
+                {model.directAgents.map((agent) => (
+                  <AgentRow key={agent.id} agent={agent} />
+                ))}
+              </section>
+            ) : null}
+          </div>
+        </ScrollArea>
+        <footer className="flex items-center justify-between border-t border-border/60 px-3 py-1.5 font-mono text-2xs text-muted-foreground">
+          <span className="flex items-center gap-2">
+            {model.runningCount + model.waitingCount > 0 ? (
+              <span className="text-info-foreground">
+                ● {t("{count} working", { count: model.runningCount + model.waitingCount })}
+              </span>
+            ) : null}
+            {model.idleCount > 0 ? (
+              <span>{t("{count} idle", { count: model.idleCount })}</span>
+            ) : null}
+            {model.settledCount > 0 ? (
+              <span>{t("{count} settled", { count: model.settledCount })}</span>
+            ) : null}
+          </span>
+          <span className="tabular-nums">Σ {formatSubagentTokenCount(model.totalTokens)} tok</span>
+        </footer>
+      </div>
+    </ReviewFixContext>
   );
 }
