@@ -75,12 +75,12 @@ const dictionary: Readonly<Record<string, string>> = {
 
   // Diff panel: "Explain changes" by the text model
   "Explain changes": "Explicar mudanças",
-  "Diff too large to explain here": "Diff grande demais pra explicar aqui",
+  "Diff too large to explain here": "Mudanças grandes demais pra explicar aqui",
   "What changed": "O que mudou",
   "Reading the changes…": "Lendo as mudanças…",
   "Worth testing by hand": "Vale testar na mão",
   "The patch was large; the explanation covers only the beginning.":
-    "O patch era grande, a explicação cobre só o começo.",
+    "As mudanças eram muitas; a explicação cobre só o começo.",
   "The changes on screen are newer than this explanation.":
     "As mudanças na tela são mais novas que esta explicação.",
   Redo: "Refazer",

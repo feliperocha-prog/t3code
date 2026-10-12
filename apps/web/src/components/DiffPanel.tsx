@@ -1088,7 +1088,11 @@ export default function DiffPanel({
               <ChangesExplanationCard
                 explanation={changesExplanation}
                 stale={explanationStale}
-                onRedo={() => setExplanationNonce((nonce) => nonce + 1)}
+                onRedo={() => {
+                  // A stale card redoes the patch now on screen, not the one it explained.
+                  if (explanationStale && canExplainChanges) explainChanges();
+                  else setExplanationNonce((nonce) => nonce + 1);
+                }}
                 onClose={() => setExplanationOpen(false)}
               />
             )}
