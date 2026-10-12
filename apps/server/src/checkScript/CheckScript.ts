@@ -51,7 +51,8 @@ function shellInvocation(
     // Node re-quotes every argument on Windows, so a command holding `"` would
     // reach cmd.exe mangled. A batch file carries the command verbatim.
     const scriptPath = NodePath.join(NodeOS.tmpdir(), `t3-check-${NodeCrypto.randomUUID()}.cmd`);
-    NodeFS.writeFileSync(scriptPath, `@echo off\r\n${command}\r\n`, "utf8");
+    // Inside a batch file a lone `%` is dropped and `%x%` expands; `%%` keeps it literal.
+    NodeFS.writeFileSync(scriptPath, `@echo off\r\n${command.replace(/%/g, "%%")}\r\n`, "utf8");
     return { command: env.ComSpec ?? "cmd.exe", args: ["/d", "/c", scriptPath], scriptPath };
   }
   return { command: "sh", args: ["-lc", command] };

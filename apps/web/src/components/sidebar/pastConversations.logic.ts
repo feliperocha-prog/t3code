@@ -73,8 +73,12 @@ export function parsePastConversations(output: string): PastConversation[] {
  * requires every word to appear in the conversation.
  */
 export function sanitizePastConversationsQuery(query: string): string {
+  // Accents are stripped (the script compares without them anyway): the
+  // command goes through a batch file that cmd.exe reads in the OEM code page.
   return query
-    .replace(/[^\p{L}\p{M}\p{N}_.-]+/gu, " ")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^A-Za-z0-9_.-]+/g, " ")
     .split(" ")
     .map((word) => word.replace(/^-+/, ""))
     .filter((word) => word.length > 0)

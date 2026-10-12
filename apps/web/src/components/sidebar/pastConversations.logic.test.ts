@@ -91,7 +91,13 @@ describe("buildPastConversationsCommand", () => {
         `  ${base}  `,
         'a" & calc | x > y ^ "b\n%PATH% $(x) `y`; c\\d * ? <z> (w) café v1.2 snake_case',
       ),
-    ).toBe(`${base} a calc x y b PATH x y c d z w café v1.2 snake_case --max 8`);
+    ).toBe(`${base} a calc x y b PATH x y c d z w cafe v1.2 snake_case --max 8`);
+  });
+
+  it("strips accents so the batch file code page cannot mangle them", () => {
+    expect(buildPastConversationsCommand(base, "orçamento atenção")).toBe(
+      `${base} orcamento atencao --max 8`,
+    );
   });
 
   it("drops leading hyphens so a word is never a script flag", () => {

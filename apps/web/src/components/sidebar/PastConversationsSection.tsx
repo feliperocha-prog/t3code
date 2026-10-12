@@ -63,7 +63,11 @@ export function PastConversationsSection({ query }: { query: string }) {
     searchTerm.length >= MIN_QUERY_LENGTH;
 
   useEffect(() => {
-    if (!enabled || primaryEnvironmentId === null || cwd === null) return;
+    if (!enabled || primaryEnvironmentId === null || cwd === null) {
+      // A stale list would flash under the next term during its debounce.
+      setState(null);
+      return;
+    }
     let cancelled = false;
     const timer = setTimeout(() => {
       setState({ status: "loading" });

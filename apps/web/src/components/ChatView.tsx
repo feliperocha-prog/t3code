@@ -6553,6 +6553,17 @@ export default function ChatView(props: ChatViewProps) {
   const heavyNoticeDismissedAtPercent =
     heavyNoticeDismissal?.threadKey === routeThreadKey ? heavyNoticeDismissal.percent : null;
   const heavyUsedPercentage = activeContextWindow?.usedPercentage ?? null;
+  // Compacting drops usage below the threshold; the next climb past it should warn again.
+  useEffect(() => {
+    if (
+      heavyNoticeDismissal !== null &&
+      heavyNoticeDismissal.threadKey === routeThreadKey &&
+      heavyUsedPercentage !== null &&
+      heavyUsedPercentage < heavyThreadWarningPercent
+    ) {
+      setHeavyNoticeDismissal(null);
+    }
+  }, [heavyNoticeDismissal, heavyThreadWarningPercent, heavyUsedPercentage, routeThreadKey]);
   const heavyThreadBanner = useMemo<ComposerBannerStackItem | null>(() => {
     if (
       !activeProject ||
