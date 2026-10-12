@@ -374,3 +374,35 @@ export class ChangesExplanationError extends Schema.TaggedError<ChangesExplanati
     return this.detail;
   }
 }
+
+export const CHECK_SCRIPT_TIMEOUT_MAX_MS = 600_000;
+export const CHECK_SCRIPT_TIMEOUT_DEFAULT_MS = 300_000;
+export const CHECK_SCRIPT_OUTPUT_TAIL_LENGTH = 4_000;
+
+// Runs one project script (build, tests) to completion before a publish.
+export const ProjectRunCheckScriptInput = Schema.Struct({
+  cwd: TrimmedNonEmptyString,
+  command: TrimmedNonEmptyString,
+  timeoutMs: Schema.optional(
+    PositiveInt.check(Schema.isLessThanOrEqualTo(CHECK_SCRIPT_TIMEOUT_MAX_MS)),
+  ),
+});
+export type ProjectRunCheckScriptInput = typeof ProjectRunCheckScriptInput.Type;
+
+export const ProjectRunCheckScriptResult = Schema.Struct({
+  // Null when the process was killed (timeout or signal) before it exited.
+  exitCode: Schema.NullOr(Schema.Number),
+  timedOut: Schema.Boolean,
+  durationMs: NonNegativeInt,
+  // The last CHECK_SCRIPT_OUTPUT_TAIL_LENGTH characters of stdout followed by stderr.
+  outputTail: Schema.String,
+});
+export type ProjectRunCheckScriptResult = typeof ProjectRunCheckScriptResult.Type;
+
+export class CheckScriptError extends Schema.TaggedError<CheckScriptError>()("CheckScriptError", {
+  detail: Schema.String,
+}) {
+  override get message(): string {
+    return this.detail;
+  }
+}

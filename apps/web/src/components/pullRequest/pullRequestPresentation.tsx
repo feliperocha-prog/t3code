@@ -213,7 +213,7 @@ export function PullRequestConflictGlyph({
   );
 }
 
-const CHECK_STATUS_PRESENTATION = {
+export const CHECK_STATUS_PRESENTATION = {
   pending: { label: t("Running"), Icon: Spinner, toneClassName: "text-amber-500" },
   "action-required": {
     label: t("Awaiting action"),

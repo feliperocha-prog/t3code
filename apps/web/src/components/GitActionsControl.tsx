@@ -8,6 +8,7 @@ import type {
   GitActionProgressEvent,
   GitRunStackedActionResult,
   GitStackedAction,
+  ProjectScript,
   SourceControlCloneProtocol,
   SourceControlProviderDiscoveryItem,
   SourceControlProviderKind,
@@ -58,6 +59,7 @@ import {
   type GitQuickAction,
   type DefaultBranchConfirmableAction,
   requiresDefaultBranchConfirmation,
+  requiresPublishChecklist,
   resolveDefaultBranchActionDialogCopy,
   resolveLiveThreadBranchUpdate,
   resolveThreadBranchMetadataPatch,
@@ -65,6 +67,8 @@ import {
   resolveThreadBranchUpdate,
 } from "./GitActionsControl.logic";
 import { GitTerm } from "./git/GitTerm";
+import { gitTermLabel } from "./git/gitTerms";
+import { PublishChecklistDialog } from "./git/PublishChecklistDialog";
 import { WizardPopup, WizardHeader, WizardSteps, WizardPanel, WizardFooter } from "./ui/wizard";
 import { StartTruncatedPath } from "./StartTruncatedPath";
 import { Button } from "~/components/ui/button";
@@ -117,6 +121,7 @@ import { getSourceControlPresentation } from "~/sourceControlPresentation";
 import { useOpenLink } from "~/browser/useOpenLink";
 import { useOpenPrLink } from "~/lib/openPullRequestLink";
 import { t } from "~/i18n";
+import { useClientSettings } from "~/hooks/useSettings";
 
 interface GitActionsControlProps {
   presentation?: "toolbar" | "menu";
@@ -128,7 +133,11 @@ interface GitActionsControlProps {
    * place it against, in which case it still opens in the browser.
    */
   onOpenPullRequest?: ((number: number) => void) | undefined;
+  /** The project scripts the publish checklist picks its build and test runs from. */
+  projectScripts?: ReadonlyArray<ProjectScript> | undefined;
 }
+
+const NO_PROJECT_SCRIPTS: ReadonlyArray<ProjectScript> = [];
 
 interface PendingDefaultBranchAction {
   action: DefaultBranchConfirmableAction;
@@ -167,6 +176,7 @@ interface RunGitActionWithToastInput {
   featureBranch?: boolean;
   progressToastId?: GitActionToastId;
   filePaths?: string[];
+  skipPublishChecklist?: boolean;
 }
 
 const GIT_STATUS_WINDOW_REFRESH_DEBOUNCE_MS = 250;
@@ -1000,6 +1010,7 @@ export default function GitActionsControl({
   activeThreadRef,
   draftId,
   onOpenPullRequest,
+  projectScripts = NO_PROJECT_SCRIPTS,
 }: GitActionsControlProps) {
   const updateThreadMetadata = useAtomCommand(
     threadEnvironment.updateMetadata,
@@ -1033,6 +1044,9 @@ export default function GitActionsControl({
   const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
   const [pendingDefaultBranchAction, setPendingDefaultBranchAction] =
     useState<PendingDefaultBranchAction | null>(null);
+  const [pendingPublishChecklistAction, setPendingPublishChecklistAction] =
+    useState<RunGitActionWithToastInput | null>(null);
+  const publishChecklistEnabled = useClientSettings((settings) => settings.publishChecklistEnabled);
   const activeGitActionProgressRef = useRef<ActiveGitActionProgress | null>(null);
   const sourceControlScope = useMemo(
     () => ({ environmentId: activeEnvironmentId, cwd: gitCwd }),
@@ -1285,8 +1299,29 @@ export default function GitActionsControl({
       featureBranch = false,
       progressToastId,
       filePaths,
+      skipPublishChecklist = false,
     }: RunGitActionWithToastInput) => {
       const actionStatus = statusOverride ?? gitStatusForActions;
+      // The checklist comes before the default-branch prompt; both resume through here.
+      if (
+        publishChecklistEnabled !== false &&
+        !skipPublishChecklist &&
+        activeEnvironmentId !== null &&
+        gitCwd !== null &&
+        requiresPublishChecklist(action, actionStatus)
+      ) {
+        setPendingPublishChecklistAction({
+          action,
+          skipDefaultBranchPrompt,
+          featureBranch,
+          ...(commitMessage ? { commitMessage } : {}),
+          ...(onConfirmed ? { onConfirmed } : {}),
+          ...(statusOverride !== undefined ? { statusOverride } : {}),
+          ...(progressToastId ? { progressToastId } : {}),
+          ...(filePaths ? { filePaths } : {}),
+        });
+        return;
+      }
       const actionBranch = actionStatus?.refName ?? null;
       const actionIsDefaultBranch = featureBranch ? false : isDefaultRef;
       const actionCanCommit =
@@ -1521,6 +1556,7 @@ export default function GitActionsControl({
       ...(onConfirmed ? { onConfirmed } : {}),
       ...(filePaths ? { filePaths } : {}),
       skipDefaultBranchPrompt: true,
+      skipPublishChecklist: true,
     });
   };
 
@@ -1535,7 +1571,18 @@ export default function GitActionsControl({
       ...(filePaths ? { filePaths } : {}),
       featureBranch: true,
       skipDefaultBranchPrompt: true,
+      skipPublishChecklist: true,
     });
+  };
+
+  const publishPendingChecklistAction = (override: boolean) => {
+    if (!pendingPublishChecklistAction) return;
+    const input = pendingPublishChecklistAction;
+    setPendingPublishChecklistAction(null);
+    if (override) {
+      toastManager.add({ type: "warning", title: t("Published without passing the checklist") });
+    }
+    void runGitActionWithToast({ ...input, skipPublishChecklist: true });
   };
 
   const runDialogActionOnNewBranch = () => {
@@ -2149,6 +2196,18 @@ export default function GitActionsControl({
           </DialogFooter>
         </DialogPopup>
       </Dialog>
+
+      {pendingPublishChecklistAction !== null && activeEnvironmentId !== null && gitCwd !== null ? (
+        <PublishChecklistDialog
+          open
+          environmentId={activeEnvironmentId}
+          cwd={gitCwd}
+          scripts={projectScripts}
+          actionLabel={gitTermLabel("push")}
+          onCancel={() => setPendingPublishChecklistAction(null)}
+          onPublish={publishPendingChecklistAction}
+        />
+      ) : null}
     </>
   );
 }

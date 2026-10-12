@@ -162,6 +162,7 @@ import {
   ChangesExplanation,
   ChangesExplanationError,
   ChangesExplanationInput,
+  CheckScriptError,
   ProjectBrief,
   ProjectBriefError,
   ProjectBriefInput,
@@ -171,6 +172,8 @@ import {
   ProjectReadFileError,
   ProjectReadFileInput,
   ProjectReadFileResult,
+  ProjectRunCheckScriptInput,
+  ProjectRunCheckScriptResult,
   ProjectSearchContentsError,
   ProjectSearchContentsInput,
   ProjectSearchContentsResult,
@@ -298,6 +301,7 @@ export const WS_METHODS = {
   projectsReadFile: "projects.readFile",
   projectsGenerateBrief: "projects.generateBrief",
   projectsExplainChanges: "projects.explainChanges",
+  projectsRunCheckScript: "projects.runCheckScript",
   projectsSearchContents: "projects.searchContents",
   projectsSearchEntries: "projects.searchEntries",
   projectsWriteFile: "projects.writeFile",
@@ -1008,6 +1012,12 @@ const WsProjectsExplainChangesRpc = Rpc.make(WS_METHODS.projectsExplainChanges, 
   error: Schema.Union([ChangesExplanationError, EnvironmentAuthorizationError]),
 });
 
+const WsProjectsRunCheckScriptRpc = Rpc.make(WS_METHODS.projectsRunCheckScript, {
+  payload: ProjectRunCheckScriptInput,
+  success: ProjectRunCheckScriptResult,
+  error: Schema.Union([CheckScriptError, EnvironmentAuthorizationError]),
+});
+
 const WsProjectsWriteFileRpc = Rpc.make(WS_METHODS.projectsWriteFile, {
   payload: ProjectWriteFileInput,
   success: ProjectWriteFileResult,
@@ -1531,6 +1541,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsProjectsReadFileRpc,
   WsProjectsGenerateBriefRpc,
   WsProjectsExplainChangesRpc,
+  WsProjectsRunCheckScriptRpc,
   WsProjectsSearchContentsRpc,
   WsProjectsSearchEntriesRpc,
   WsProjectsWriteFileRpc,

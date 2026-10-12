@@ -395,6 +395,7 @@ export const ChatHeader = memo(function ChatHeader({
             activeThreadRef={scopeThreadRef(activeThreadEnvironmentId, activeThreadId)}
             onOpenPullRequest={onOpenPullRequest}
             {...(draftId ? { draftId } : {})}
+            {...(activeProjectScripts ? { projectScripts: activeProjectScripts } : {})}
           />
         </>
       )}

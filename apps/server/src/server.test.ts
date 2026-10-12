@@ -121,6 +121,7 @@ import * as EnvironmentTheme from "./environmentTheme.ts";
 import * as UsageLimitSources from "./usage/UsageLimitSources.ts";
 import * as ProjectBrief from "./projectBrief/ProjectBrief.ts";
 import * as ChangesExplanation from "./changesExplanation/ChangesExplanation.ts";
+import * as CheckScript from "./checkScript/CheckScript.ts";
 import * as Keybindings from "./keybindings.ts";
 import * as ExternalLauncher from "./process/externalLauncher.ts";
 import * as RemoteOpenTargets from "./environment/RemoteOpenTargets.ts";
@@ -854,6 +855,7 @@ const buildAppUnderTest = (options?: {
           }),
           Layer.mock(ProjectBrief.ProjectBrief)({}),
           Layer.mock(ChangesExplanation.ChangesExplanation)({}),
+          Layer.mock(CheckScript.CheckScript)({}),
         ),
       ),
       Layer.provide(

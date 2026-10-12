@@ -632,6 +632,9 @@ export function useSettingsRestore(onRestored?: () => void) {
       ...(settings.confirmThreadDelete !== DEFAULT_UNIFIED_SETTINGS.confirmThreadDelete
         ? [t("Delete confirmation")]
         : []),
+      ...(settings.publishChecklistEnabled !== DEFAULT_UNIFIED_SETTINGS.publishChecklistEnabled
+        ? [t("Publish checklist")]
+        : []),
       ...(settings.confirmQuit !== DEFAULT_UNIFIED_SETTINGS.confirmQuit
         ? [t("Quit shortcut")]
         : []),
@@ -660,6 +663,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       settings.confirmThreadArchive,
       settings.confirmThreadDelete,
       settings.confirmThreadUnpin,
+      settings.publishChecklistEnabled,
       settings.composerCollapseOnScroll,
       settings.composerRichTextEnabled,
       settings.sendShortcut,
@@ -805,6 +809,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       confirmThreadArchive: DEFAULT_UNIFIED_SETTINGS.confirmThreadArchive,
       confirmThreadDelete: DEFAULT_UNIFIED_SETTINGS.confirmThreadDelete,
       confirmThreadUnpin: DEFAULT_UNIFIED_SETTINGS.confirmThreadUnpin,
+      publishChecklistEnabled: DEFAULT_UNIFIED_SETTINGS.publishChecklistEnabled,
       confirmQuit: DEFAULT_UNIFIED_SETTINGS.confirmQuit,
       textGenerationModelSelection: DEFAULT_UNIFIED_SETTINGS.textGenerationModelSelection,
       fontFamilySans: DEFAULT_UNIFIED_SETTINGS.fontFamilySans,
@@ -3222,6 +3227,35 @@ export function GeneralSettingsPanel() {
                 updateSettings({ confirmThreadDelete: Boolean(checked) })
               }
               aria-label={t("Confirm thread deletion")}
+            />
+          }
+        />
+
+        <SettingsRow
+          {...searchableSetting("publish-checklist")}
+          description={t(
+            "Runs the secret scan, build, tests and reviewer before every publish (push).",
+          )}
+          resetAction={
+            settings.publishChecklistEnabled !==
+            DEFAULT_UNIFIED_SETTINGS.publishChecklistEnabled ? (
+              <SettingResetButton
+                label={t("publish checklist")}
+                onClick={() =>
+                  updateSettings({
+                    publishChecklistEnabled: DEFAULT_UNIFIED_SETTINGS.publishChecklistEnabled,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <Switch
+              checked={settings.publishChecklistEnabled}
+              onCheckedChange={(checked) =>
+                updateSettings({ publishChecklistEnabled: Boolean(checked) })
+              }
+              aria-label={t("Run the checklist before publishing")}
             />
           }
         />

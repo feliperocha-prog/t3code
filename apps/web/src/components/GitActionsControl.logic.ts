@@ -388,6 +388,19 @@ export function requiresDefaultBranchConfirmation(
   );
 }
 
+/**
+ * Whether the action publishes commits, so the publish checklist runs first.
+ * `create_pr` only pushes when the branch has no upstream or is ahead of it.
+ */
+export function requiresPublishChecklist(
+  action: GitStackedAction,
+  status: Pick<VcsStatusResult, "hasUpstream" | "aheadCount"> | null,
+): boolean {
+  if (action === "push" || action === "commit_push" || action === "commit_push_pr") return true;
+  if (action !== "create_pr") return false;
+  return status === null || !status.hasUpstream || status.aheadCount > 0;
+}
+
 export function resolveDefaultBranchActionDialogCopy(input: {
   action: DefaultBranchConfirmableAction;
   branchName: string;

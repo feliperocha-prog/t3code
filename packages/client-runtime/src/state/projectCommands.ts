@@ -44,6 +44,7 @@ export function createProjectEnvironmentAtoms<R, E>(
 ) {
   const projectScheduler = createAtomCommandScheduler();
   const fileScheduler = createAtomCommandScheduler();
+  const checkScriptScheduler = createAtomCommandScheduler();
   const optimisticFileFamily = Atom.family((key: string) =>
     Atom.make<OptimisticProjectFile | null>(null).pipe(
       Atom.withLabel(`environment-data:projects:optimistic-file:${key}`),
@@ -85,6 +86,16 @@ export function createProjectEnvironmentAtoms<R, E>(
       tag: WS_METHODS.projectsExplainChanges,
       staleTimeMs: Infinity,
       idleTtlMs: 30 * 60_000,
+    }),
+    // Build/test runs for the publish checklist; one at a time per project root.
+    runCheckScript: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:projects:run-check-script",
+      tag: WS_METHODS.projectsRunCheckScript,
+      scheduler: checkScriptScheduler,
+      concurrency: {
+        mode: "serial",
+        key: ({ environmentId, input }) => JSON.stringify([environmentId, input.cwd]),
+      },
     }),
     optimisticFile: (target: OptimisticProjectFileTarget) =>
       optimisticFileFamily(optimisticProjectFileKey(target)),

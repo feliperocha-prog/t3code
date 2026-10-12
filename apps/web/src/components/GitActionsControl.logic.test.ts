@@ -6,6 +6,7 @@ import {
   buildGitActionProgressStages,
   buildMenuItems,
   requiresDefaultBranchConfirmation,
+  requiresPublishChecklist,
   resolveAutoFeatureBranchName,
   resolveDefaultBranchActionDialogCopy,
   resolveLiveThreadBranchUpdate,
@@ -929,6 +930,21 @@ describe("requiresDefaultBranchConfirmation", () => {
     assert.isTrue(requiresDefaultBranchConfirmation("commit_push_pr", true));
     assert.isFalse(requiresDefaultBranchConfirmation("commit_push", false));
     assert.isFalse(requiresDefaultBranchConfirmation("push", false));
+  });
+});
+
+describe("requiresPublishChecklist", () => {
+  it("runs the checklist for every action that pushes", () => {
+    assert.isFalse(requiresPublishChecklist("commit", null));
+    assert.isTrue(requiresPublishChecklist("push", null));
+    assert.isTrue(requiresPublishChecklist("commit_push", null));
+    assert.isTrue(requiresPublishChecklist("commit_push_pr", null));
+  });
+
+  it("runs the checklist for create_pr only when it also pushes", () => {
+    assert.isTrue(requiresPublishChecklist("create_pr", { hasUpstream: false, aheadCount: 0 }));
+    assert.isTrue(requiresPublishChecklist("create_pr", { hasUpstream: true, aheadCount: 2 }));
+    assert.isFalse(requiresPublishChecklist("create_pr", { hasUpstream: true, aheadCount: 0 }));
   });
 });
 

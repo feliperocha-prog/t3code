@@ -164,6 +164,7 @@ import * as ResourceTelemetry from "./resourceTelemetry/ResourceTelemetry.ts";
 import * as UsageLimitSources from "./usage/UsageLimitSources.ts";
 import * as ProjectBrief from "./projectBrief/ProjectBrief.ts";
 import * as ChangesExplanation from "./changesExplanation/ChangesExplanation.ts";
+import * as CheckScript from "./checkScript/CheckScript.ts";
 import * as UsageService from "./usage/UsageService.ts";
 import { OrchestrationLayerLive } from "./orchestration/runtimeLayer.ts";
 import {
@@ -522,9 +523,12 @@ const ChangesExplanationLayerLive = ChangesExplanation.layer.pipe(
   Layer.provide(ServerSettingsLayerLive),
 );
 
+const CheckScriptLayerLive = CheckScript.layer.pipe(Layer.provide(ProcessRunner.layer));
+
 const RuntimeCoreDependenciesLive = ReactorLayerLive.pipe(
   Layer.provideMerge(ProjectBriefLayerLive),
   Layer.provideMerge(ChangesExplanationLayerLive),
+  Layer.provideMerge(CheckScriptLayerLive),
   Layer.provideMerge(ProviderInstallationRefreshLive),
   Layer.provideMerge(ReplayMarkers.layer),
   Layer.provideMerge(ProviderAuthServiceLive),

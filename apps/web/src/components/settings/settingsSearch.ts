@@ -671,6 +671,16 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
   },
   {
+    id: "publish-checklist",
+    title: t("Publish checklist"),
+    to: "/settings/general",
+    searchTerms: [
+      "secret scan build tests reviewer before push publish",
+      "Publish checklist",
+      "checklist antes de publicar segredo build testes revisor push",
+    ],
+  },
+  {
     id: "quit-confirmation",
     title: t("Quit shortcut"),
     to: "/settings/general",
