@@ -546,7 +546,7 @@ const dictionary: Readonly<Record<string, string>> = {
   "Largest shown": "Maiores primeiro",
   "Smallest shown": "Menores primeiro",
   "Select a pull request first": "Selecione um pull request primeiro",
-  "Pull requests unavailable": "Pull requests indisponíveis",
+  "Pull requests unavailable": "Pedidos de revisão (PRs) indisponíveis",
   "Update your T3 Code servers to browse pull requests.":
     "Atualize seus servidores do T3 Code para navegar pelos pull requests.",
   "Showing the last pull requests loaded.": "Mostrando os últimos pull requests carregados.",

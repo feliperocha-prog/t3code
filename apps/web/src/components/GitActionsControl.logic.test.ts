@@ -1,6 +1,7 @@
 import type { VcsStatusResult } from "@t3tools/contracts";
 import { assert, describe, it } from "vite-plus/test";
 import { t } from "~/i18n";
+import { gitTermLabel } from "./git/gitTerms";
 import {
   buildGitActionProgressStages,
   buildMenuItems,
@@ -49,6 +50,7 @@ describe("when: ref is clean and has an open PR", () => {
       false,
     );
     assert.deepInclude(quick, {
+      term: "viewPr",
       kind: "open_pr",
       label: t("View {label}", { label: "PR" }),
       disabled: false,
@@ -72,7 +74,7 @@ describe("when: ref is clean and has an open PR", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: true,
         icon: "commit",
         kind: "open_dialog",
@@ -80,7 +82,7 @@ describe("when: ref is clean and has an open PR", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: true,
         icon: "push",
         kind: "open_dialog",
@@ -101,8 +103,9 @@ describe("when: actions are busy", () => {
   it("resolveQuickAction returns running disabled state", () => {
     const quick = resolveQuickAction(status(), true);
     assert.deepInclude(quick, {
+      term: "commit",
       kind: "show_hint",
-      label: "Commit",
+      label: gitTermLabel("commit"),
       disabled: true,
       hint: t("Git action in progress."),
     });
@@ -113,7 +116,7 @@ describe("when: actions are busy", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: true,
         icon: "commit",
         kind: "open_dialog",
@@ -121,7 +124,7 @@ describe("when: actions are busy", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: true,
         icon: "push",
         kind: "open_dialog",
@@ -143,8 +146,9 @@ describe("when: git status is unavailable", () => {
   it("resolveQuickAction returns unavailable disabled state", () => {
     const quick = resolveQuickAction(null, false);
     assert.deepInclude(quick, {
+      term: "commit",
       kind: "show_hint",
-      label: "Commit",
+      label: gitTermLabel("commit"),
       disabled: true,
       hint: t("Git status is unavailable."),
     });
@@ -172,7 +176,12 @@ describe("when: ref is clean, ahead, and has an open PR", () => {
       }),
       false,
     );
-    assert.deepInclude(quick, { kind: "run_action", action: "push", label: "Push" });
+    assert.deepInclude(quick, {
+      term: "push",
+      kind: "run_action",
+      action: "push",
+      label: gitTermLabel("push"),
+    });
   });
 
   it("buildMenuItems enables push and keeps open PR available", () => {
@@ -193,7 +202,7 @@ describe("when: ref is clean, ahead, and has an open PR", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: true,
         icon: "commit",
         kind: "open_dialog",
@@ -201,7 +210,7 @@ describe("when: ref is clean, ahead, and has an open PR", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: false,
         icon: "push",
         kind: "open_dialog",
@@ -222,6 +231,7 @@ describe("when: ref is clean, ahead, and has no open PR", () => {
   it("resolveQuickAction pushes and creates a PR", () => {
     const quick = resolveQuickAction(status({ aheadCount: 2, pr: null }), false);
     assert.deepInclude(quick, {
+      term: "pushAndCreatePr",
       kind: "run_action",
       action: "create_pr",
       label: t("Push & create {label}", { label: "PR" }),
@@ -233,7 +243,7 @@ describe("when: ref is clean, ahead, and has no open PR", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: true,
         icon: "commit",
         kind: "open_dialog",
@@ -241,7 +251,7 @@ describe("when: ref is clean, ahead, and has no open PR", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: false,
         icon: "push",
         kind: "open_dialog",
@@ -274,6 +284,7 @@ describe("when: source control provider uses merge requests", () => {
     const items = buildMenuItems(gitlabStatus, false);
 
     assert.deepInclude(quick, {
+      term: "pushAndCreatePr",
       kind: "run_action",
       action: "create_pr",
       label: t("Push & create {label}", { label: "MR" }),
@@ -296,6 +307,7 @@ describe("when: ref is clean, up to date, and has no open PR", () => {
 
     const quick = resolveQuickAction(syncedFeature, false);
     assert.deepInclude(quick, {
+      term: "createPr",
       label: t("Create {label}", { label: "PR" }),
       disabled: false,
       kind: "run_action",
@@ -311,7 +323,12 @@ describe("when: ref is clean, up to date, and has no open PR", () => {
       status({ aheadCount: 0, behindCount: 0, hasWorkingTreeChanges: false, pr: null }),
       false,
     );
-    assert.deepInclude(quick, { kind: "show_hint", label: "Commit", disabled: true });
+    assert.deepInclude(quick, {
+      term: "commit",
+      kind: "show_hint",
+      label: gitTermLabel("commit"),
+      disabled: true,
+    });
   });
 
   it("buildMenuItems disables commit, push, and create PR", () => {
@@ -319,7 +336,7 @@ describe("when: ref is clean, up to date, and has no open PR", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: true,
         icon: "commit",
         kind: "open_dialog",
@@ -327,7 +344,7 @@ describe("when: ref is clean, up to date, and has no open PR", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: true,
         icon: "push",
         kind: "open_dialog",
@@ -348,7 +365,12 @@ describe("when: ref is clean, up to date, and has no open PR", () => {
 describe("when: ref is behind upstream", () => {
   it("resolveQuickAction returns pull", () => {
     const quick = resolveQuickAction(status({ behindCount: 2 }), false);
-    assert.deepInclude(quick, { kind: "run_pull", label: "Pull", disabled: false });
+    assert.deepInclude(quick, {
+      term: "pull",
+      kind: "run_pull",
+      label: gitTermLabel("pull"),
+      disabled: false,
+    });
   });
 
   it("buildMenuItems disables push and create PR", () => {
@@ -356,7 +378,7 @@ describe("when: ref is behind upstream", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: true,
         icon: "commit",
         kind: "open_dialog",
@@ -364,7 +386,7 @@ describe("when: ref is behind upstream", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: true,
         icon: "push",
         kind: "open_dialog",
@@ -386,6 +408,7 @@ describe("when: ref has diverged from upstream", () => {
   it("resolveQuickAction returns a disabled sync hint", () => {
     const quick = resolveQuickAction(status({ aheadCount: 2, behindCount: 1 }), false);
     assert.deepEqual(quick, {
+      term: "syncRef",
       label: t("Sync ref"),
       disabled: true,
       kind: "show_hint",
@@ -398,6 +421,7 @@ describe("when: working tree has local changes", () => {
   it("resolveQuickAction returns commit, push, and create PR", () => {
     const quick = resolveQuickAction(status({ hasWorkingTreeChanges: true }), false);
     assert.deepInclude(quick, {
+      term: "commitPushAndCreatePr",
       kind: "run_action",
       action: "commit_push_pr",
       label: t("Commit, push & {label}", { label: "PR" }),
@@ -412,9 +436,10 @@ describe("when: working tree has local changes", () => {
       false,
     );
     assert.deepInclude(quick, {
+      term: "commit",
       kind: "run_action",
       action: "commit",
-      label: "Commit",
+      label: gitTermLabel("commit"),
       disabled: false,
     });
   });
@@ -435,6 +460,7 @@ describe("when: working tree has local changes", () => {
       false,
     );
     assert.deepInclude(quick, {
+      term: "commitAndPush",
       kind: "run_action",
       action: "commit_push",
       label: t("Commit & push"),
@@ -446,7 +472,7 @@ describe("when: working tree has local changes", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: false,
         icon: "commit",
         kind: "open_dialog",
@@ -454,7 +480,7 @@ describe("when: working tree has local changes", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: true,
         icon: "push",
         kind: "open_dialog",
@@ -488,7 +514,7 @@ describe("when: working tree has local changes", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: false,
         icon: "commit",
         kind: "open_dialog",
@@ -496,7 +522,7 @@ describe("when: working tree has local changes", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: false,
         icon: "push",
         kind: "open_dialog",
@@ -522,6 +548,7 @@ describe("when: on default ref without open PR", () => {
       true,
     );
     assert.deepInclude(quick, {
+      term: "commitAndPush",
       kind: "run_action",
       action: "commit_push",
       label: t("Commit & push"),
@@ -536,9 +563,10 @@ describe("when: on default ref without open PR", () => {
       true,
     );
     assert.deepInclude(quick, {
+      term: "push",
       kind: "run_action",
       action: "commit_push",
-      label: "Push",
+      label: gitTermLabel("push"),
       disabled: false,
     });
   });
@@ -551,6 +579,7 @@ describe("when: working tree has local changes and ref is behind upstream", () =
       false,
     );
     assert.deepInclude(quick, {
+      term: "commitPushAndCreatePr",
       kind: "run_action",
       action: "commit_push_pr",
       label: t("Commit, push & {label}", { label: "PR" }),
@@ -562,7 +591,7 @@ describe("when: working tree has local changes and ref is behind upstream", () =
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: false,
         icon: "commit",
         kind: "open_dialog",
@@ -570,7 +599,7 @@ describe("when: working tree has local changes and ref is behind upstream", () =
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: true,
         icon: "push",
         kind: "open_dialog",
@@ -594,7 +623,12 @@ describe("when: HEAD is detached and there are no local changes", () => {
       status({ refName: null, hasWorkingTreeChanges: false, hasUpstream: false }),
       false,
     );
-    assert.deepInclude(quick, { kind: "show_hint", label: "Commit", disabled: true });
+    assert.deepInclude(quick, {
+      term: "commit",
+      kind: "show_hint",
+      label: gitTermLabel("commit"),
+      disabled: true,
+    });
   });
 
   it("buildMenuItems keeps commit, push, and PR disabled", () => {
@@ -602,7 +636,7 @@ describe("when: HEAD is detached and there are no local changes", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: true,
         icon: "commit",
         kind: "open_dialog",
@@ -610,7 +644,7 @@ describe("when: HEAD is detached and there are no local changes", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: true,
         icon: "push",
         kind: "open_dialog",
@@ -635,8 +669,9 @@ describe("when: ref has no upstream configured", () => {
       false,
     );
     assert.deepInclude(quick, {
+      term: "push",
       kind: "show_hint",
-      label: "Push",
+      label: gitTermLabel("push"),
       hint: t("No local commits to push."),
       disabled: true,
     });
@@ -659,6 +694,7 @@ describe("when: ref has no upstream configured", () => {
       false,
     );
     assert.deepInclude(quick, {
+      term: "viewPr",
       kind: "open_pr",
       label: t("View {label}", { label: "PR" }),
       disabled: false,
@@ -682,9 +718,10 @@ describe("when: ref has no upstream configured", () => {
       false,
     );
     assert.deepInclude(quick, {
+      term: "push",
       kind: "run_action",
       action: "push",
-      label: "Push",
+      label: gitTermLabel("push"),
       disabled: false,
     });
   });
@@ -694,7 +731,7 @@ describe("when: ref has no upstream configured", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: true,
         icon: "commit",
         kind: "open_dialog",
@@ -702,7 +739,7 @@ describe("when: ref has no upstream configured", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: true,
         icon: "push",
         kind: "open_dialog",
@@ -729,6 +766,7 @@ describe("when: ref has no upstream configured", () => {
       false,
     );
     assert.deepInclude(quick, {
+      term: "pushAndCreatePr",
       kind: "run_action",
       action: "create_pr",
       label: t("Push & create {label}", { label: "PR" }),
@@ -748,6 +786,7 @@ describe("when: ref has no upstream configured", () => {
       false,
     );
     assert.deepEqual(quick, {
+      term: "publishRepository",
       kind: "open_publish",
       label: t("Publish repository"),
       disabled: false,
@@ -759,7 +798,7 @@ describe("when: ref has no upstream configured", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: true,
         icon: "commit",
         kind: "open_dialog",
@@ -767,7 +806,7 @@ describe("when: ref has no upstream configured", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: false,
         icon: "push",
         kind: "open_dialog",
@@ -793,7 +832,7 @@ describe("when: ref has no upstream configured", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: true,
         icon: "commit",
         kind: "open_dialog",
@@ -814,8 +853,9 @@ describe("when: ref has no upstream configured", () => {
       true,
     );
     assert.deepInclude(quick, {
+      term: "push",
       kind: "show_hint",
-      label: "Push",
+      label: gitTermLabel("push"),
       hint: t("No local commits to push."),
       disabled: true,
     });
@@ -833,9 +873,10 @@ describe("when: ref has no upstream configured", () => {
       true,
     );
     assert.deepInclude(quick, {
+      term: "push",
       kind: "run_action",
       action: "commit_push",
-      label: "Push",
+      label: gitTermLabel("push"),
       disabled: false,
     });
   });
@@ -853,7 +894,7 @@ describe("when: ref has no upstream configured", () => {
     assert.deepEqual(items, [
       {
         id: "commit",
-        label: "Commit",
+        label: gitTermLabel("commit"),
         disabled: true,
         icon: "commit",
         kind: "open_dialog",
@@ -861,7 +902,7 @@ describe("when: ref has no upstream configured", () => {
       },
       {
         id: "push",
-        label: "Push",
+        label: gitTermLabel("push"),
         disabled: true,
         icon: "push",
         kind: "open_dialog",

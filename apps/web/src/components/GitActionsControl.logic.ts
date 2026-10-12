@@ -10,6 +10,7 @@ import {
   type ChangeRequestTerminology,
 } from "../sourceControlPresentation";
 import { t } from "~/i18n";
+import { gitTermLabel } from "./git/gitTerms";
 
 export type GitActionIconName = "commit" | "push" | "pr";
 
@@ -24,7 +25,21 @@ export interface GitActionMenuItem {
   dialogAction?: GitDialogAction;
 }
 
+export type GitQuickActionTerm =
+  | "commit"
+  | "push"
+  | "pull"
+  | "commitAndPush"
+  | "commitPushAndCreatePr"
+  | "pushAndCreatePr"
+  | "viewPr"
+  | "createPr"
+  | "publishRepository"
+  | "syncRef";
+
 export interface GitQuickAction {
+  /** Semantic identity of the action; drives icon and rendering, never the label text. */
+  term: GitQuickActionTerm;
   label: string;
   disabled: boolean;
   kind: "run_action" | "run_pull" | "open_pr" | "open_publish" | "show_hint";
@@ -127,7 +142,7 @@ export function buildMenuItems(
 
   const commitItem: GitActionMenuItem = {
     id: "commit",
-    label: "Commit",
+    label: gitTermLabel("commit"),
     disabled: !canCommit,
     icon: "commit",
     kind: "open_dialog",
@@ -142,7 +157,7 @@ export function buildMenuItems(
     commitItem,
     {
       id: "push",
-      label: "Push",
+      label: gitTermLabel("push"),
       disabled: !canPush,
       icon: "push",
       kind: "open_dialog",
@@ -175,7 +190,8 @@ export function resolveQuickAction(
 ): GitQuickAction {
   if (isBusy) {
     return {
-      label: "Commit",
+      term: "commit",
+      label: gitTermLabel("commit"),
       disabled: true,
       kind: "show_hint",
       hint: t("Git action in progress."),
@@ -184,7 +200,8 @@ export function resolveQuickAction(
 
   if (!gitStatus) {
     return {
-      label: "Commit",
+      term: "commit",
+      label: gitTermLabel("commit"),
       disabled: true,
       kind: "show_hint",
       hint: t("Git status is unavailable."),
@@ -202,7 +219,8 @@ export function resolveQuickAction(
 
   if (!hasBranch) {
     return {
-      label: "Commit",
+      term: "commit",
+      label: gitTermLabel("commit"),
       disabled: true,
       kind: "show_hint",
       hint: t("Create and checkout a ref before pushing or opening a {changeRequest}.", {
@@ -213,10 +231,17 @@ export function resolveQuickAction(
 
   if (hasChanges) {
     if (!gitStatus.hasUpstream && !hasPrimaryRemote) {
-      return { label: "Commit", disabled: false, kind: "run_action", action: "commit" };
+      return {
+        term: "commit",
+        label: gitTermLabel("commit"),
+        disabled: false,
+        kind: "run_action",
+        action: "commit",
+      };
     }
     if (hasOpenPr || isDefaultRef) {
       return {
+        term: "commitAndPush",
         label: t("Commit & push"),
         disabled: false,
         kind: "run_action",
@@ -224,6 +249,7 @@ export function resolveQuickAction(
       };
     }
     return {
+      term: "commitPushAndCreatePr",
       label: t("Commit, push & {label}", { label: terminology.shortLabel }),
       disabled: false,
       kind: "run_action",
@@ -235,12 +261,14 @@ export function resolveQuickAction(
     if (!hasPrimaryRemote) {
       if (hasOpenPr && !isAhead) {
         return {
+          term: "viewPr",
           label: t("View {label}", { label: terminology.shortLabel }),
           disabled: false,
           kind: "open_pr",
         };
       }
       return {
+        term: "publishRepository",
         label: t("Publish repository"),
         disabled: false,
         kind: "open_publish",
@@ -249,13 +277,15 @@ export function resolveQuickAction(
     if (!isAhead) {
       if (hasOpenPr) {
         return {
+          term: "viewPr",
           label: t("View {label}", { label: terminology.shortLabel }),
           disabled: false,
           kind: "open_pr",
         };
       }
       return {
-        label: "Push",
+        term: "push",
+        label: gitTermLabel("push"),
         disabled: true,
         kind: "show_hint",
         hint: t("No local commits to push."),
@@ -263,13 +293,15 @@ export function resolveQuickAction(
     }
     if (hasOpenPr || isDefaultRef) {
       return {
-        label: "Push",
+        term: "push",
+        label: gitTermLabel("push"),
         disabled: false,
         kind: "run_action",
         action: isDefaultRef ? "commit_push" : "push",
       };
     }
     return {
+      term: "pushAndCreatePr",
       label: t("Push & create {label}", { label: terminology.shortLabel }),
       disabled: false,
       kind: "run_action",
@@ -279,6 +311,7 @@ export function resolveQuickAction(
 
   if (isDiverged) {
     return {
+      term: "syncRef",
       label: t("Sync ref"),
       disabled: true,
       kind: "show_hint",
@@ -288,7 +321,8 @@ export function resolveQuickAction(
 
   if (isBehind) {
     return {
-      label: "Pull",
+      term: "pull",
+      label: gitTermLabel("pull"),
       disabled: false,
       kind: "run_pull",
     };
@@ -297,13 +331,15 @@ export function resolveQuickAction(
   if (isAhead) {
     if (hasOpenPr || isDefaultRef) {
       return {
-        label: "Push",
+        term: "push",
+        label: gitTermLabel("push"),
         disabled: false,
         kind: "run_action",
         action: isDefaultRef ? "commit_push" : "push",
       };
     }
     return {
+      term: "pushAndCreatePr",
       label: t("Push & create {label}", { label: terminology.shortLabel }),
       disabled: false,
       kind: "run_action",
@@ -313,6 +349,7 @@ export function resolveQuickAction(
 
   if (hasOpenPr && gitStatus.hasUpstream) {
     return {
+      term: "viewPr",
       label: t("View {label}", { label: terminology.shortLabel }),
       disabled: false,
       kind: "open_pr",
@@ -321,6 +358,7 @@ export function resolveQuickAction(
 
   if (hasDefaultBranchDelta && !isDefaultRef) {
     return {
+      term: "createPr",
       label: t("Create {label}", { label: terminology.shortLabel }),
       disabled: false,
       kind: "run_action",
@@ -329,7 +367,8 @@ export function resolveQuickAction(
   }
 
   return {
-    label: "Commit",
+    term: "commit",
+    label: gitTermLabel("commit"),
     disabled: true,
     kind: "show_hint",
     hint: t("Branch is up to date. No action needed."),

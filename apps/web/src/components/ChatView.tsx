@@ -10596,6 +10596,20 @@ export default function ChatView(props: ChatViewProps) {
                 ? ` ${t("Files stay as they are because this thread shares the project directory.")}`
                 : null}
             </AlertDialogDescription>
+            <ul className="flex flex-col gap-1.5 text-muted-foreground text-sm">
+              {activeWorktreePath !== null ? (
+                <li>
+                  <span className="font-medium text-foreground">{t("Revert files too")}</span>
+                  {" — "}
+                  {t("Files go back to how they were at this message.")}
+                </li>
+              ) : null}
+              <li>
+                <span className="font-medium text-foreground">{t("Revert and keep changes")}</span>
+                {" — "}
+                {t("Files stay as they are now.")}
+              </li>
+            </ul>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" />}>{t("Cancel")}</AlertDialogClose>

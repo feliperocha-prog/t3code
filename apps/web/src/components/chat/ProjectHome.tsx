@@ -1,22 +1,31 @@
 import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import type { EnvironmentId, ProjectId } from "@t3tools/contracts";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRightIcon, RefreshCwIcon } from "lucide-react";
+import { ChevronRightIcon, ExternalLinkIcon, RefreshCwIcon } from "lucide-react";
 import { memo, useMemo, useState, type ReactNode } from "react";
 
 import { t, tc } from "~/i18n";
+import { readLocalApi } from "~/localApi";
 import { cn } from "~/lib/utils";
 import { sortThreads } from "~/lib/threadSort";
 import { useThreadShellsForProjectRefs } from "~/state/entities";
+import { usePullRequestList } from "~/state/pullRequests";
+import { useEnvironmentQuery } from "~/state/query";
+import { vcsEnvironment } from "~/state/vcs";
 import { buildThreadRouteParams } from "~/threadRoutes";
 import { formatRelativeTimeLabel } from "~/timestampFormat";
 
 import ChatMarkdown from "../ChatMarkdown";
 import { useProjectFileQuery } from "../files/projectFilesQueryState";
+import { GitTerm } from "../git/GitTerm";
+import { gitTermSimple, gitTermTechnical } from "../git/gitTerms";
+import { readPullRequestListPreferences } from "../pullRequest/pullRequestListPreferences";
 import { Button } from "../ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { describeDeployState, type DeployStateTone } from "./deployState";
 import { compactRelativeTimeLabel, findRunSections, readHubDigest } from "./projectHome.logic";
+import { describePullRequestState, type PullRequestStateTone } from "./pullRequestState";
 import {
   resolveStatusCardView,
   type StatusCardHeadline,
@@ -25,6 +34,22 @@ import {
 import { useProjectBrief } from "./useProjectBrief";
 
 const RECENT_THREAD_LIMIT = 3;
+/** Rows the review-request block shows. */
+const PULL_REQUEST_ROW_LIMIT = 8;
+/** Fetched a little past the rows shown, so sorting by last activity picks from more than the first page. */
+const PULL_REQUEST_FETCH_LIMIT = 20;
+
+const PULL_REQUEST_TONE_DOT: Record<PullRequestStateTone, string> = {
+  green: "bg-success",
+  yellow: "bg-warning",
+  red: "bg-destructive",
+  grey: "bg-muted-foreground/50",
+};
+
+const DEPLOY_TONE_DOT: Record<DeployStateTone, string> = {
+  green: "bg-success",
+  yellow: "bg-warning",
+};
 
 /** Dot colour per status tone, the same semantic colours the status Badge uses. */
 const TONE_DOT: Record<StatusCardTone, string> = {
@@ -319,6 +344,130 @@ function RecentConversations({
   );
 }
 
+/**
+ * How far the project's work is from GitHub, from the git status the app already
+ * streams. Hidden while the status loads and when the folder is not a repository.
+ */
+function DeployStatus({
+  environmentId,
+  workspaceRoot,
+}: {
+  environmentId: EnvironmentId;
+  workspaceRoot: string;
+}) {
+  const gitStatus = useEnvironmentQuery(
+    workspaceRoot.length > 0
+      ? vcsEnvironment.status({ environmentId, input: { cwd: workspaceRoot } })
+      : null,
+  );
+  const lines = useMemo(
+    () => (gitStatus.data ? describeDeployState(gitStatus.data) : null),
+    [gitStatus.data],
+  );
+  if (lines === null) return null;
+
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="px-2 font-medium text-muted-foreground text-xs">
+        {tc("project home", "Is it live?")}
+      </h3>
+      <ul className="flex flex-col gap-1 px-2">
+        {lines.map((line) => (
+          <li key={line.kind} className="flex min-w-0 items-center gap-2 text-sm">
+            <span
+              aria-hidden
+              className={cn("size-2 shrink-0 rounded-full", DEPLOY_TONE_DOT[line.tone])}
+            />
+            <span className="min-w-0 truncate">{line.text}</span>
+            {line.term !== null ? <GitTerm term={line.term} variant="technical" /> : null}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * The project's review requests (PRs), most recently active first, each opening
+ * in the browser. Hidden when the project has none.
+ */
+function ReviewRequests({
+  environmentId,
+  projectId,
+}: {
+  environmentId: EnvironmentId;
+  projectId: ProjectId;
+}) {
+  const navigate = useNavigate();
+  const targets = useMemo(
+    () => [
+      {
+        environmentId,
+        input: { state: "all" as const, projectId, limit: PULL_REQUEST_FETCH_LIMIT },
+      },
+    ],
+    [environmentId, projectId],
+  );
+  const pullRequests = usePullRequestList(targets);
+  const entries = useMemo(
+    () =>
+      (pullRequests.data?.entries ?? [])
+        .filter((entry) => entry.projectId === projectId)
+        .toSorted((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+        .slice(0, PULL_REQUEST_ROW_LIMIT),
+    [projectId, pullRequests.data],
+  );
+  if (entries.length === 0) return null;
+
+  return (
+    <section className="flex flex-col gap-2">
+      <header className="flex items-center justify-between gap-3 px-2">
+        <h3 className="font-medium text-muted-foreground text-xs">
+          {`${tc("git term", "Review requests")} · ${gitTermTechnical("pr")}s`}
+        </h3>
+        <Button
+          size="xs"
+          variant="ghost"
+          onClick={() =>
+            void navigate({
+              to: "/pull-requests",
+              search: { ...readPullRequestListPreferences(), projectId },
+            })
+          }
+        >
+          {tc("project home", "See all")}
+        </Button>
+      </header>
+      <ul className="flex flex-col gap-0.5">
+        {entries.map((entry) => {
+          const state = describePullRequestState(entry);
+          return (
+            <li
+              key={`${entry.environmentId} ${entry.host} ${entry.repository} ${entry.number}`}
+              className="min-w-0"
+            >
+              <button
+                type="button"
+                aria-label={`${gitTermSimple("pr")} #${entry.number}: ${entry.title} · ${state.label}`}
+                className="flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-accent/40 focus-visible:outline-2 focus-visible:outline-ring"
+                onClick={() => void readLocalApi()?.shell.openExternal(entry.url)}
+              >
+                <span
+                  aria-hidden
+                  className={cn("size-2 shrink-0 rounded-full", PULL_REQUEST_TONE_DOT[state.tone])}
+                />
+                <span className="min-w-0 flex-1 truncate font-medium text-sm">{entry.title}</span>
+                <span className="shrink-0 text-muted-foreground text-xs">{state.label}</span>
+                <ExternalLinkIcon aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 /** Run and publish sections of the README, collapsed; the files are read only once it opens. */
 function RunAndPublish({
   environmentId,
@@ -401,7 +550,8 @@ export interface ProjectHomeProps {
 /**
  * Draft screen of a project, one column under the composer: the hub summary
  * (where we are, what is left, what could go wrong), the latest conversations,
- * and how to run and publish from the README, collapsed.
+ * whether the work is published, the review requests (PRs), and how to run and
+ * publish from the README, collapsed.
  */
 export const ProjectHome = memo(function ProjectHome({
   environmentId,
@@ -418,6 +568,8 @@ export const ProjectHome = memo(function ProjectHome({
         notePath={notePath}
       />
       <RecentConversations environmentId={environmentId} projectId={projectId} />
+      <DeployStatus environmentId={environmentId} workspaceRoot={workspaceRoot} />
+      <ReviewRequests environmentId={environmentId} projectId={projectId} />
       <RunAndPublish environmentId={environmentId} workspaceRoot={workspaceRoot} />
     </div>
   );

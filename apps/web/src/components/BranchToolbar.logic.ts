@@ -9,6 +9,7 @@ import * as Schema from "effect/Schema";
 import { sanitizeNewRefName } from "@t3tools/shared/git";
 import { toSortableTimestamp } from "../lib/threadSort";
 import { t } from "~/i18n";
+import { gitTermLabel } from "./git/gitTerms";
 export {
   dedupeRemoteBranchesWithLocalMatches,
   deriveLocalBranchNameFromRemoteRef,
@@ -111,7 +112,7 @@ export function resolveLockedWorkspaceLabel(
   activeWorktreePath: string | null,
   effectiveEnvMode: EnvMode,
 ): string {
-  if (activeWorktreePath) return "Worktree";
+  if (activeWorktreePath) return gitTermLabel("worktree");
   return effectiveEnvMode === "worktree" ? resolveEnvModeLabel("worktree") : t("Local checkout");
 }
 

@@ -40,7 +40,7 @@ const dictionary: Readonly<Record<string, string>> = {
   // Pull requests
   "pull request filter|Open": "Abertos",
   "pull request filter|Closed": "Fechados",
-  "pull request filter|Merged": "Mergeados",
+  "pull request filter|Merged": "Juntados (merge)",
   "matched in the description": "encontrado na descrição",
   "updated {time}": "atualizado {time}",
   "opened {time}": "aberto {time}",

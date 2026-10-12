@@ -64,6 +64,7 @@ import {
   resolveQuickAction,
   resolveThreadBranchUpdate,
 } from "./GitActionsControl.logic";
+import { GitTerm } from "./git/GitTerm";
 import { WizardPopup, WizardHeader, WizardSteps, WizardPanel, WizardFooter } from "./ui/wizard";
 import { StartTruncatedPath } from "./StartTruncatedPath";
 import { Button } from "~/components/ui/button";
@@ -418,9 +419,36 @@ function GitQuickActionIcon({
     }
     return <SourceControlIcon className={className} />;
   }
-  if (quickAction.label === "Commit") return <GitCommitIcon className={className} />;
-  if (quickAction.label === "Push") return <CloudUploadIcon className={className} />;
+  if (quickAction.term === "commit") return <GitCommitIcon className={className} />;
+  if (quickAction.term === "push") return <CloudUploadIcon className={className} />;
   return <InfoIcon className={className} />;
+}
+
+/** Bilingual label for pure git terms; composite actions keep their translated text. */
+function GitQuickActionLabel({
+  quickAction,
+  variant = "inline",
+}: {
+  quickAction: GitQuickAction;
+  variant?: "inline" | "plain";
+}) {
+  if (quickAction.term === "commit" || quickAction.term === "push" || quickAction.term === "pull") {
+    return <GitTerm term={quickAction.term} variant={variant} />;
+  }
+  return <>{quickAction.label}</>;
+}
+
+function GitMenuItemLabel({
+  item,
+  variant = "inline",
+}: {
+  item: GitActionMenuItem;
+  variant?: "inline" | "plain";
+}) {
+  if (item.id === "commit" || item.id === "push") {
+    return <GitTerm term={item.id} variant={variant} />;
+  }
+  return <>{item.label}</>;
 }
 
 interface PublishRepositoryDialogProps {
@@ -1690,7 +1718,9 @@ export default function GitActionsControl({
             <div key={`${item.id}-${item.label}`}>
               <MenuItem density={presentation === "menu" ? "touch" : "default"} disabled>
                 <GitActionItemIcon icon={item.icon} SourceControlIcon={SourceControlIcon} />
-                <MenuItemLabel>{item.label}</MenuItemLabel>
+                <MenuItemLabel>
+                  <GitMenuItemLabel item={item} />
+                </MenuItemLabel>
               </MenuItem>
               <p className="max-w-64 px-2 pb-2 text-xs text-muted-foreground">{disabledReason}</p>
             </div>
@@ -1710,7 +1740,9 @@ export default function GitActionsControl({
                   disabled
                 >
                   <GitActionItemIcon icon={item.icon} SourceControlIcon={SourceControlIcon} />
-                  <MenuItemLabel>{item.label}</MenuItemLabel>
+                  <MenuItemLabel>
+                    <GitMenuItemLabel item={item} variant="plain" />
+                  </MenuItemLabel>
                 </MenuItem>
               </PopoverTrigger>
               <PopoverPopup tooltipStyle side="left" align="center">
@@ -1730,7 +1762,9 @@ export default function GitActionsControl({
             }}
           >
             <GitActionItemIcon icon={item.icon} SourceControlIcon={SourceControlIcon} />
-            <MenuItemLabel>{item.label}</MenuItemLabel>
+            <MenuItemLabel>
+              <GitMenuItemLabel item={item} />
+            </MenuItemLabel>
           </MenuItem>
         );
       })}
@@ -1796,7 +1830,9 @@ export default function GitActionsControl({
                 quickAction={quickAction}
                 SourceControlIcon={SourceControlIcon}
               />
-              <MenuItemLabel>{quickAction.label}</MenuItemLabel>
+              <MenuItemLabel>
+                <GitQuickActionLabel quickAction={quickAction} />
+              </MenuItemLabel>
             </MenuItem>
             {quickActionDisabledReason && (
               <p className="max-w-64 px-2 py-1.5 text-xs text-warning">
@@ -1836,7 +1872,7 @@ export default function GitActionsControl({
                   SourceControlIcon={SourceControlIcon}
                 />
                 <span className="sr-only @3xl/header-actions:not-sr-only @3xl/header-actions:ml-0.5">
-                  {quickAction.label}
+                  <GitQuickActionLabel quickAction={quickAction} variant="plain" />
                 </span>
               </PopoverTrigger>
               <PopoverPopup tooltipStyle side="bottom" align="start">
@@ -1852,7 +1888,7 @@ export default function GitActionsControl({
             >
               <GitQuickActionIcon quickAction={quickAction} SourceControlIcon={SourceControlIcon} />
               <span className="sr-only @3xl/header-actions:not-sr-only @3xl/header-actions:ml-0.5">
-                {quickAction.label}
+                <GitQuickActionLabel quickAction={quickAction} />
               </span>
             </Button>
           )}

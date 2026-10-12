@@ -78,7 +78,9 @@ import { previewBridge } from "./preview/previewBridge";
 import { PierreEntryIcon } from "./chat/PierreEntryIcon";
 import { resolvePullRequestState } from "./pullRequest/pullRequestPresentation";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
+import { GitTerm } from "./git/GitTerm";
+import { gitTermLabel, gitTermTechnical } from "./git/gitTerms";
 
 interface RightPanelTabsProps {
   mode: PreviewPanelMode;
@@ -192,10 +194,29 @@ const SURFACE_UNAVAILABLE_HINTS = {
 const SURFACE_ACTION_LABELS: Readonly<Record<string, string>> = {
   Browser: t("Browser"),
   Files: t("Files"),
+  Diff: gitTermLabel("diff"),
+  "Pull request": gitTermLabel("pr"),
   "Linked pull requests": t("Linked pull requests"),
   Agents: t("Agents"),
   Device: t("Device"),
 };
+
+/**
+ * Surface action name for display. Git surfaces render bilingually (plain word
+ * plus technical term with a hover explanation); `plain` keeps it to text for
+ * spots that already carry their own tooltip.
+ */
+function SurfaceActionLabel({
+  label,
+  variant = "inline",
+}: {
+  label: string;
+  variant?: "inline" | "plain";
+}) {
+  if (label === "Diff") return <GitTerm term="diff" variant={variant} />;
+  if (label === "Pull request") return <GitTerm term="pr" variant={variant} />;
+  return <>{SURFACE_ACTION_LABELS[label] ?? label}</>;
+}
 
 type TabContextMenuAction =
   | "rename"
@@ -556,7 +577,7 @@ function RightPanelEmptyState(props: {
                       action.label === "Browser" && props.browserProfiles.length > 1 && "pr-7",
                     )}
                   >
-                    {SURFACE_ACTION_LABELS[action.label] ?? action.label}
+                    <SurfaceActionLabel label={action.label} />
                   </span>
                   <Kbd>{action.shortcut}</Kbd>
                 </button>
@@ -604,7 +625,7 @@ function RightPanelEmptyState(props: {
                   >
                     {actionIcon(action, "size-4")}
                     <span className="min-w-0 flex-1 truncate">
-                      {SURFACE_ACTION_LABELS[action.label] ?? action.label}
+                      <SurfaceActionLabel label={action.label} variant="plain" />
                     </span>
                     <Kbd>{action.shortcut}</Kbd>
                   </div>
@@ -625,7 +646,7 @@ function surfaceTitle(
 ): string {
   switch (surface.kind) {
     case "diff":
-      return "Diff";
+      return gitTermLabel("diff");
     case "files":
       return t("Files");
     case "file":
@@ -640,7 +661,7 @@ function surfaceTitle(
     case "pull-request":
       return `#${surface.number}`;
     case "pull-requests":
-      return "Pull requests";
+      return `${tc("git term", "Review requests")} · ${gitTermTechnical("pr")}s`;
     case "agents":
       return t("Agents");
     case "device":
@@ -1357,7 +1378,10 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                         onClick={action.onClick}
                       >
                         <Icon />
-                        {SURFACE_ACTION_LABELS[action.label] ?? action.label}
+                        <SurfaceActionLabel
+                          label={action.label}
+                          variant={action.available ? "inline" : "plain"}
+                        />
                       </SurfaceMenuItem>
                     );
                   })}
