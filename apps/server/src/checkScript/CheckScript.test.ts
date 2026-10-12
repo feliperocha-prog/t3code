@@ -22,6 +22,18 @@ it.layer(TestLayer)("CheckScript", (it) => {
     }),
   );
 
+  it.effect("keeps double quotes inside the command intact", () =>
+    Effect.gen(function* () {
+      const checkScript = yield* CheckScript.CheckScript;
+      const result = yield* checkScript.run({
+        cwd: process.cwd(),
+        command: "node -e \"console.log('quoted ok')\"",
+      });
+      expect(result.exitCode).toBe(0);
+      expect(result.outputTail).toContain("quoted ok");
+    }),
+  );
+
   it.effect("returns a failing exit code as a result, not an error", () =>
     Effect.gen(function* () {
       const checkScript = yield* CheckScript.CheckScript;

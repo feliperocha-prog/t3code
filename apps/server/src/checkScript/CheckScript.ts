@@ -1,3 +1,4 @@
+// @effect-diagnostics nodeBuiltinImport:off - the Windows batch file is a spawn-boundary detail.
 /**
  * Runs one project script (build, tests) to completion so the publish checklist
  * can tell whether it passed. The command goes through the platform shell, the
@@ -15,6 +16,10 @@ import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as NodeCrypto from "node:crypto";
+import * as NodeFS from "node:fs";
+import * as NodeOS from "node:os";
+import * as NodePath from "node:path";
 
 import { ProcessRunner } from "../processRunner.ts";
 
@@ -30,16 +35,34 @@ export class CheckScript extends Context.Service<
   }
 >()("t3/checkScript/CheckScript") {}
 
+interface ShellInvocation {
+  readonly command: string;
+  readonly args: ReadonlyArray<string>;
+  /** A temporary script to delete once the process has finished. */
+  readonly scriptPath?: string;
+}
+
 function shellInvocation(
   command: string,
   platform: NodeJS.Platform,
   env: NodeJS.ProcessEnv,
-): { command: string; args: ReadonlyArray<string> } {
+): ShellInvocation {
   if (platform === "win32") {
-    // `/s` strips the quotes libuv puts around the command argument.
-    return { command: env.ComSpec ?? "cmd.exe", args: ["/d", "/s", "/c", command] };
+    // Node re-quotes every argument on Windows, so a command holding `"` would
+    // reach cmd.exe mangled. A batch file carries the command verbatim.
+    const scriptPath = NodePath.join(NodeOS.tmpdir(), `t3-check-${NodeCrypto.randomUUID()}.cmd`);
+    NodeFS.writeFileSync(scriptPath, `@echo off\r\n${command}\r\n`, "utf8");
+    return { command: env.ComSpec ?? "cmd.exe", args: ["/d", "/c", scriptPath], scriptPath };
   }
   return { command: "sh", args: ["-lc", command] };
+}
+
+function removeScript(invocation: ShellInvocation): Effect.Effect<void> {
+  return Effect.sync(() => {
+    if (invocation.scriptPath !== undefined) {
+      NodeFS.rmSync(invocation.scriptPath, { force: true });
+    }
+  });
 }
 
 function outputTail(stdout: string, stderr: string, maxChars: number): string {
@@ -78,7 +101,7 @@ export const make = Effect.fn("CheckScript.make")(function* () {
   const env = yield* HostProcessEnvironment;
 
   const run = Effect.fn("CheckScript.run")(function* (input: ProjectRunCheckScriptInput) {
-    const invocation = shellInvocation(input.command, platform, env);
+    const invocation = yield* Effect.sync(() => shellInvocation(input.command, platform, env));
     const startedAt = yield* Clock.currentTimeMillis;
     const maxChars = input.maxOutputChars ?? CHECK_SCRIPT_OUTPUT_TAIL_LENGTH;
     // UTF-8 can use up to 4 bytes per character; keep enough to fill the tail.
@@ -97,7 +120,10 @@ export const make = Effect.fn("CheckScript.make")(function* () {
         // A timeout comes back as a result; its partial output is lost.
         timeoutBehavior: "timedOutResult",
       })
-      .pipe(Effect.mapError((cause) => new CheckScriptError({ detail: cause.message })));
+      .pipe(
+        Effect.mapError((cause) => new CheckScriptError({ detail: cause.message })),
+        Effect.ensuring(removeScript(invocation)),
+      );
     const finishedAt = yield* Clock.currentTimeMillis;
     return {
       exitCode: output.code,
