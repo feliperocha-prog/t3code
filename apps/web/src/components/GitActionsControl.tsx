@@ -2202,6 +2202,8 @@ export default function GitActionsControl({
           open
           environmentId={activeEnvironmentId}
           cwd={gitCwd}
+          // On the default branch the base is the branch itself; the upstream is what a push sends.
+          baseRef={gitStatusForActions?.hasUpstream ? "@{upstream}" : null}
           scripts={projectScripts}
           action={pendingPublishChecklistAction.action}
           actionLabel={gitTermLabel("push")}

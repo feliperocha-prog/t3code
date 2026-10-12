@@ -54,6 +54,48 @@ export function pickCheckScripts(scripts: ReadonlyArray<ProjectScript>): {
   };
 }
 
+export interface CheckCommand {
+  readonly name: string;
+  readonly command: string;
+}
+
+// What `npm init` writes; running it would always fail the check.
+const NPM_PLACEHOLDER_TEST = /no test specified/i;
+
+function packageJsonScripts(contents: string | null): Record<string, unknown> {
+  if (contents === null) return {};
+  try {
+    const parsed: unknown = JSON.parse(contents);
+    if (typeof parsed !== "object" || parsed === null || !("scripts" in parsed)) return {};
+    const scripts = parsed.scripts;
+    return typeof scripts === "object" && scripts !== null ? { ...scripts } : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Build and Tests commands: a project action wins; without one, the `build` and
+ * `test` scripts of the root package.json run through npm, which any package
+ * manager's project accepts once its dependencies are installed.
+ */
+export function resolveCheckCommands(
+  scripts: ReadonlyArray<ProjectScript>,
+  packageJsonContents: string | null,
+): { build: CheckCommand | null; test: CheckCommand | null } {
+  const picked = pickCheckScripts(scripts);
+  const fromPackage = packageJsonScripts(packageJsonContents);
+  const build = typeof fromPackage.build === "string" && fromPackage.build.trim().length > 0;
+  const test =
+    typeof fromPackage.test === "string" &&
+    fromPackage.test.trim().length > 0 &&
+    !NPM_PLACEHOLDER_TEST.test(fromPackage.test);
+  return {
+    build: picked.build ?? (build ? { name: "npm run build", command: "npm run build" } : null),
+    test: picked.test ?? (test ? { name: "npm test", command: "npm test" } : null),
+  };
+}
+
 const REVIEW_PATHS_SHOWN = 3;
 
 /** Turns the reviewer's per-file risk into the checklist verdict. */

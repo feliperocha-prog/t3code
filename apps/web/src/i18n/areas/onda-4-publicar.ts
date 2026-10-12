@@ -16,6 +16,7 @@ const dictionary: Readonly<Record<string, string>> = {
   "{count} medium-risk file(s)": "{count} arquivo(s) de risco médio",
   "No risky file": "Nenhum arquivo de risco",
   "No build script in this project": "Projeto sem script de build",
+  "Looking for the script…": "Procurando o script…",
   "No test script in this project": "Projeto sem script de testes",
   "Waiting for the build…": "Esperando o build…",
   "Running {name}…": "Rodando {name}…",

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   checklistDecision,
   pickCheckScripts,
+  resolveCheckCommands,
   reviewVerdict,
   type ChecklistItemState,
 } from "./publishChecklist.logic";
@@ -45,6 +46,35 @@ describe("pickCheckScripts", () => {
       script({ id: "upgrade", name: "Upgrade", command: "npx tool@latest --prebuild" }),
     ]);
     expect(picked).toEqual({ build: null, test: null });
+  });
+});
+
+describe("resolveCheckCommands", () => {
+  const packageJson = JSON.stringify({ scripts: { build: "vite build", test: "vitest run" } });
+
+  it("runs the package.json scripts through npm when the project has no actions", () => {
+    expect(resolveCheckCommands([], packageJson)).toEqual({
+      build: { name: "npm run build", command: "npm run build" },
+      test: { name: "npm test", command: "npm test" },
+    });
+  });
+
+  it("lets a project action win over package.json", () => {
+    const resolved = resolveCheckCommands(
+      [script({ id: "bundle", icon: "build", command: "pnpm bundle" })],
+      packageJson,
+    );
+    expect(resolved.build?.command).toBe("pnpm bundle");
+    expect(resolved.test?.command).toBe("npm test");
+  });
+
+  it("ignores the npm init placeholder test, missing scripts and broken JSON", () => {
+    const placeholder = JSON.stringify({
+      scripts: { test: 'echo "Error: no test specified" && exit 1' },
+    });
+    expect(resolveCheckCommands([], placeholder)).toEqual({ build: null, test: null });
+    expect(resolveCheckCommands([], "{ not json")).toEqual({ build: null, test: null });
+    expect(resolveCheckCommands([], null)).toEqual({ build: null, test: null });
   });
 });
 

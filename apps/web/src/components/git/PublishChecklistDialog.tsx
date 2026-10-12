@@ -27,8 +27,9 @@ import { CHECK_STATUS_PRESENTATION } from "../pullRequest/pullRequestPresentatio
 import {
   checklistDecision,
   checklistItemLabel,
-  pickCheckScripts,
+  resolveCheckCommands,
   reviewVerdict,
+  type CheckCommand,
   type ChecklistItemId,
   type ChecklistItemState,
   type ChecklistItemStatus,
@@ -38,6 +39,11 @@ interface PublishChecklistDialogProps {
   open: boolean;
   environmentId: EnvironmentId;
   cwd: string;
+  /**
+   * What the outgoing commits are compared against: the branch's upstream when it
+   * has one (what a push sends), otherwise null for the project's base branch.
+   */
+  baseRef: string | null;
   scripts: ReadonlyArray<ProjectScript>;
   /** The guarded action; decides whether uncommitted changes are part of what gets published. */
   action: GitStackedAction;
@@ -82,7 +88,15 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function initialScriptRow(id: ScriptCheckId, script: ProjectScript | null, waiting: boolean) {
+function initialScriptRow(
+  id: ScriptCheckId,
+  script: CheckCommand | null,
+  waiting: boolean,
+  lookingUp: boolean,
+) {
+  if (lookingUp) {
+    return { id, status: "running", detail: t("Looking for the script…") } satisfies ChecklistRow;
+  }
   if (script === null) {
     return {
       id,
@@ -107,24 +121,36 @@ export function PublishChecklistDialog({
   open,
   environmentId,
   cwd,
+  baseRef,
   scripts,
   action,
   actionLabel,
   onCancel,
   onPublish,
 }: PublishChecklistDialogProps) {
+  // Without a project action for build or tests, the package.json scripts stand in.
+  const packageJson = useEnvironmentQuery(
+    projectEnvironment.readFile({ environmentId, input: { cwd, relativePath: "package.json" } }),
+  );
+  const packageJsonContents = packageJson.data?.contents ?? null;
+  const scriptsResolved = packageJson.data !== null || packageJson.error !== null;
   const { build: buildScript, test: testScript } = useMemo(
-    () => pickCheckScripts(scripts),
-    [scripts],
+    () => resolveCheckCommands(scripts, packageJsonContents),
+    [scripts, packageJsonContents],
   );
   const buildCommand = buildScript?.command ?? null;
   const testCommand = testScript?.command ?? null;
+  const buildName = buildScript?.name ?? "";
+  const testName = testScript?.name ?? "";
 
   // What gets published: commits ahead of the base, plus the working tree only
   // when this action commits it. A plain push never sends uncommitted files.
   const commitsWorkingTree = action === "commit_push" || action === "commit_push_pr";
   const diffPreview = useEnvironmentQuery(
-    reviewEnvironment.diffPreview({ environmentId, input: { cwd } }),
+    reviewEnvironment.diffPreview({
+      environmentId,
+      input: baseRef === null ? { cwd } : { cwd, baseRef },
+    }),
   );
   const outgoing = useMemo(() => {
     const sources = diffPreview.data?.sources;
@@ -213,16 +239,31 @@ export function PublishChecklistDialog({
     reportFailure: false,
   });
   const [scriptRows, setScriptRows] = useState<Record<ScriptCheckId, ChecklistRow>>(() => ({
-    build: initialScriptRow("build", buildScript, false),
-    tests: initialScriptRow("tests", testScript, buildScript !== null),
+    build: initialScriptRow("build", buildScript, false, !scriptsResolved),
+    tests: initialScriptRow("tests", testScript, buildScript !== null, !scriptsResolved),
   }));
 
   // Build and tests run one after the other: two package managers at once fight over caches.
   useEffect(() => {
+    if (!scriptsResolved) return;
     let cancelled = false;
+    setScriptRows({
+      build: initialScriptRow(
+        "build",
+        buildCommand === null ? null : { name: buildName, command: buildCommand },
+        false,
+        false,
+      ),
+      tests: initialScriptRow(
+        "tests",
+        testCommand === null ? null : { name: testName, command: testCommand },
+        buildCommand !== null,
+        false,
+      ),
+    });
     const queue: Array<[ScriptCheckId, string | null, string]> = [
-      ["build", buildCommand, buildScript?.name ?? ""],
-      ["tests", testCommand, testScript?.name ?? ""],
+      ["build", buildCommand, buildName],
+      ["tests", testCommand, testName],
     ];
     void (async () => {
       for (const [id, command, name] of queue) {
@@ -268,12 +309,13 @@ export function PublishChecklistDialog({
     };
   }, [
     buildCommand,
-    buildScript?.name,
+    buildName,
     cwd,
     environmentId,
     runCheckScript,
+    scriptsResolved,
     testCommand,
-    testScript?.name,
+    testName,
   ]);
 
   const rows: ReadonlyArray<ChecklistRow> = [
