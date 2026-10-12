@@ -31,6 +31,7 @@ import { Button } from "~/components/ui/button";
 import { t } from "~/i18n";
 import { ReviewFindingsList } from "./chat/ReviewFindingsList";
 import { subagentRoleLabel } from "./chat/subagentRole.logic";
+import { Term } from "./ui-terms/Term";
 
 /** Sends a reviewer finding back to the AI; null when the host cannot send. */
 const ReviewFixContext = createContext<((text: string, count: number) => void) | null>(null);
@@ -628,7 +629,12 @@ export function AgentsPanel({
               <span>{t("{count} settled", { count: model.settledCount })}</span>
             ) : null}
           </span>
-          <span className="tabular-nums">Σ {formatSubagentTokenCount(model.totalTokens)} tok</span>
+          <span className="tabular-nums">
+            Σ {formatSubagentTokenCount(model.totalTokens)}{" "}
+            <Term term="token" variant="hint">
+              tok
+            </Term>
+          </span>
         </footer>
       </div>
     </ReviewFixContext>

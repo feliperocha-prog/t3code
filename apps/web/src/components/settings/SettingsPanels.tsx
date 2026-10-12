@@ -28,6 +28,7 @@ import {
   MAX_APPEARANCE_CONTRAST,
   MAX_CODE_FONT_SIZE,
   MAX_GLASS_OPACITY,
+  MAX_HEAVY_THREAD_WARNING_PERCENT,
   MAX_INTERFACE_FONT_SIZE,
   MAX_PANEL_ANIMATION_DURATION_MS,
   MAX_PROMPT_FONT_SIZE,
@@ -36,6 +37,7 @@ import {
   MIN_CODE_FONT_SIZE,
   MIN_APPEARANCE_CONTRAST,
   MIN_GLASS_OPACITY,
+  MIN_HEAVY_THREAD_WARNING_PERCENT,
   MIN_INTERFACE_FONT_SIZE,
   MIN_PANEL_ANIMATION_DURATION_MS,
   MIN_PROMPT_FONT_SIZE,
@@ -600,6 +602,9 @@ export function useSettingsRestore(onRestored?: () => void) {
       ...(settings.contextWindowMeterEnabled !== DEFAULT_UNIFIED_SETTINGS.contextWindowMeterEnabled
         ? [t("Context window indicator")]
         : []),
+      ...(settings.heavyThreadWarningPercent !== DEFAULT_UNIFIED_SETTINGS.heavyThreadWarningPercent
+        ? [t("Heavy conversation warning (% of context)")]
+        : []),
       ...(settings.responseStreamingMode !== DEFAULT_UNIFIED_SETTINGS.responseStreamingMode
         ? [t("Response streaming")]
         : []),
@@ -623,6 +628,9 @@ export function useSettingsRestore(onRestored?: () => void) {
         ? [t("Add project base directory")]
         : []),
       ...(settings.vaultFolder !== DEFAULT_UNIFIED_SETTINGS.vaultFolder ? [t("Vault folder")] : []),
+      ...(settings.pastConversationsCommand !== DEFAULT_UNIFIED_SETTINGS.pastConversationsCommand
+        ? [t("Command for 'Did we talk about this?'")]
+        : []),
       ...(settings.confirmThreadUnpin !== DEFAULT_UNIFIED_SETTINGS.confirmThreadUnpin
         ? [t("Unpin confirmation")]
         : []),
@@ -670,6 +678,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       settings.followUpBehavior,
       settings.addProjectBaseDirectory,
       settings.vaultFolder,
+      settings.pastConversationsCommand,
       settings.defaultThreadEnvMode,
       settings.newWorktreesStartFromOrigin,
       settings.diffFilesCollapsed,
@@ -678,6 +687,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       settings.proactivePanelsEnabled,
       settings.environmentIdentificationMode,
       settings.contextWindowMeterEnabled,
+      settings.heavyThreadWarningPercent,
       settings.fontFamilyCode,
       settings.fontFamilyComposer,
       settings.fontFamilySans,
@@ -788,6 +798,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       sendShortcut: DEFAULT_UNIFIED_SETTINGS.sendShortcut,
       followUpBehavior: DEFAULT_UNIFIED_SETTINGS.followUpBehavior,
       contextWindowMeterEnabled: DEFAULT_UNIFIED_SETTINGS.contextWindowMeterEnabled,
+      heavyThreadWarningPercent: DEFAULT_UNIFIED_SETTINGS.heavyThreadWarningPercent,
       environmentIdentificationMode: DEFAULT_UNIFIED_SETTINGS.environmentIdentificationMode,
       glassOpacity: DEFAULT_UNIFIED_SETTINGS.glassOpacity,
       panelAnimationDurationMs: DEFAULT_UNIFIED_SETTINGS.panelAnimationDurationMs,
@@ -806,6 +817,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       newWorktreesStartFromOrigin: DEFAULT_UNIFIED_SETTINGS.newWorktreesStartFromOrigin,
       addProjectBaseDirectory: DEFAULT_UNIFIED_SETTINGS.addProjectBaseDirectory,
       vaultFolder: DEFAULT_UNIFIED_SETTINGS.vaultFolder,
+      pastConversationsCommand: DEFAULT_UNIFIED_SETTINGS.pastConversationsCommand,
       confirmThreadArchive: DEFAULT_UNIFIED_SETTINGS.confirmThreadArchive,
       confirmThreadDelete: DEFAULT_UNIFIED_SETTINGS.confirmThreadDelete,
       confirmThreadUnpin: DEFAULT_UNIFIED_SETTINGS.confirmThreadUnpin,
@@ -2116,7 +2128,6 @@ function AutoSettleDaysInput({
 // expand the section before its target can mount and scroll.
 const LEGACY_FEATURE_TARGET_IDS: ReadonlySet<string> = new Set([
   "legacy-plan-mode",
-  "legacy-context-window-indicator",
   "legacy-sidebar",
 ]);
 
@@ -2170,19 +2181,6 @@ function LegacyFeaturesSection() {
                     updateSettings({ planModeEnabled: Boolean(checked) });
                   }}
                   aria-label={t("Plan mode (legacy)")}
-                />
-              }
-            />
-            <SettingsRow
-              {...searchableSetting("legacy-context-window-indicator")}
-              description={t("Shows context window usage as a circular indicator in the composer.")}
-              control={
-                <Switch
-                  checked={settings.contextWindowMeterEnabled}
-                  onCheckedChange={(checked) =>
-                    updateSettings({ contextWindowMeterEnabled: Boolean(checked) })
-                  }
-                  aria-label={t("Context window indicator (legacy)")}
                 />
               }
             />
@@ -2877,6 +2875,49 @@ export function GeneralSettingsPanel() {
             </Select>
           }
         />
+        <SettingsRow
+          {...searchableSetting("legacy-context-window-indicator")}
+          description={t("Shows context window usage as a circular indicator in the composer.")}
+          control={
+            <Switch
+              checked={settings.contextWindowMeterEnabled}
+              onCheckedChange={(checked) =>
+                updateSettings({ contextWindowMeterEnabled: Boolean(checked) })
+              }
+              aria-label={t("Context window indicator")}
+            />
+          }
+        />
+        <SettingsRow
+          {...searchableSetting("heavy-thread-warning")}
+          description={t(
+            "Warns when the conversation passes this share of the context. 0 turns it off.",
+          )}
+          control={
+            <NumberField
+              value={settings.heavyThreadWarningPercent}
+              min={MIN_HEAVY_THREAD_WARNING_PERCENT}
+              max={MAX_HEAVY_THREAD_WARNING_PERCENT}
+              step={5}
+              size="sm"
+              className="w-32"
+              onValueChange={(value) =>
+                updateSettings({
+                  heavyThreadWarningPercent: Math.max(
+                    MIN_HEAVY_THREAD_WARNING_PERCENT,
+                    Math.min(MAX_HEAVY_THREAD_WARNING_PERCENT, Math.round(value ?? 0)),
+                  ),
+                })
+              }
+            >
+              <NumberFieldGroup>
+                <NumberFieldDecrement aria-label={t("Lower the heavy conversation warning")} />
+                <NumberFieldInput aria-label={t("Heavy conversation warning (% of context)")} />
+                <NumberFieldIncrement aria-label={t("Raise the heavy conversation warning")} />
+              </NumberFieldGroup>
+            </NumberField>
+          }
+        />
 
         <SettingsRow
           serverScoped
@@ -3130,6 +3171,36 @@ export function GeneralSettingsPanel() {
               placeholder={t("Not set")}
               spellCheck={false}
               aria-label={t("Vault folder")}
+            />
+          }
+        />
+        <SettingsRow
+          {...searchableSetting("past-conversations-command")}
+          description={t(
+            "Program that searches old Claude Code conversations. Empty turns it off.",
+          )}
+          resetAction={
+            settings.pastConversationsCommand !==
+            DEFAULT_UNIFIED_SETTINGS.pastConversationsCommand ? (
+              <SettingResetButton
+                label={t("command for 'Did we talk about this?'")}
+                onClick={() =>
+                  updateSettings({
+                    pastConversationsCommand: DEFAULT_UNIFIED_SETTINGS.pastConversationsCommand,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <DraftInput
+              size="sm"
+              className="w-full sm:w-72"
+              value={settings.pastConversationsCommand}
+              onCommit={(next) => updateSettings({ pastConversationsCommand: next })}
+              placeholder={t("Off")}
+              spellCheck={false}
+              aria-label={t("Command for 'Did we talk about this?'")}
             />
           }
         />

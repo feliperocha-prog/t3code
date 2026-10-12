@@ -609,14 +609,25 @@ describe("ClientSettings sidebar", () => {
 });
 
 describe("ClientSettings context window meter", () => {
-  it("defaults off and preserves an explicit legacy opt-in", () => {
-    expect(decodeClientSettings({}).contextWindowMeterEnabled).toBe(false);
+  it("defaults on and preserves an explicit opt-out", () => {
+    expect(decodeClientSettings({}).contextWindowMeterEnabled).toBe(true);
     expect(
-      decodeClientSettings({ contextWindowMeterEnabled: true }).contextWindowMeterEnabled,
-    ).toBe(true);
+      decodeClientSettings({ contextWindowMeterEnabled: false }).contextWindowMeterEnabled,
+    ).toBe(false);
     expect(
-      decodeClientSettingsPatch({ contextWindowMeterEnabled: true }).contextWindowMeterEnabled,
-    ).toBe(true);
+      decodeClientSettingsPatch({ contextWindowMeterEnabled: false }).contextWindowMeterEnabled,
+    ).toBe(false);
+  });
+});
+
+describe("ClientSettings heavy thread warning", () => {
+  it("defaults to 60%, allows 0 to turn it off, and rejects values outside 0..100", () => {
+    expect(decodeClientSettings({}).heavyThreadWarningPercent).toBe(60);
+    expect(
+      decodeClientSettingsPatch({ heavyThreadWarningPercent: 0 }).heavyThreadWarningPercent,
+    ).toBe(0);
+    expect(() => decodeClientSettingsPatch({ heavyThreadWarningPercent: 101 })).toThrow();
+    expect(() => decodeClientSettingsPatch({ heavyThreadWarningPercent: 12.5 })).toThrow();
   });
 });
 

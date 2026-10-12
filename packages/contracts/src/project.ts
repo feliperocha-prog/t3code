@@ -378,6 +378,7 @@ export class ChangesExplanationError extends Schema.TaggedError<ChangesExplanati
 export const CHECK_SCRIPT_TIMEOUT_MAX_MS = 600_000;
 export const CHECK_SCRIPT_TIMEOUT_DEFAULT_MS = 300_000;
 export const CHECK_SCRIPT_OUTPUT_TAIL_LENGTH = 4_000;
+export const CHECK_SCRIPT_OUTPUT_TAIL_MAX_LENGTH = 64_000;
 
 // Runs one project script (build, tests) to completion before a publish.
 export const ProjectRunCheckScriptInput = Schema.Struct({
@@ -385,6 +386,10 @@ export const ProjectRunCheckScriptInput = Schema.Struct({
   command: TrimmedNonEmptyString,
   timeoutMs: Schema.optional(
     PositiveInt.check(Schema.isLessThanOrEqualTo(CHECK_SCRIPT_TIMEOUT_MAX_MS)),
+  ),
+  // How many trailing output characters come back; defaults to CHECK_SCRIPT_OUTPUT_TAIL_LENGTH.
+  maxOutputChars: Schema.optional(
+    PositiveInt.check(Schema.isLessThanOrEqualTo(CHECK_SCRIPT_OUTPUT_TAIL_MAX_LENGTH)),
   ),
 });
 export type ProjectRunCheckScriptInput = typeof ProjectRunCheckScriptInput.Type;
@@ -394,7 +399,7 @@ export const ProjectRunCheckScriptResult = Schema.Struct({
   exitCode: Schema.NullOr(Schema.Number),
   timedOut: Schema.Boolean,
   durationMs: NonNegativeInt,
-  // The last CHECK_SCRIPT_OUTPUT_TAIL_LENGTH characters of stdout followed by stderr.
+  // The last `maxOutputChars` (default CHECK_SCRIPT_OUTPUT_TAIL_LENGTH) characters of stdout followed by stderr.
   outputTail: Schema.String,
 });
 export type ProjectRunCheckScriptResult = typeof ProjectRunCheckScriptResult.Type;

@@ -309,6 +309,23 @@ export const DiffColorScheme = Schema.Literals(["red-green", "blue-orange"]);
 export const ChatWidth = Schema.Literals(["comfortable", "wide", "full"]);
 export type ChatWidth = typeof ChatWidth.Type;
 
+export const MIN_HEAVY_THREAD_WARNING_PERCENT = 0;
+export const MAX_HEAVY_THREAD_WARNING_PERCENT = 100;
+export const HeavyThreadWarningPercent = Schema.Int.check(
+  Schema.isBetween({
+    minimum: MIN_HEAVY_THREAD_WARNING_PERCENT,
+    maximum: MAX_HEAVY_THREAD_WARNING_PERCENT,
+  }),
+);
+export type HeavyThreadWarningPercent = typeof HeavyThreadWarningPercent.Type;
+const DEFAULT_HEAVY_THREAD_WARNING_PERCENT: HeavyThreadWarningPercent = 60;
+
+// Unquoted on purpose: on Windows the server hands the command to cmd.exe through
+// libuv, which escapes inner quotes as \" and cmd passes them on literally.
+// A script path with spaces cannot be used here.
+export const DEFAULT_PAST_CONVERSATIONS_COMMAND =
+  "node C:/Users/felip/.claude/scripts/buscar-conversa.js";
+
 export const ClientSettingsSchema = Schema.Struct({
   notificationMode: NotificationMode.pipe(
     Schema.withDecodingDefault(Effect.succeed("notifications" as const)),
@@ -458,9 +475,13 @@ export const ClientSettingsSchema = Schema.Struct({
   // default UI; this beta flag restores it (plus the /plan and /default slash
   // commands) for users who still rely on the old workflow.
   planModeEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
-  // Legacy context window meter. The composer hides it by default; users who
-  // still want the old usage indicator can restore it from Settings.
-  contextWindowMeterEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  // Context window meter: the ring in the composer. On by default; users who
+  // find it noisy can turn it off from Settings.
+  contextWindowMeterEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  // Context share (0..100) at which the composer suggests a fresh thread. 0 turns it off.
+  heavyThreadWarningPercent: HeavyThreadWarningPercent.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_HEAVY_THREAD_WARNING_PERCENT)),
+  ),
   // Desktop resting composer: scrolling an existing thread's conversation
   // settles the composer into its single-line layout. Losing focus never does.
   composerCollapseOnScroll: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
@@ -471,6 +492,11 @@ export const ClientSettingsSchema = Schema.Struct({
   ),
   followUpBehavior: Schema.Literals(["queue", "steer"]).pipe(
     Schema.withDecodingDefault(Effect.succeed("queue")),
+  ),
+  // Shell command behind the sidebar search's "Did we talk about this?" section; the
+  // query words and flags are appended. Empty turns the section off.
+  pastConversationsCommand: TrimmedString.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_PAST_CONVERSATIONS_COMMAND)),
   ),
   proactivePanelsEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   showSkillsInSlashMenu: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
@@ -1686,10 +1712,12 @@ export const ClientSettingsPatch = Schema.Struct({
   ),
   planModeEnabled: Schema.optionalKey(Schema.Boolean),
   contextWindowMeterEnabled: Schema.optionalKey(Schema.Boolean),
+  heavyThreadWarningPercent: Schema.optionalKey(HeavyThreadWarningPercent),
   composerCollapseOnScroll: Schema.optionalKey(Schema.Boolean),
   composerRichTextEnabled: Schema.optionalKey(Schema.Boolean),
   sendShortcut: Schema.optionalKey(Schema.Literals(["enter", "mod-enter-multiline", "mod-enter"])),
   followUpBehavior: Schema.optionalKey(Schema.Literals(["queue", "steer"])),
+  pastConversationsCommand: Schema.optionalKey(TrimmedString),
   proactivePanelsEnabled: Schema.optionalKey(Schema.Boolean),
   showSkillsInSlashMenu: Schema.optionalKey(Schema.Boolean),
   legacySidebarEnabled: Schema.optionalKey(Schema.Boolean),

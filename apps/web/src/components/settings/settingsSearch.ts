@@ -631,6 +631,16 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
   },
   {
+    id: "past-conversations-command",
+    title: t("Command for 'Did we talk about this?'"),
+    to: "/settings/general",
+    searchTerms: [
+      "past conversations claude code terminal search resume history script",
+      "Command for 'Did we talk about this?'",
+      "já falamos disso conversas antigas claude code terminal busca histórico comando script",
+    ],
+  },
+  {
     id: "import-agent-conversations",
     title: t("Import conversations"),
     to: "/settings/general",
@@ -726,12 +736,22 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "legacy-context-window-indicator",
-    title: t("Context window indicator (legacy)"),
+    title: t("Context window indicator"),
     to: "/settings/general",
     searchTerms: [
-      "composer meter usage tokens circle old",
-      "Context window indicator (legacy)",
-      "medidor uso tokens círculo antigo",
+      "composer meter usage tokens circle",
+      "Context window indicator",
+      "medidor uso tokens círculo",
+    ],
+  },
+  {
+    id: "heavy-thread-warning",
+    title: t("Heavy conversation warning (% of context)"),
+    to: "/settings/general",
+    searchTerms: [
+      "heavy thread context warning new conversation compact",
+      "Heavy conversation warning (% of context)",
+      "aviso conversa pesada contexto nova conversa compactar",
     ],
   },
   {

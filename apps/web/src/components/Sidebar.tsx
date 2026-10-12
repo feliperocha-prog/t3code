@@ -229,6 +229,7 @@ import {
 } from "../providerInstances";
 import { useThreadRunningTerminalIds } from "../state/terminalSessions";
 import { stackedThreadToast, toastManager } from "./ui/toast";
+import { PastConversationsSection } from "./sidebar/PastConversationsSection";
 import { Button, InlineButton } from "./ui/button";
 import {
   Combobox,
@@ -4757,6 +4758,7 @@ export default function Sidebar() {
               </p>
             )
           ) : null}
+          {isSearchingThreads ? <PastConversationsSection query={threadSearchQuery} /> : null}
           {!isSearchingThreads ? (
             <TooltipProvider
               key="sidebar-thread-tooltips-150"
