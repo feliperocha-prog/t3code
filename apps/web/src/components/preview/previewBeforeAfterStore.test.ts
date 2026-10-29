@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { turnCaptureMoment } from "./previewBeforeAfterStore";
+import type { DesktopPreviewThumbnail } from "@t3tools/contracts";
+
+import {
+  MAX_BEFORE_AFTER_THREADS,
+  turnCaptureMoment,
+  usePreviewBeforeAfterStore,
+} from "./previewBeforeAfterStore";
 
 const running = (turnId: string) => ({ turnId, running: true });
 const settled = (turnId: string) => ({ turnId, running: false });
@@ -27,5 +33,34 @@ describe("turnCaptureMoment", () => {
 
   it("skips an after shot for a turn that settled without being seen running", () => {
     expect(turnCaptureMoment(running("t1"), settled("t2"))).toBeNull();
+  });
+});
+
+describe("usePreviewBeforeAfterStore", () => {
+  const shot = (url: string): DesktopPreviewThumbnail => ({
+    tabId: "tab",
+    url,
+    dataUrl: "data:image/png;base64,",
+    createdAt: "2026-10-29T10:00:00.000Z",
+  });
+
+  it("keeps only the most recent threads", () => {
+    const store = usePreviewBeforeAfterStore.getState();
+    for (let index = 0; index <= MAX_BEFORE_AFTER_THREADS; index += 1) {
+      store.setBefore(`thread-${index}`, "t1", shot(`u${index}`));
+    }
+    const keys = Object.keys(usePreviewBeforeAfterStore.getState().byThreadKey);
+    expect(keys).toHaveLength(MAX_BEFORE_AFTER_THREADS);
+    expect(keys).not.toContain("thread-0");
+    expect(keys.at(-1)).toBe(`thread-${MAX_BEFORE_AFTER_THREADS}`);
+  });
+
+  it("drops an after shot that belongs to a different turn", () => {
+    const store = usePreviewBeforeAfterStore.getState();
+    store.setBefore("thread-a", "t1", shot("before"));
+    store.setAfter("thread-a", "t2", shot("stale"));
+    expect(usePreviewBeforeAfterStore.getState().byThreadKey["thread-a"]?.after).toBeNull();
+    store.setAfter("thread-a", "t1", shot("after"));
+    expect(usePreviewBeforeAfterStore.getState().byThreadKey["thread-a"]?.after?.url).toBe("after");
   });
 });

@@ -1,7 +1,7 @@
 import { scopedThreadKey } from "@t3tools/client-runtime/environment";
 import type { DesktopPreviewThumbnail, ScopedThreadRef } from "@t3tools/contracts";
 import { Columns2Icon, RefreshCwIcon, XIcon } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
@@ -13,48 +13,92 @@ import { turnCaptureMoment, usePreviewBeforeAfterStore } from "./previewBeforeAf
 
 // Gives a dev server's hot reload time to repaint before the "after" shot.
 const AFTER_SETTLE_MS = 2000;
+// Lets a hidden native surface present again before it is photographed.
+const SURFACE_SHOW_MS = 400;
+
+function captureInto(
+  moment: "before" | "after",
+  threadKey: string,
+  turnId: string,
+  runtimeTabId: string,
+): Promise<void> {
+  if (!previewBridge) return Promise.resolve();
+  return previewBridge
+    .captureThumbnail(runtimeTabId)
+    .then((shot) => {
+      const store = usePreviewBeforeAfterStore.getState();
+      if (moment === "before") store.setBefore(threadKey, turnId, shot);
+      else store.setAfter(threadKey, turnId, shot);
+    })
+    .catch((error: unknown) => {
+      console.warn("[preview] before/after capture failed", error);
+    });
+}
 
 /**
  * Photographs the open preview when the thread's turn starts and again when it
- * settles. Runs only while the preview panel is mounted with a live page.
+ * settles. `canCapture` must be false whenever the page surface is hidden (the
+ * compare view is open, the page failed to load); a pending "after" waits for
+ * it instead of photographing an empty surface.
  */
 export function usePreviewBeforeAfterCapture(
   threadRef: ScopedThreadRef,
   runtimeTabId: string | null,
-  enabled: boolean,
+  canCapture: boolean,
 ) {
   const threadKey = scopedThreadKey(threadRef);
   const latestTurn = useThreadShell(threadRef)?.latestTurn ?? null;
   const turnId = latestTurn?.turnId ?? null;
   const running = latestTurn?.state === "running";
-  const seenRef = useRef<{ turnId: string; running: boolean } | null>(null);
+  const seenRef = useRef<{ threadKey: string; turnId: string; running: boolean } | null>(null);
+  const [pendingAfter, setPendingAfter] = useState<{ threadKey: string; turnId: string } | null>(
+    null,
+  );
 
   useEffect(() => {
-    const previous = seenRef.current;
+    // A thread switch is a first observation: the other thread's turn state
+    // says nothing about this page.
+    const seen = seenRef.current;
+    const previous = seen?.threadKey === threadKey ? seen : null;
+    seenRef.current = turnId === null ? null : { threadKey, turnId, running };
     const next = turnId === null ? null : { turnId, running };
-    seenRef.current = next;
-    if (!enabled || !runtimeTabId || !previewBridge || next === null) return;
     const moment = turnCaptureMoment(previous, next);
-    if (moment === null) return;
-    const bridge = previewBridge;
-    const capture = () =>
-      bridge
-        .captureThumbnail(runtimeTabId)
-        .then((shot) => {
-          const store = usePreviewBeforeAfterStore.getState();
-          if (moment === "before") store.setBefore(threadKey, next.turnId, shot);
-          else store.setAfter(threadKey, next.turnId, shot);
-        })
-        .catch((error: unknown) => {
-          console.warn("[preview] before/after capture failed", error);
-        });
-    if (moment === "before") {
-      void capture();
+    if (moment === null || next === null) return;
+    if (moment === "after") {
+      setPendingAfter({ threadKey, turnId: next.turnId });
       return;
     }
-    const timer = window.setTimeout(() => void capture(), AFTER_SETTLE_MS);
+    setPendingAfter(null);
+    if (canCapture && runtimeTabId)
+      void captureInto("before", threadKey, next.turnId, runtimeTabId);
+    // Only turn transitions decide; canCapture and the tab are read as they are now.
+  }, [running, threadKey, turnId]);
+
+  useEffect(() => {
+    if (!pendingAfter || pendingAfter.threadKey !== threadKey) return;
+    if (!canCapture || !runtimeTabId) return;
+    const timer = window.setTimeout(() => {
+      void captureInto("after", pendingAfter.threadKey, pendingAfter.turnId, runtimeTabId);
+      setPendingAfter(null);
+    }, AFTER_SETTLE_MS);
     return () => window.clearTimeout(timer);
-  }, [enabled, running, runtimeTabId, threadKey, turnId]);
+  }, [canCapture, pendingAfter, runtimeTabId, threadKey]);
+}
+
+/**
+ * Retakes the "after" shot from the compare view. The compare view hides the
+ * page surface, so it closes, waits for the page to show, shoots, and reopens.
+ */
+export async function retakePreviewAfter(input: {
+  threadKey: string;
+  turnId: string;
+  runtimeTabId: string;
+  setCompareOpen: (open: boolean) => void;
+}) {
+  input.setCompareOpen(false);
+  await new Promise((resolve) => window.setTimeout(resolve, SURFACE_SHOW_MS));
+  await captureInto("after", input.threadKey, input.turnId, input.runtimeTabId);
+  input.setCompareOpen(true);
 }
 
 export function usePreviewBeforeAfterPair(threadRef: ScopedThreadRef) {
@@ -125,25 +169,14 @@ function Shot({ title, shot }: { title: string; shot: DesktopPreviewThumbnail | 
 /** Side-by-side compare that covers the page area while open. */
 export function PreviewBeforeAfterView({
   threadRef,
-  runtimeTabId,
+  onRetakeAfter,
   onClose,
 }: {
   threadRef: ScopedThreadRef;
-  runtimeTabId: string | null;
+  onRetakeAfter: ((turnId: string) => void) | null;
   onClose: () => void;
 }) {
-  const threadKey = scopedThreadKey(threadRef);
   const pair = usePreviewBeforeAfterPair(threadRef);
-  const retakeAfter = useCallback(() => {
-    if (!pair || !runtimeTabId || !previewBridge) return;
-    const turnId = pair.turnId;
-    void previewBridge
-      .captureThumbnail(runtimeTabId)
-      .then((shot) => usePreviewBeforeAfterStore.getState().setAfter(threadKey, turnId, shot))
-      .catch((error: unknown) => {
-        console.warn("[preview] before/after capture failed", error);
-      });
-  }, [pair, runtimeTabId, threadKey]);
 
   return (
     <div className="@container/before-after absolute inset-0 z-20 flex flex-col gap-2 bg-background p-3">
@@ -151,7 +184,13 @@ export function PreviewBeforeAfterView({
         <p className="min-w-0 flex-1 truncate text-sm font-medium">
           {t("Before × after the last reply")}
         </p>
-        <Button variant="ghost" size="xs" type="button" onClick={retakeAfter} disabled={!pair}>
+        <Button
+          variant="ghost"
+          size="xs"
+          type="button"
+          onClick={() => pair && onRetakeAfter?.(pair.turnId)}
+          disabled={!pair || !onRetakeAfter}
+        >
           <RefreshCwIcon />
           {t("Retake after")}
         </Button>

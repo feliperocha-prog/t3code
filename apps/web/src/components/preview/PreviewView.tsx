@@ -47,6 +47,7 @@ import { openPreviewSession } from "./openPreviewSession";
 import {
   PreviewBeforeAfterButton,
   PreviewBeforeAfterView,
+  retakePreviewAfter,
   usePreviewBeforeAfterCapture,
   usePreviewBeforeAfterPair,
 } from "./PreviewBeforeAfter";
@@ -186,7 +187,7 @@ export function PreviewView({
   usePreviewBeforeAfterCapture(
     threadRef,
     runtimeTabId,
-    Boolean(desktopOverlay?.hasWebContents) && !showEmptyState && !isUnreachable,
+    Boolean(desktopOverlay?.hasWebContents) && !showEmptyState && !isUnreachable && !compareOpen,
   );
 
   const navUrl = navStatus._tag === "Success" ? navStatus.url : null;
@@ -836,7 +837,17 @@ export function PreviewView({
         {compareOpen ? (
           <PreviewBeforeAfterView
             threadRef={threadRef}
-            runtimeTabId={runtimeTabId}
+            onRetakeAfter={
+              runtimeTabId && !isUnreachable
+                ? (turnId) =>
+                    void retakePreviewAfter({
+                      threadKey: scopedThreadKey(threadRef),
+                      turnId,
+                      runtimeTabId,
+                      setCompareOpen,
+                    })
+                : null
+            }
             onClose={() => setCompareOpen(false)}
           />
         ) : null}

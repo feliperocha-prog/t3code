@@ -18,12 +18,23 @@ interface PreviewBeforeAfterState {
   setAfter: (threadKey: string, turnId: string, shot: DesktopPreviewThumbnail) => void;
 }
 
+// Each pair holds two ~960px PNGs; older threads drop out past this count.
+export const MAX_BEFORE_AFTER_THREADS = 8;
+
 export const usePreviewBeforeAfterStore = create<PreviewBeforeAfterState>()((set) => ({
   byThreadKey: {},
   setBefore: (threadKey, turnId, shot) =>
-    set((state) => ({
-      byThreadKey: { ...state.byThreadKey, [threadKey]: { turnId, before: shot, after: null } },
-    })),
+    set((state) => {
+      const { [threadKey]: _replaced, ...others } = state.byThreadKey;
+      // Insertion order is recency: the oldest kept thread is the first key.
+      const kept = Object.entries(others).slice(-(MAX_BEFORE_AFTER_THREADS - 1));
+      return {
+        byThreadKey: {
+          ...Object.fromEntries(kept),
+          [threadKey]: { turnId, before: shot, after: null },
+        },
+      };
+    }),
   setAfter: (threadKey, turnId, shot) =>
     set((state) => {
       const current = state.byThreadKey[threadKey];
