@@ -15,6 +15,7 @@ import type {
 import { getTerminalLabel } from "@t3tools/shared/terminalLabels";
 import {
   Bot,
+  Images,
   Smartphone,
   ChevronDown,
   ChevronLeft,
@@ -125,6 +126,7 @@ interface RightPanelTabsProps {
   onAddPullRequest: () => void;
   onAddPullRequests: () => void;
   onAddAgents: () => void;
+  onAddGallery?: () => void;
   onAddDevice: () => void;
   browserAvailable: boolean;
   terminalAvailable: boolean;
@@ -133,6 +135,7 @@ interface RightPanelTabsProps {
   pullRequestAvailable: boolean;
   pullRequestsAvailable: boolean;
   agentsAvailable: boolean;
+  galleryAvailable?: boolean;
   deviceAvailable: boolean;
   pullRequestStatusSeeds?: Readonly<Record<string, PullRequestTabStatusSeed>>;
   /** Running + waiting subagents; badges the Agents card in the empty state. */
@@ -164,6 +167,7 @@ const SURFACE_DISABLED_REASONS = {
   pullRequest: t("This thread's branch has no pull request yet."),
   pullRequests: t("No linked pull requests are available for this thread."),
   agents: t("Agents are only available from a thread."),
+  gallery: t("The gallery is only available from a thread."),
   device: t("Devices are only available from a thread."),
 } as const;
 
@@ -188,6 +192,7 @@ const SURFACE_UNAVAILABLE_HINTS = {
   pullRequest: t("No pull request on this branch yet."),
   pullRequests: t("No linked pull requests available."),
   agents: t("Available from a thread."),
+  gallery: t("Available from a thread."),
   device: t("Available from a thread."),
 } as const;
 
@@ -198,6 +203,7 @@ const SURFACE_ACTION_LABELS: Readonly<Record<string, string>> = {
   "Pull request": gitTermLabel("pr"),
   "Linked pull requests": t("Linked pull requests"),
   Agents: t("Agents"),
+  Gallery: t("Gallery"),
   Device: t("Device"),
 };
 
@@ -355,6 +361,7 @@ function RightPanelEmptyState(props: {
   onAddPullRequest: () => void;
   onAddPullRequests: () => void;
   onAddAgents: () => void;
+  onAddGallery?: () => void;
   onAddDevice: () => void;
   browserAvailable: boolean;
   terminalAvailable: boolean;
@@ -363,6 +370,7 @@ function RightPanelEmptyState(props: {
   pullRequestAvailable: boolean;
   pullRequestsAvailable: boolean;
   agentsAvailable: boolean;
+  galleryAvailable?: boolean;
   deviceAvailable: boolean;
   liveAgentCount: number;
 }) {
@@ -432,6 +440,15 @@ function RightPanelEmptyState(props: {
       disabledReason: SURFACE_UNAVAILABLE_HINTS.agents,
       onClick: props.onAddAgents,
       badgeCount: props.liveAgentCount,
+    },
+    {
+      label: "Gallery",
+      icon: Images,
+      shortcut: "G",
+      available: Boolean(props.galleryAvailable && props.onAddGallery),
+      disabledReason: SURFACE_UNAVAILABLE_HINTS.gallery,
+      onClick: () => props.onAddGallery?.(),
+      badgeCount: 0,
     },
     {
       label: "Device",
@@ -664,6 +681,8 @@ function surfaceTitle(
       return `${tc("git term", "Review requests")} · ${gitTermTechnical("pr")}s`;
     case "agents":
       return t("Agents");
+    case "gallery":
+      return t("Gallery");
     case "device":
       return surface.title ?? surface.target?.name ?? t("Device");
     case "preview": {
@@ -749,6 +768,8 @@ function SurfaceIcon({
       return <PullRequestGlyph.link className="size-3 shrink-0" />;
     case "agents":
       return <Bot className="size-3 shrink-0" />;
+    case "gallery":
+      return <Images className="size-3 shrink-0" />;
     case "device":
       return surface.target?.platform === "ios" ? (
         <AppleIcon className="size-3 shrink-0" />
@@ -958,6 +979,14 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       available: props.agentsAvailable,
       disabledReason: SURFACE_DISABLED_REASONS.agents,
       onClick: props.onAddAgents,
+    },
+    {
+      label: "Gallery",
+      icon: Images,
+      shortcut: "G",
+      available: Boolean(props.galleryAvailable && props.onAddGallery),
+      disabledReason: SURFACE_DISABLED_REASONS.gallery,
+      onClick: () => props.onAddGallery?.(),
     },
     {
       label: "Device",
@@ -1458,6 +1487,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
             onAddPullRequest={props.onAddPullRequest}
             onAddPullRequests={props.onAddPullRequests}
             onAddAgents={props.onAddAgents}
+            {...(props.onAddGallery ? { onAddGallery: props.onAddGallery } : {})}
             onAddDevice={props.onAddDevice}
             browserAvailable={props.browserAvailable}
             terminalAvailable={props.terminalAvailable}
@@ -1466,6 +1496,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
             pullRequestAvailable={props.pullRequestAvailable}
             pullRequestsAvailable={props.pullRequestsAvailable}
             agentsAvailable={props.agentsAvailable}
+            galleryAvailable={props.galleryAvailable ?? false}
             deviceAvailable={props.deviceAvailable}
             liveAgentCount={props.liveAgentCount}
           />

@@ -20,6 +20,7 @@ import { AppSidebarLayout } from "../components/AppSidebarLayout";
 import { CommandPalette } from "../components/CommandPalette";
 import { CustomSnoozeDialogHost } from "../components/CustomSnoozeDialog";
 import { ShortcutSheetDialogHost } from "../components/ShortcutSheetDialog";
+import { NewProjectAssistantHost } from "../components/newProject/NewProjectAssistant";
 import { ConfirmDialogHost } from "../components/ConfirmDialogHost";
 import { FirstRunGate } from "../components/onboarding/FirstRunGate";
 import { ConnectOnboardingDialog } from "../components/cloud/ConnectOnboardingDialog";
@@ -186,6 +187,7 @@ function RootRouteView() {
           <ProviderAuthCallbackCoordinator />
           <CustomSnoozeDialogHost />
           <ShortcutSheetDialogHost />
+          <NewProjectAssistantHost />
           <CommandPalette>
             <AppSidebarLayout>
               <Outlet />
@@ -244,6 +246,7 @@ function RootRouteView() {
           <ConfirmDialogHost />
           <CustomSnoozeDialogHost />
           <ShortcutSheetDialogHost />
+          <NewProjectAssistantHost />
           <SlowRpcRequestToastCoordinator />
           <ProjectCloneToastCoordinator />
           <HostedStaticEnvironmentBootstrap />

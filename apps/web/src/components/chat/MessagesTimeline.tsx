@@ -137,6 +137,7 @@ import {
   WrenchIcon,
   XIcon,
   ZapIcon,
+  TableIcon,
 } from "lucide-react";
 import type {
   ComposerContextId,
@@ -171,6 +172,7 @@ import {
   timelineContentOverflowsViewport,
 } from "./timelineScrollAnchoring";
 import { MessageCopyButton } from "./MessageCopyButton";
+import { BadAnswerRuleButton } from "./BadAnswerRuleButton";
 import { PierreEntryIcon } from "./PierreEntryIcon";
 import { inferEntryKindFromPath } from "../../pierre-icons";
 import { AssistantSelectionToolbar } from "./AssistantSelectionToolbar";
@@ -259,6 +261,8 @@ import { formatChatTimestampTooltip, formatDayAwareTimestamp } from "../../times
 import { SkillChipIcon, SkillInlineText } from "./SkillInlineText";
 import { deriveAgentSpawnSummary } from "./agentSpawnSummary";
 import { ReviewFindingsList } from "./ReviewFindingsList";
+import { parseQueryResultTable } from "./queryResultTable";
+import { QueryResultTableView } from "./QueryResultTableView";
 import { subagentRoleLabel } from "./subagentRole.logic";
 import { formatWorkspaceRelativePath } from "../../filePathDisplay";
 import {
@@ -2528,6 +2532,12 @@ function AssistantMessageMeta({
         showCopyButton={showCopyButton}
         streaming={copyStreaming}
       />
+      {!message.streaming && message.text ? (
+        <BadAnswerRuleButton
+          environmentId={ctx.activeThreadEnvironmentId}
+          answerText={message.text}
+        />
+      ) : null}
       {!message.streaming && (
         <Tooltip>
           <TooltipTrigger render={<p className="text-muted-foreground text-xs tabular-nums" />}>
@@ -4953,6 +4963,11 @@ const PlainWorkEntryRow = memo(function PlainWorkEntryRow(props: {
     ? getQuestionAnswerPreview(workEntry.questionAnswer)
     : null;
   const viewedImagePath = workEntryViewedImagePath(workEntry);
+  const queryTable = useMemo(
+    () =>
+      workEntry.itemType === "mcp_tool_call" ? parseQueryResultTable(workEntry.toolData) : null,
+    [workEntry.itemType, workEntry.toolData],
+  );
   const viewedImage =
     viewedImagePath && threadRef
       ? resolveViewedImageAsset(viewedImagePath, {
@@ -5071,6 +5086,12 @@ const PlainWorkEntryRow = memo(function PlainWorkEntryRow(props: {
                   {answerPreview}
                 </span>
               ) : null}
+              {queryTable && !expanded ? (
+                <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
+                  <TableIcon aria-hidden className="size-3" />
+                  {t("{rows} rows", { rows: queryTable.rows.length })}
+                </span>
+              ) : null}
             </p>
           </div>
           {showFailedIndicator &&
@@ -5115,7 +5136,15 @@ const PlainWorkEntryRow = memo(function PlainWorkEntryRow(props: {
       {expanded && workEntry.questionAnswer ? (
         <QuestionAnswerHistory answer={workEntry.questionAnswer} />
       ) : null}
-      {expanded && canExpand && expandedBody && !workEntry.questionAnswer ? (
+      {expanded && queryTable ? (
+        <div
+          className="mt-1 ms-7 cursor-default"
+          onClick={stopRowToggle}
+          onPointerDown={stopRowToggle}
+        >
+          <QueryResultTableView table={queryTable} />
+        </div>
+      ) : expanded && canExpand && expandedBody && !workEntry.questionAnswer ? (
         <div
           className="mt-1 ms-7 cursor-default rounded-md bg-muted/40 px-3 py-2"
           onClick={stopRowToggle}

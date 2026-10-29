@@ -127,7 +127,15 @@ export function resolveUsageLimitsAfterProbe(input: {
   readonly probed: ServerProviderUsageLimits | undefined;
 }): ServerProviderUsageLimits | undefined {
   const { published, probed } = input;
-  if (probed?.unavailable?.reason === "probeFailed" && published && !published.unavailable) {
+  if (!published || published.unavailable) {
+    return probed;
+  }
+  if (probed?.unavailable?.reason === "probeFailed") {
+    return published;
+  }
+  // A probe that read no numbers yet (Claude on Team before any turn) must not
+  // wipe the windows a turn already reported.
+  if (probed && !probed.unavailable && probed.windows.length === 0) {
     return published;
   }
   return probed;

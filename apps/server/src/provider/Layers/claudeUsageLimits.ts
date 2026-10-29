@@ -159,9 +159,17 @@ export function claudeUsageResponseToLimits(input: {
   readonly checkedAt: string;
 }): { readonly limits: ServerProviderUsageLimits; readonly names: ClaudeScopedLimitNames } {
   const { response, checkedAt } = input;
-  if (!response.rate_limits_available || !response.rate_limits) {
+  if (!response.rate_limits_available) {
     return {
       limits: makeUnavailableUsageLimits({ checkedAt, reason: "unsupported" }),
+      names: { overageIncluded: undefined },
+    };
+  }
+  // Subscriptions such as Team report limits as available but return no
+  // numbers until the CLI has seen a response; stay open for turn events.
+  if (!response.rate_limits) {
+    return {
+      limits: makeUsageLimits({ checkedAt, windows: [] }),
       names: { overageIncluded: undefined },
     };
   }

@@ -86,4 +86,13 @@ describe("resolveUsageLimitsAfterProbe", () => {
     expect(resolveUsageLimitsAfterProbe({ published, probed: unsupported })).toBe(unsupported);
     expect(resolveUsageLimitsAfterProbe({ published: undefined, probed: failed })).toBe(failed);
   });
+
+  it("keeps turn-reported windows when the probe read no numbers yet", () => {
+    const empty = { checkedAt, windows: [] };
+    expect(resolveUsageLimitsAfterProbe({ published, probed: empty })).toBe(published);
+    expect(resolveUsageLimitsAfterProbe({ published: undefined, probed: empty })).toBe(empty);
+    expect(
+      applyUsageLimitsUpdate({ previous: empty, checkedAt, update: { windows: [session] } }),
+    ).toEqual({ checkedAt, windows: [session] });
+  });
 });
