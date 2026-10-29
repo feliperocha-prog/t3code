@@ -53,6 +53,7 @@ import {
   MoonIcon,
   PaletteIcon,
   SettingsIcon,
+  SparklesIcon,
   SquarePenIcon,
   SunIcon,
   TextSearchIcon,
@@ -166,6 +167,7 @@ import { AzureDevOpsIcon, BitbucketIcon, GitHubIcon, GitLabIcon, ForgejoIcon } f
 import { EnvironmentMachineIcon } from "./EnvironmentMachineIcon";
 import { ProjectFavicon } from "./ProjectFavicon";
 import { ProjectFilePicker } from "./files/ProjectFilePicker";
+import { openNewProjectAssistant } from "./newProject/NewProjectAssistant";
 import { openLinkPullRequestDialog } from "./pullRequest/LinkPullRequestDialog";
 import { ProjectContentSearchDialog } from "./search/ProjectContentSearchDialog";
 import { toggleThemeEditorForTheme } from "./settings/themeEditorStore";
@@ -1517,6 +1519,27 @@ function OpenCommandPaletteDialog(props: {
       const sourceItems: Array<CommandPaletteActionItem | CommandPaletteSubmenuItem> = [
         {
           kind: "action",
+          value: `action:add-project:${environmentId}:scratch`,
+          searchTerms: [
+            "new",
+            "scratch",
+            "create",
+            "empty",
+            "do zero",
+            "criar",
+            "moon",
+            "minimal",
+            "hoomy",
+          ],
+          title: t("From scratch"),
+          description: t("New folder with git, README and the Moon rules"),
+          icon: <SparklesIcon className={ITEM_ICON_CLASS} />,
+          run: async () => {
+            openNewProjectAssistant(environmentId);
+          },
+        },
+        {
+          kind: "action",
           value: `action:add-project:${environmentId}:local`,
           searchTerms: ["local", "folder", "directory", "browse"],
           title: t("Local folder"),
@@ -1871,6 +1894,33 @@ function OpenCommandPaletteDialog(props: {
     shortcutCommand: "projectSearch.toggle",
     run: async () => {
       openOverlayMode("content");
+    },
+  });
+
+  actionItems.push({
+    kind: "action",
+    value: "action:new-project-from-scratch",
+    searchTerms: [
+      "new project",
+      "create project",
+      "scratch",
+      "novo projeto",
+      "criar projeto do zero",
+      "moon",
+      "minimal",
+      "hoomy",
+    ],
+    title: t("New project from scratch"),
+    icon: <SparklesIcon className={ITEM_ICON_CLASS} />,
+    // With one environment there is nothing to pick; otherwise the add-project
+    // flow asks which one and lists "From scratch" there.
+    keepOpen: defaultAddProjectEnvironmentId === null || addProjectEnvironmentOptions.length > 1,
+    run: async () => {
+      if (defaultAddProjectEnvironmentId === null || addProjectEnvironmentOptions.length > 1) {
+        openAddProjectFlow();
+        return;
+      }
+      openNewProjectAssistant(defaultAddProjectEnvironmentId);
     },
   });
 
