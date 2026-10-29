@@ -68,17 +68,28 @@ export function galleryPathsInText(text: string): string[] {
   return found;
 }
 
-const dedupeKey = (path: string) =>
+const normalizePath = (path: string) =>
   path
     .replaceAll("\\", "/")
     .replace(/^\.\//, "")
     .replace(/^[A-Z]:/, (drive) => drive.toLowerCase());
+
+/** Same key for `C:\repo\a.png` and the checkpoint's `a.png` when the repo is the workspace. */
+function dedupeKey(path: string, workspaceRoot: string | undefined): string {
+  const normalized = normalizePath(path);
+  if (!workspaceRoot) return normalized;
+  const root = normalizePath(workspaceRoot).replace(/\/+$/, "") + "/";
+  return normalized.toLowerCase().startsWith(root.toLowerCase())
+    ? normalized.slice(root.length)
+    : normalized;
+}
 
 /**
  * Every image and HTML page a thread produced or pointed at, newest first.
  * Files a turn changed win over mere mentions of the same path.
  */
 export function collectGalleryItems(input: {
+  readonly workspaceRoot?: string | undefined;
   readonly messages: ReadonlyArray<{
     readonly role: string;
     readonly text: string;
@@ -117,7 +128,7 @@ export function collectGalleryItems(input: {
   );
   const byKey = new Map<string, GalleryItem>();
   for (const candidate of candidates) {
-    const key = dedupeKey(candidate.path);
+    const key = dedupeKey(candidate.path, input.workspaceRoot);
     const existing = byKey.get(key);
     if (!existing) {
       byKey.set(key, candidate);

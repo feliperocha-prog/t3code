@@ -50,8 +50,8 @@ export function GalleryPanel({
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const allItems = useMemo(
-    () => collectGalleryItems({ messages, checkpoints }).slice(0, MAX_ITEMS),
-    [messages, checkpoints],
+    () => collectGalleryItems({ workspaceRoot, messages, checkpoints }).slice(0, MAX_ITEMS),
+    [workspaceRoot, messages, checkpoints],
   );
   const items = filter === "all" ? allItems : allItems.filter((item) => item.kind === filter);
   // Streaming answers rebuild the item list on every token; key the URL

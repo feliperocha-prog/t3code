@@ -249,6 +249,32 @@ describe("projectActivityPayload", () => {
     expect(JSON.stringify(projected.payload).length).toBeLessThan(500);
   });
 
+  it("keeps small BigQuery results whole so the client can draw the table", () => {
+    const rows = JSON.stringify([{ marca: "Minimal", receita: "12345.67" }], null, 2);
+    const text = `${rows}
+
+-- 0.00 GB cobrados`;
+    const bigquery = (body: string) =>
+      (
+        projectActivityPayload(
+          activity({
+            itemType: "mcp_tool_call",
+            data: {
+              toolName: "mcp__bigquery__bq_query",
+              input: { query: "SELECT 1" },
+              result: { type: "tool_result", content: [{ type: "text", text: body }] },
+            },
+          }),
+        ).payload as Record<string, unknown>
+      ).data as Record<string, unknown>;
+
+    expect(bigquery(text).result).toEqual({ content: text });
+    expect(
+      bigquery(`[
+${"x".repeat(70 * 1024)}`).result,
+    ).toEqual({ content: "[" });
+  });
+
   it.each([
     {
       item: {

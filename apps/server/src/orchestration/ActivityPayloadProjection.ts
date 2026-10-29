@@ -233,11 +233,27 @@ function extractMcpResultText(result: unknown): string | null {
   return null;
 }
 
-function summarizeMcpResult(result: unknown): Record<string, unknown> | undefined {
+// BigQuery results render as a table in the work log, so they cross the wire
+// whole while small; anything bigger falls back to the one-line summary.
+const QUERY_RESULT_TOOL = /bigquery|(?:^|_)bq_|execute_sql|get_query_results/i;
+const MAX_QUERY_RESULT_CHARS = 64 * 1024;
+
+function summarizeMcpResult(
+  result: unknown,
+  toolName?: string,
+): Record<string, unknown> | undefined {
   if (result === undefined || result === null) {
     return undefined;
   }
   const text = extractMcpResultText(result);
+  if (
+    text &&
+    toolName &&
+    text.length <= MAX_QUERY_RESULT_CHARS &&
+    QUERY_RESULT_TOOL.test(toolName)
+  ) {
+    return { content: text };
+  }
   const summary = text ? summarizeToolTextOutput(text) : null;
   return summary ? { content: summary } : undefined;
 }
@@ -323,7 +339,7 @@ function projectMcpToolCallData(data: Record<string, unknown>): Record<string, u
         projectedItem[key] = item[key];
       }
     }
-    const result = summarizeMcpResult(item.result);
+    const result = summarizeMcpResult(item.result, `${item.server} ${item.tool}`);
     if (result) {
       projectedItem.result = result;
     }
@@ -337,7 +353,8 @@ function projectMcpToolCallData(data: Record<string, unknown>): Record<string, u
     projectedData.input = data.input;
   }
   if (!item) {
-    const result = summarizeMcpResult(data.result);
+    const toolName = typeof data.toolName === "string" ? data.toolName : undefined;
+    const result = summarizeMcpResult(data.result, toolName);
     if (result) {
       projectedData.result = result;
     }

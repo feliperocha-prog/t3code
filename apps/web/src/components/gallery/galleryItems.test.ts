@@ -65,4 +65,24 @@ describe("collectGalleryItems", () => {
       ["prints/antes.png", "image", "mentioned"],
     ]);
   });
+
+  it("merges an absolute mention with the checkpoint's workspace-relative path", () => {
+    const items = collectGalleryItems({
+      workspaceRoot: "C:\\Users\\felip\\repo",
+      messages: [
+        {
+          role: "assistant",
+          text: "Criei `C:\\Users\\felip\\repo\\prova.svg`",
+          createdAt: "2026-10-28T10:05:00.000Z",
+        },
+      ],
+      checkpoints: [
+        {
+          completedAt: "2026-10-28T10:05:01.000Z",
+          files: [{ path: "prova.svg", kind: "added" }],
+        },
+      ],
+    });
+    expect(items.map((item) => [item.path, item.source])).toEqual([["prova.svg", "changed"]]);
+  });
 });
