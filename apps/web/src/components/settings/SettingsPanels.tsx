@@ -174,6 +174,7 @@ import {
   useSettingsSearchTargetId,
 } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
+import { BehaviorRulesSettings } from "./BehaviorRulesSettings";
 import { ProjectFavicon } from "../ProjectFavicon";
 import { PanelAnimationsPreview } from "./PanelAnimationsPreview";
 
@@ -3373,6 +3374,8 @@ export function GeneralSettingsPanel() {
           />
         ) : null}
       </SettingsSection>
+
+      <BehaviorRulesSettings />
 
       <SettingsSection id="text-generation" title={t("Text generation")}>
         <SettingsRow

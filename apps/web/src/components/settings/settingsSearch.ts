@@ -691,6 +691,16 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
   },
   {
+    id: "behavior-rules",
+    title: t("Agent rules"),
+    to: "/settings/general",
+    searchTerms: [
+      "standing instructions always follow this was bad feedback",
+      "Agent rules",
+      "regras sempre seguir instruções isso foi ruim liga desliga",
+    ],
+  },
+  {
     id: "quit-confirmation",
     title: t("Quit shortcut"),
     to: "/settings/general",

@@ -1150,6 +1150,17 @@ export const StorageCleanupSettings = Schema.Struct({
 });
 export type StorageCleanupSettings = typeof StorageCleanupSettings.Type;
 
+/**
+ * A standing instruction the user keeps for every agent turn. Disabled rules
+ * stay in the list so they can be switched back on.
+ */
+export const BehaviorRule = Schema.Struct({
+  id: TrimmedNonEmptyString,
+  text: TrimmedNonEmptyString,
+  enabled: Schema.Boolean,
+});
+export type BehaviorRule = typeof BehaviorRule.Type;
+
 export const ServerSettings = Schema.Struct({
   worktreeCleanup: WorktreeCleanup.pipe(Schema.withDecodingDefault(Effect.succeed(null))),
   storageCleanup: StorageCleanupSettings.pipe(
@@ -1198,6 +1209,9 @@ export const ServerSettings = Schema.Struct({
   defaultRuntimeMode: RuntimeMode.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_RUNTIME_MODE)),
   ),
+  // Server-side for the same reason as `enableAgentBrowserAccess`: the turn
+  // text is built here, and every client attached must send the same rules.
+  behaviorRules: Schema.Array(BehaviorRule).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
   /**
    * Per-project overrides of the keys in `PROJECT_SCOPED_SERVER_SETTING_KEYS`.
    * The source of truth for project settings; `projectAgentBrowserAccessOverrides`,
@@ -1558,6 +1572,7 @@ export const ServerSettingsPatch = Schema.Struct({
     Schema.Record(ProjectId, Schema.NullOr(Schema.Boolean)),
   ),
   defaultModelSelection: Schema.optionalKey(Schema.NullOr(ModelSelection)),
+  behaviorRules: Schema.optionalKey(Schema.Array(BehaviorRule)),
   defaultRuntimeMode: Schema.optionalKey(RuntimeMode),
   /**
    * Per-project entry replacement: each entry replaces that project's whole
