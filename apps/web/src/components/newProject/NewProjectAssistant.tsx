@@ -142,6 +142,16 @@ function NewProjectAssistant({
     }
     const separator = parentPath.includes("\\") ? "\\" : "/";
     const root = `${parentPath.replace(/[\\/]+$/, "")}${separator}${slug}`;
+    // The listing skips junctions and symlinks; browsing into the path itself
+    // still succeeds for them, and writing the starter files would overwrite.
+    const inside = await browse({ environmentId, input: { partialPath: `${root}${separator}` } });
+    if (inside._tag === "Success") {
+      setStep(null);
+      setError(
+        t("{folder} already has a folder named {name}.", { folder: parentPath, name: slug }),
+      );
+      return;
+    }
 
     setStep(t("Creating the project…"));
     const projectId = newProjectId();

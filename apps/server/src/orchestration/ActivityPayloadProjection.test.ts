@@ -271,7 +271,7 @@ describe("projectActivityPayload", () => {
     expect(bigquery(text).result).toEqual({ content: text });
     expect(
       bigquery(`[
-${"x".repeat(70 * 1024)}`).result,
+${"x".repeat(30 * 1024)}`).result,
     ).toEqual({ content: "[" });
   });
 

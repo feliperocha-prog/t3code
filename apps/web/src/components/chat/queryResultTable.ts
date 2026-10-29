@@ -8,8 +8,9 @@ export interface QueryResultTable {
 }
 
 // Local `bq_query` servers, Google's BigQuery MCP (`execute_sql_readonly`,
-// `get_query_results`) and anything else that names BigQuery.
-const BIGQUERY_TOOL = /bigquery|(?:^|_)bq_|execute_sql|get_query_results/i;
+// `get_query_results`) and anything else that names BigQuery. Codex joins
+// server and tool with a space.
+const BIGQUERY_TOOL = /bigquery|(?:^|[_\s])bq_|execute_sql_readonly|get_query_results/i;
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   typeof value === "object" && value !== null && !Array.isArray(value)

@@ -56,6 +56,11 @@ describe("parseQueryResultTable", () => {
     );
     expect(parseQueryResultTable(bqQuery("Erro: tabela não existe"))).toBe(null);
     expect(parseQueryResultTable(bqQuery('["a","b"]'))).toBe(null);
+    expect(parseQueryResultTable(bqQuery('[{"a":1}]', "mcp__postgres__execute_sql"))).toBe(null);
+  });
+
+  it("matches Codex's '<server> <tool>' name", () => {
+    expect(parseQueryResultTable(bqQuery('[{"a":1}]', "minimal bq_query"))?.rows).toEqual([["1"]]);
   });
 });
 

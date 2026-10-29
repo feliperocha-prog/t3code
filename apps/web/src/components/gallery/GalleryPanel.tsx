@@ -1,4 +1,4 @@
-import type { AssetResource, EnvironmentId, ScopedThreadRef } from "@t3tools/contracts";
+import type { AssetResource, ScopedThreadRef } from "@t3tools/contracts";
 import { ExternalLinkIcon, FileCodeIcon, ImageOffIcon, ImagesIcon } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 

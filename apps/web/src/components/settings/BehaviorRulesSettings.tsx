@@ -26,6 +26,26 @@ export function addBehaviorRule(
   return [{ id, text: trimmed, enabled: true }, ...rules];
 }
 
+const sameRules = (left: ReadonlyArray<BehaviorRule>, right: ReadonlyArray<BehaviorRule>) =>
+  JSON.stringify(left) === JSON.stringify(right);
+
+/**
+ * The lists sent since `base` that the server has not echoed yet. An echo of
+ * one of them settles it and every earlier one; any other server list means
+ * someone else changed the rules, and that wins.
+ */
+export function behaviorRulesInFlight(
+  sent: {
+    readonly base: ReadonlyArray<BehaviorRule>;
+    readonly lists: ReadonlyArray<ReadonlyArray<BehaviorRule>>;
+  },
+  saved: ReadonlyArray<BehaviorRule>,
+): ReadonlyArray<ReadonlyArray<BehaviorRule>> {
+  if (saved === sent.base) return sent.lists;
+  const echoed = sent.lists.findLastIndex((list) => sameRules(list, saved));
+  return echoed === -1 ? [] : sent.lists.slice(echoed + 1);
+}
+
 /**
  * Standing rules sent with every turn while switched on. Switching one off
  * keeps it in the list; the trash button is the way to drop it for good.
@@ -34,16 +54,17 @@ export function BehaviorRulesSettings() {
   const savedRules = useScopedSettings((settings) => settings.behaviorRules);
   const updateSettings = useUpdateScopedSettings();
   const [draft, setDraft] = useState("");
-  // Server settings only change after the round trip, so a second click before
-  // it lands would rebuild the list from the stale copy and drop the first edit.
-  // Show and build on the last list we sent until the server echoes a new one.
-  const [pending, setPending] = useState<{
+  // Server settings only change after the round trip, so a click before it
+  // lands would rebuild the list from a stale copy and drop an edit. Every list
+  // we sent stays in flight until the server echoes it (or a later one).
+  const [sent, setSent] = useState<{
     base: ReadonlyArray<BehaviorRule>;
-    rules: ReadonlyArray<BehaviorRule>;
-  } | null>(null);
-  const rules = pending?.base === savedRules ? pending.rules : savedRules;
+    lists: ReadonlyArray<ReadonlyArray<BehaviorRule>>;
+  }>({ base: savedRules, lists: [] });
+  const inFlight = behaviorRulesInFlight(sent, savedRules);
+  const rules = inFlight.at(-1) ?? savedRules;
   const setRules = (behaviorRules: ReadonlyArray<BehaviorRule>) => {
-    setPending({ base: savedRules, rules: behaviorRules });
+    setSent({ base: savedRules, lists: [...inFlight, behaviorRules] });
     updateSettings({ behaviorRules });
   };
   const submit = () => {

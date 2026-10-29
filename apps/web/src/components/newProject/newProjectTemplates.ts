@@ -144,7 +144,7 @@ ${answers.purpose.trim()}
 
 Dono: ${singleLine(answers.owner)}. Marca: ${brand.label}.
 
-Regras do padrão Moon Ventures pra sistema feito com IA. Dúvida → **B.Ops** (Guilherme, Tcharlles, Juan, Bernardo).
+Regras pra sistema feito com IA na Moon. Dúvida → **B.Ops** (Guilherme, Tcharlles, Juan, Bernardo). Doutrina no Solar System.
 
 ## Contexto
 **Moon Ventures** (Grupo Minimal): holding DTC das marcas **Minimal Club** e **Hoomy**. Sistema é da empresa, não do autor.

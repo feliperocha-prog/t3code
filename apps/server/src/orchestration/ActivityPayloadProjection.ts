@@ -234,9 +234,11 @@ function extractMcpResultText(result: unknown): string | null {
 }
 
 // BigQuery results render as a table in the work log, so they cross the wire
-// whole while small; anything bigger falls back to the one-line summary.
-const QUERY_RESULT_TOOL = /bigquery|(?:^|_)bq_|execute_sql|get_query_results/i;
-const MAX_QUERY_RESULT_CHARS = 64 * 1024;
+// whole while small; anything bigger falls back to the one-line summary. Every
+// thread snapshot carries them, so the cap stays near a hundred-row answer.
+// Codex names a tool "<server> <tool>", hence the space before `bq_`.
+const QUERY_RESULT_TOOL = /bigquery|(?:^|[_\s])bq_|execute_sql_readonly|get_query_results/i;
+const MAX_QUERY_RESULT_CHARS = 24 * 1024;
 
 function summarizeMcpResult(
   result: unknown,

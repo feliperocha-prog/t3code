@@ -84,6 +84,18 @@ function dedupeKey(path: string, workspaceRoot: string | undefined): string {
     : normalized;
 }
 
+// A streaming answer replaces only its own message object, so the finished
+// ones keep their scan instead of rerunning the regexes on every token.
+const pathsByMessage = new WeakMap<object, ReadonlyArray<string>>();
+
+function pathsInMessage(message: { readonly text: string }): ReadonlyArray<string> {
+  const cached = pathsByMessage.get(message);
+  if (cached) return cached;
+  const paths = [...galleryPathsInText(message.text)];
+  pathsByMessage.set(message, paths);
+  return paths;
+}
+
 /**
  * Every image and HTML page a thread produced or pointed at, newest first.
  * Files a turn changed win over mere mentions of the same path.
@@ -110,7 +122,7 @@ export function collectGalleryItems(input: {
   }
   for (const message of input.messages) {
     if (message.role !== "assistant") continue;
-    for (const path of galleryPathsInText(message.text)) {
+    for (const path of pathsInMessage(message)) {
       const kind = galleryKindForPath(path);
       if (kind) candidates.push({ path, kind, source: "mentioned", at: message.createdAt });
     }
