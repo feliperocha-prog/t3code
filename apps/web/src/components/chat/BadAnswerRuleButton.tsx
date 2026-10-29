@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 
 import { useEnvironmentSettings, useUpdateEnvironmentSettings } from "~/hooks/useSettings";
 import { t } from "~/i18n";
+import { randomUUID } from "~/lib/utils";
 import { addBehaviorRule } from "../settings/BehaviorRulesSettings";
 import { Button } from "../ui/button";
 import {
@@ -52,7 +53,7 @@ export function BadAnswerRuleButton({
       : answerText;
 
   const save = () => {
-    const next = addBehaviorRule(rules, draft, crypto.randomUUID());
+    const next = addBehaviorRule(rules, draft, randomUUID());
     if (next !== rules) {
       updateSettings({ behaviorRules: next });
       toastManager.add({

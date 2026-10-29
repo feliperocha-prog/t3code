@@ -3,6 +3,7 @@ import { PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 
 import { t } from "~/i18n";
+import { randomUUID } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
@@ -46,7 +47,7 @@ export function BehaviorRulesSettings() {
     updateSettings({ behaviorRules });
   };
   const submit = () => {
-    const next = addBehaviorRule(rules, draft, crypto.randomUUID());
+    const next = addBehaviorRule(rules, draft, randomUUID());
     if (next !== rules) setRules(next);
     setDraft("");
   };
