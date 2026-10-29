@@ -111,6 +111,8 @@ transforma em cartão, botão e lista.
 
 Rotinas agendadas com último resultado e "rodar agora" · resultado de BigQuery vira tabela no app (só leitura) · galeria de imagens e HTML gerados · regras de comportamento como lista com liga/desliga e botão "isso foi ruim" · cópia separada automática por conversa · assistente de projeto novo no padrão Moon · preview embutido do site com antes × depois · tela dividida (Etapa 3 do plano antigo).
 
+**Decidido 28/10:** "padrão Moon" = regras do B.Ops (CLAUDE.md da organização). O assistente pergunta nome, pra que serve e marca, e cria **só a pasta no PC** já no padrão (README, proteção de .env, instruções da IA, identidade da marca, deploy no Google Cloud da empresa); não cria repositório no GitHub da empresa. Visual da Onda 6 segue o estilo atual, sem rodada de mockup (Felipe revisa no teste em lote).
+
 ## Regras de comportamento que não dependem do app
 
 Entram no `CLAUDE.md` global antes de qualquer instalação:
