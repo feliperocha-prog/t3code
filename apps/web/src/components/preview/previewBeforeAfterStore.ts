@@ -16,6 +16,7 @@ interface PreviewBeforeAfterState {
   byThreadKey: Record<string, PreviewBeforeAfterPair>;
   setBefore: (threadKey: string, turnId: string, shot: DesktopPreviewThumbnail) => void;
   setAfter: (threadKey: string, turnId: string, shot: DesktopPreviewThumbnail) => void;
+  clear: (threadKey: string) => void;
 }
 
 // Each pair holds two ~960px PNGs; older threads drop out past this count.
@@ -41,6 +42,12 @@ export const usePreviewBeforeAfterStore = create<PreviewBeforeAfterState>()((set
       // An "after" without its own "before" would compare unrelated turns.
       if (!current || current.turnId !== turnId) return state;
       return { byThreadKey: { ...state.byThreadKey, [threadKey]: { ...current, after: shot } } };
+    }),
+  clear: (threadKey) =>
+    set((state) => {
+      if (!(threadKey in state.byThreadKey)) return state;
+      const { [threadKey]: _cleared, ...others } = state.byThreadKey;
+      return { byThreadKey: others };
     }),
 }));
 

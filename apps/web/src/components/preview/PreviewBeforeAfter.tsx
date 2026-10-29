@@ -69,9 +69,15 @@ export function usePreviewBeforeAfterCapture(
       return;
     }
     setPendingAfter(null);
-    if (canCapture && runtimeTabId)
+    // A new turn makes the old pair stale; with no "before" possible (page
+    // hidden or failed) show nothing rather than the previous reply's pair.
+    if (canCapture && runtimeTabId) {
       void captureInto("before", threadKey, next.turnId, runtimeTabId);
+    } else {
+      usePreviewBeforeAfterStore.getState().clear(threadKey);
+    }
     // Only turn transitions decide; canCapture and the tab are read as they are now.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [running, threadKey, turnId]);
 
   useEffect(() => {

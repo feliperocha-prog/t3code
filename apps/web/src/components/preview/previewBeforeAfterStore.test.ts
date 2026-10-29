@@ -63,4 +63,11 @@ describe("usePreviewBeforeAfterStore", () => {
     store.setAfter("thread-a", "t1", shot("after"));
     expect(usePreviewBeforeAfterStore.getState().byThreadKey["thread-a"]?.after?.url).toBe("after");
   });
+
+  it("forgets a thread's pair when a new turn could not be photographed", () => {
+    const store = usePreviewBeforeAfterStore.getState();
+    store.setBefore("thread-b", "t1", shot("before"));
+    store.clear("thread-b");
+    expect(usePreviewBeforeAfterStore.getState().byThreadKey["thread-b"]).toBeUndefined();
+  });
 });
