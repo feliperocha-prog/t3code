@@ -95,6 +95,15 @@ describe("claudeUsageResponseToLimits", () => {
     ).toEqual({ checkedAt, windows: [], unavailable: { reason: "unsupported" } });
   });
 
+  it("keeps a Team account open for turn events when no numbers are cached yet", () => {
+    expect(
+      claudeUsageResponseToLimits({
+        checkedAt,
+        response: { rate_limits_available: true, rate_limits: null },
+      }).limits,
+    ).toEqual({ checkedAt, windows: [] });
+  });
+
   it("skips a window the endpoint reports without a utilization", () => {
     expect(
       claudeUsageResponseToLimits({

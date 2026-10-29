@@ -171,6 +171,8 @@ function apiProviderAuthMetadata(
 // account info. The previous 8s budget expired mid-init, so the probe returned
 // `undefined` and left the provider unverified and unselectable in the picker.
 const CAPABILITIES_PROBE_TIMEOUT_MS = 25_000;
+// The usage read can take several seconds on a cold CLI; it is optional, so it waits apart.
+const USAGE_PROBE_TIMEOUT_MS = 15_000;
 
 /**
  * Keep workspace-scoped command discovery intact while isolating the periodic
@@ -366,7 +368,7 @@ const probeClaudeCapabilities = (
         // Usage has its own deadline so a slow optional request cannot discard initialization.
         const usageResult = yield* Effect.tryPromise(() =>
           q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET(),
-        ).pipe(Effect.timeout(DEFAULT_TIMEOUT_MS), Effect.result);
+        ).pipe(Effect.timeout(USAGE_PROBE_TIMEOUT_MS), Effect.result);
         const usage = Result.isSuccess(usageResult)
           ? {
               rate_limits_available: usageResult.success.rate_limits_available,
