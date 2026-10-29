@@ -803,6 +803,21 @@ export const DesktopPreviewScreenshotArtifactSchema: Schema.Codec<DesktopPreview
     createdAt: Schema.String,
   });
 
+/** A small in-memory page snapshot, for UI that shows it directly (before/after). */
+export interface DesktopPreviewThumbnail {
+  tabId: string;
+  url: string;
+  dataUrl: string;
+  createdAt: string;
+}
+
+export const DesktopPreviewThumbnailSchema: Schema.Codec<DesktopPreviewThumbnail> = Schema.Struct({
+  tabId: DesktopPreviewTabIdSchema,
+  url: Schema.String,
+  dataUrl: Schema.String,
+  createdAt: Schema.String,
+});
+
 /**
  * Single stack frame captured by react-grab's `getElementContext`. We surface
  * the source file/line so coding agents can jump straight to the JSX that
@@ -1320,6 +1335,7 @@ export interface DesktopPreviewBridge {
   /** Cancel an in-flight preview annotation session. */
   cancelPickElement: (tabId: string) => Promise<void>;
   captureScreenshot: (tabId: string) => Promise<DesktopPreviewScreenshotArtifact>;
+  captureThumbnail: (tabId: string) => Promise<DesktopPreviewThumbnail>;
   revealArtifact: (path: string) => Promise<void>;
   copyArtifactToClipboard: (path: string) => Promise<void>;
   pictureInPicture: {
