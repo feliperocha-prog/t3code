@@ -28,6 +28,7 @@ import * as DesktopServerExposure from "../backend/DesktopServerExposure.ts";
 import * as DesktopAppSettings from "../settings/DesktopAppSettings.ts";
 import * as DesktopShellEnvironment from "../shell/DesktopShellEnvironment.ts";
 import * as DesktopState from "./DesktopState.ts";
+import { watchRoutinesLaunch } from "./DesktopRoutinesLaunch.ts";
 import * as DesktopRemoteUpdates from "../updates/DesktopRemoteUpdates.ts";
 import * as DesktopUpdates from "../updates/DesktopUpdates.ts";
 import * as DesktopSnapShot from "../snapShot/DesktopSnapShot.ts";
@@ -184,6 +185,12 @@ const bootstrap = Effect.gen(function* () {
 
   if (!settings.localEnvironmentEnabled) {
     yield* logBootstrapInfo("bootstrap skipping local environment (disabled in settings)");
+    if (yield* Ref.get(state.routinesOnly)) {
+      // Routines run on the local server; without it there is nothing to do.
+      const electronApp = yield* ElectronApp.ElectronApp;
+      yield* electronApp.quit;
+      return;
+    }
     if (!(yield* Ref.get(state.quitting))) {
       yield* desktopWindow.createMainIfBackendReady;
     }
@@ -240,11 +247,16 @@ const bootstrap = Effect.gen(function* () {
     // WSL" splash immediately so the app feels responsive instead of presenting
     // no window until WSL is ready. (Dual mode opens fast off the Windows
     // primary, so no splash there.)
-    if (settings.wslOnly === true && settings.wslBackendEnabled === true) {
+    const routinesOnly = yield* Ref.get(state.routinesOnly);
+    if (settings.wslOnly === true && settings.wslBackendEnabled === true && !routinesOnly) {
       yield* desktopWindow.showConnectingSplash;
     }
     yield* primaryBackend.start;
     yield* logBootstrapInfo("bootstrap backend start requested");
+    if (routinesOnly) {
+      yield* logBootstrapInfo("bootstrap opened for scheduled routines, no window");
+      yield* Effect.forkScoped(watchRoutinesLaunch);
+    }
     yield* appActivation.start.pipe(
       Effect.tap(() => logBootstrapInfo("desktop app control socket ready")),
       Effect.catch((error) => logStartupError("desktop app control socket unavailable", { error })),

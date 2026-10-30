@@ -2223,6 +2223,35 @@ describe("PreviewManager", () => {
     ),
   );
 
+  effectIt.effect("captures a downsized in-memory thumbnail without writing a file", () =>
+    withManager((manager) =>
+      Effect.gen(function* () {
+        const resized = { toDataURL: () => "data:image/png;base64,c21hbGw=" };
+        const resize = vi.fn(() => resized);
+        const capturePage = vi.fn(async () => ({
+          toJPEG: () => Buffer.from("unused"),
+          getSize: () => ({ width: 2560, height: 1440 }),
+          resize,
+          toDataURL: () => "data:image/png;base64,ZnVsbA==",
+        }));
+        fromId.mockReturnValue(makeTestPreviewWebContents(capturePage) as never);
+        writeFile.mockClear();
+
+        yield* manager.createTab("tab_1");
+        yield* manager.registerWebview("tab_1", 42);
+        const thumbnail = yield* manager.captureThumbnail("tab_1");
+
+        expect(resize).toHaveBeenCalledWith({ width: 960 });
+        expect(thumbnail).toMatchObject({
+          tabId: "tab_1",
+          url: "https://example.com",
+          dataUrl: "data:image/png;base64,c21hbGw=",
+        });
+        expect(writeFile).not.toHaveBeenCalled();
+      }),
+    ),
+  );
+
   effectIt.effect("keeps every recorded guest unthrottled until its frame capture stops", () =>
     withManager((manager) =>
       Effect.gen(function* () {

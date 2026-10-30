@@ -701,6 +701,16 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
   },
   {
+    id: "scheduled-routines",
+    title: t("Scheduled routines"),
+    to: "/settings/general",
+    searchTerms: [
+      "schedule cron recurring daily every hours run now automation",
+      "Scheduled routines",
+      "rotinas agendadas agendar horário todo dia a cada horas rodar agora automático",
+    ],
+  },
+  {
     id: "quit-confirmation",
     title: t("Quit shortcut"),
     to: "/settings/general",

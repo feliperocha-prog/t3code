@@ -271,7 +271,13 @@ import {
   ProviderConsumeResetCreditResult,
 } from "./providerUsageLimits.ts";
 import { UsagePricing, UsageReadError, UsageSummary, UsageSummaryInput } from "./usage.ts";
-import { ServerSettings, ServerSettingsError, ServerSettingsPatch } from "./settings.ts";
+import {
+  ServerRunScheduledRoutineInput,
+  ServerRunScheduledRoutineResult,
+  ServerSettings,
+  ServerSettingsError,
+  ServerSettingsPatch,
+} from "./settings.ts";
 import {
   ProjectCloneActionInput,
   ProjectCloneActionResult,
@@ -410,6 +416,7 @@ export const WS_METHODS = {
   serverGetBackgroundPolicy: "server.getBackgroundPolicy",
   serverGetUsageSummary: "server.getUsageSummary",
   serverRefreshUsageRates: "server.refreshUsageRates",
+  serverRunScheduledRoutine: "server.runScheduledRoutine",
 
   // Cloud environment methods
   cloudGetRelayClientStatus: "cloud.getRelayClientStatus",
@@ -703,6 +710,13 @@ const WsServerGetUsageSummaryRpc = Rpc.make(WS_METHODS.serverGetUsageSummary, {
 const WsServerRefreshUsageRatesRpc = Rpc.make(WS_METHODS.serverRefreshUsageRates, {
   payload: Schema.Struct({}),
   success: UsagePricing,
+  error: EnvironmentAuthorizationError,
+});
+
+/** Runs a scheduled routine now, in a new thread, outside its schedule. */
+const WsServerRunScheduledRoutineRpc = Rpc.make(WS_METHODS.serverRunScheduledRoutine, {
+  payload: ServerRunScheduledRoutineInput,
+  success: ServerRunScheduledRoutineResult,
   error: EnvironmentAuthorizationError,
 });
 
@@ -1496,6 +1510,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerRetryResourceTelemetryRpc,
   WsServerGetUsageSummaryRpc,
   WsServerRefreshUsageRatesRpc,
+  WsServerRunScheduledRoutineRpc,
   WsServerSignalProcessRpc,
   WsServerReportClientActivityRpc,
   WsServerReportHostPowerStateRpc,

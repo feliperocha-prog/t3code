@@ -23,6 +23,7 @@ import type {
   DesktopPreviewRecordingFrame,
   DesktopPreviewRecordingInputEvent,
   DesktopPreviewScreenshotArtifact,
+  DesktopPreviewThumbnail,
   DesktopPreviewTabDefaults,
   PreviewAutomationClickInput,
   PreviewAutomationActionEvent,
@@ -139,6 +140,7 @@ const MAX_INTERACTIVE_ELEMENTS = 200;
  */
 const MAX_INTERACTIVE_ELEMENT_NAME_LENGTH = 200;
 const MAX_SCREENSHOT_WIDTH = 1280;
+const THUMBNAIL_WIDTH = 960;
 /** How long an armed tab keeps the exclusive display-media slot before another tab may take it. */
 const RECORDING_ARM_GRACE_MS = 10_000;
 const PICTURE_IN_PICTURE_FRAME_INTERVAL_MS = Math.ceil(1_000 / 12);
@@ -2839,6 +2841,26 @@ const makeNativeOperations = Effect.fn("PreviewManager.makeOperations")(function
     );
   });
 
+  const captureThumbnail = Effect.fn("PreviewManager.captureThumbnail")(function* (tabId: string) {
+    const wc = yield* requireWebContents(tabId);
+    const [createdAt, image] = yield* Effect.all([
+      currentIso,
+      capturePageWithRetry(
+        {
+          operation: "captureThumbnail.capturePage",
+          tabId,
+          webContentsId: wc.id,
+        },
+        tabId,
+        wc,
+      ),
+    ]);
+    // Kept in renderer memory for the before/after compare, so stay small.
+    const width = image.getSize().width;
+    const scaled = width > THUMBNAIL_WIDTH ? image.resize({ width: THUMBNAIL_WIDTH }) : image;
+    return { tabId, url: wc.getURL(), dataUrl: scaled.toDataURL(), createdAt };
+  });
+
   const captureScreenshot = Effect.fn("PreviewManager.captureScreenshot")(function* (
     tabId: string,
   ) {
@@ -4618,6 +4640,7 @@ const makeNativeOperations = Effect.fn("PreviewManager.makeOperations")(function
     automationWaitFor,
     cancelPickElement,
     captureScreenshot,
+    captureThumbnail,
     closeTab,
     copyArtifactToClipboard,
     createTab,
@@ -5005,6 +5028,9 @@ export class PreviewManager extends Context.Service<
     readonly captureScreenshot: (
       tabId: string,
     ) => Effect.Effect<DesktopPreviewScreenshotArtifact, PreviewManagerError>;
+    readonly captureThumbnail: (
+      tabId: string,
+    ) => Effect.Effect<DesktopPreviewThumbnail, PreviewManagerError>;
     readonly revealArtifact: (path: string) => Effect.Effect<void, PreviewManagerError>;
     readonly copyArtifactToClipboard: (path: string) => Effect.Effect<void, PreviewManagerError>;
     readonly openPictureInPicture: (tabId: string) => Effect.Effect<void, PreviewManagerError>;
@@ -5131,6 +5157,7 @@ export const make = Effect.gen(function* PreviewManagerMake() {
     pickElement: operations.pickElement,
     cancelPickElement: operations.cancelPickElement,
     captureScreenshot: operations.captureScreenshot,
+    captureThumbnail: operations.captureThumbnail,
     revealArtifact: operations.revealArtifact,
     copyArtifactToClipboard: operations.copyArtifactToClipboard,
     openPictureInPicture: operations.openPictureInPicture,

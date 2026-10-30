@@ -38,6 +38,7 @@ import { ProviderAdapterRegistry } from "../src/provider/Services/ProviderAdapte
 import { makeProviderRegistryLayer } from "../src/provider/testUtils/providerRegistryMock.ts";
 import { ProviderSessionDirectoryLive } from "../src/provider/Layers/ProviderSessionDirectory.ts";
 import { ServerSettingsService } from "../src/serverSettings.ts";
+import { ScheduledRoutines } from "../src/scheduledRoutines.ts";
 import * as StorageCleanup from "../src/storageCleanup.ts";
 import { makeProviderServiceLive } from "../src/provider/Layers/ProviderService.ts";
 import { makeCodexAdapter } from "../src/provider/Layers/CodexAdapter.ts";
@@ -387,6 +388,13 @@ export const makeOrchestrationIntegrationHarness = (
         Layer.succeed(StorageCleanup.StorageCleanup, {
           start: () => Effect.void,
           drain: Effect.void,
+        }),
+      ),
+      Layer.provideMerge(
+        Layer.succeed(ScheduledRoutines, {
+          start: () => Effect.void,
+          runNow: () => Effect.succeed({ threadId: null, problem: "routine-missing" as const }),
+          isBusy: Effect.succeed(false),
         }),
       ),
       Layer.provideMerge(runtimeIngestionLayer),

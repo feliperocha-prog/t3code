@@ -13,6 +13,7 @@ import { type DesktopSnapShotEvent, DEFAULT_CLIENT_SETTINGS } from "@t3tools/con
 
 import * as DesktopAssets from "../app/DesktopAssets.ts";
 import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
+import * as DesktopState from "../app/DesktopState.ts";
 import { makeComponentLogger } from "../app/DesktopObservability.ts";
 import * as ElectronMenu from "../electron/ElectronMenu.ts";
 import { getDesktopUrl } from "../electron/ElectronProtocol.ts";
@@ -329,6 +330,7 @@ export const make = Effect.gen(function* () {
   // createMainIfBackendReady, which gates the post-readiness window
   // open in development and the macOS "activate without windows" path.
   const backendReadyRef = yield* Ref.make(false);
+  const desktopState = yield* DesktopState.DesktopState;
   // The transient "Connecting to WSL" splash window, tracked separately so it
   // is never mistaken for the real main window.
   const splashWindowRef = yield* Ref.make<Option.Option<Electron.BrowserWindow>>(Option.none());
@@ -844,6 +846,9 @@ export const make = Effect.gen(function* () {
   });
 
   const createMain = Effect.gen(function* () {
+    // Any real window means the user is here, so a hidden routines launch
+    // becomes a normal session.
+    yield* Ref.set(desktopState.routinesOnly, false);
     const window = yield* createWindow();
     yield* electronWindow.setMain(window);
     yield* logWindowInfo("main window created");
@@ -984,6 +989,7 @@ export const make = Effect.gen(function* () {
     handleBackendReady: Effect.fn("desktop.window.handleBackendReady")(function* (httpBaseUrl) {
       yield* Ref.set(backendReadyRef, true);
       yield* logWindowInfo("backend ready", { source: "http", url: httpBaseUrl.href });
+      if (yield* Ref.get(desktopState.routinesOnly)) return;
       yield* createMainIfBackendReady;
     }),
     handleBackendNotReady: Ref.set(backendReadyRef, false).pipe(

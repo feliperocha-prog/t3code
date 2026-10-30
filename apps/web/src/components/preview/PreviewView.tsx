@@ -44,6 +44,13 @@ import { useRightPanelStore } from "~/rightPanelStore";
 import { previewBridge } from "./previewBridge";
 import { subscribePreviewAction } from "./previewActionBus";
 import { openPreviewSession } from "./openPreviewSession";
+import {
+  PreviewBeforeAfterButton,
+  PreviewBeforeAfterView,
+  retakePreviewAfter,
+  usePreviewBeforeAfterCapture,
+  usePreviewBeforeAfterPair,
+} from "./PreviewBeforeAfter";
 import { PreviewChromeRow } from "./PreviewChromeRow";
 import { PreviewEmptyState } from "./PreviewEmptyState";
 import { PreviewMoreMenu } from "./PreviewMoreMenu";
@@ -173,6 +180,14 @@ export function PreviewView({
   const activeProfileName = previewProfileName(browserDefaults.profiles, activeProfileId);
   const panelRect = useBrowserSurfaceStore((state) =>
     runtimeTabId ? (state.byTabId[runtimeTabId]?.rect ?? null) : null,
+  );
+
+  const [compareOpen, setCompareOpen] = useState(false);
+  const beforeAfterPair = usePreviewBeforeAfterPair(threadRef);
+  usePreviewBeforeAfterCapture(
+    threadRef,
+    runtimeTabId,
+    Boolean(desktopOverlay?.hasWebContents) && !showEmptyState && !isUnreachable && !compareOpen,
   );
 
   const navUrl = navStatus._tag === "Success" ? navStatus.url : null;
@@ -762,19 +777,26 @@ export function PreviewView({
         }
         trailingActions={
           previewBridge ? (
-            <PreviewMoreMenu
-              environmentId={threadRef.environmentId}
-              profileId={activeProfileId}
-              profileName={activeProfileName}
-              tabId={runtimeTabId}
-              hasWebContents={desktopOverlay?.hasWebContents ?? false}
-              zoomFactor={desktopOverlay?.zoomFactor ?? 1}
-              colorScheme={desktopOverlay?.colorScheme ?? "system"}
-              deviceToolbarVisible={viewport._tag !== "fill"}
-              onToggleDeviceToolbar={handleToggleDeviceToolbar}
-              nativePictureInPicture={desktopOverlay?.pictureInPicture ?? false}
-              onNativePictureInPicture={handleNativePictureInPicture}
-            />
+            <>
+              <PreviewBeforeAfterButton
+                available={beforeAfterPair?.before != null}
+                active={compareOpen}
+                onToggle={() => setCompareOpen((open) => !open)}
+              />
+              <PreviewMoreMenu
+                environmentId={threadRef.environmentId}
+                profileId={activeProfileId}
+                profileName={activeProfileName}
+                tabId={runtimeTabId}
+                hasWebContents={desktopOverlay?.hasWebContents ?? false}
+                zoomFactor={desktopOverlay?.zoomFactor ?? 1}
+                colorScheme={desktopOverlay?.colorScheme ?? "system"}
+                deviceToolbarVisible={viewport._tag !== "fill"}
+                onToggleDeviceToolbar={handleToggleDeviceToolbar}
+                nativePictureInPicture={desktopOverlay?.pictureInPicture ?? false}
+                onNativePictureInPicture={handleNativePictureInPicture}
+              />
+            </>
           ) : null
         }
       />
@@ -784,7 +806,7 @@ export function PreviewView({
           <BrowserSurfaceSlot
             key={runtimeTabId}
             tabId={runtimeTabId}
-            visible={visible && !isUnreachable}
+            visible={visible && !isUnreachable && !compareOpen}
             className="absolute inset-0 h-full w-full"
           />
         ) : null}
@@ -810,6 +832,23 @@ export function PreviewView({
             tabId={runtimeTabId}
             zoomFactor={desktopOverlay.zoomFactor}
             controller={controller}
+          />
+        ) : null}
+        {compareOpen ? (
+          <PreviewBeforeAfterView
+            threadRef={threadRef}
+            onRetakeAfter={
+              runtimeTabId && !isUnreachable
+                ? (turnId) =>
+                    void retakePreviewAfter({
+                      threadKey: scopedThreadKey(threadRef),
+                      turnId,
+                      runtimeTabId,
+                      setCompareOpen,
+                    })
+                : null
+            }
+            onClose={() => setCompareOpen(false)}
           />
         ) : null}
         {navStatus._tag === "LoadFailed" ? (

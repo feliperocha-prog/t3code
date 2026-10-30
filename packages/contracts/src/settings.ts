@@ -6,8 +6,10 @@ import * as SchemaTransformation from "effect/SchemaTransformation";
 import {
   ForwardCompatibleNullable,
   ForwardCompatibleOptional,
+  IsoDateTime,
   OmittedWhenNull,
   ProjectId,
+  ThreadId,
   TrimmedNonEmptyString,
   TrimmedString,
 } from "./baseSchemas.ts";
@@ -1161,6 +1163,60 @@ export const BehaviorRule = Schema.Struct({
 });
 export type BehaviorRule = typeof BehaviorRule.Type;
 
+export const MAX_ROUTINE_INTERVAL_HOURS = 24;
+
+/**
+ * When a scheduled routine fires: once a day at a local `HH:MM`, or every N
+ * hours. The server's clock and time zone decide, and only while it runs.
+ */
+export const RoutineSchedule = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("daily"),
+    time: Schema.String.check(Schema.isPattern(/^([01]\d|2[0-3]):[0-5]\d$/)),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("interval"),
+    hours: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: MAX_ROUTINE_INTERVAL_HOURS })),
+  }),
+]);
+export type RoutineSchedule = typeof RoutineSchedule.Type;
+
+/**
+ * A prompt the server sends on a schedule, each run in a new thread of its
+ * project. `createdAt` keeps a routine from firing for a slot that passed
+ * before it existed.
+ */
+export const ScheduledRoutine = Schema.Struct({
+  id: TrimmedNonEmptyString,
+  name: TrimmedNonEmptyString,
+  projectId: ProjectId,
+  prompt: TrimmedNonEmptyString,
+  schedule: RoutineSchedule,
+  enabled: Schema.Boolean,
+  createdAt: IsoDateTime,
+});
+export type ScheduledRoutine = typeof ScheduledRoutine.Type;
+
+/** The last run of a routine. A failed run is kept so it is not retried every minute. */
+export const ScheduledRoutineRun = Schema.Struct({
+  at: IsoDateTime,
+  threadId: Schema.NullOr(ThreadId),
+  failed: Schema.Boolean,
+});
+export type ScheduledRoutineRun = typeof ScheduledRoutineRun.Type;
+
+export const ServerRunScheduledRoutineInput = Schema.Struct({
+  routineId: TrimmedNonEmptyString,
+});
+export type ServerRunScheduledRoutineInput = typeof ServerRunScheduledRoutineInput.Type;
+
+/** `threadId` is the new run's thread; `problem` says why there is none. */
+export const ServerRunScheduledRoutineResult = Schema.Struct({
+  threadId: Schema.NullOr(ThreadId),
+  problem: Schema.NullOr(Schema.Literals(["routine-missing", "project-missing", "failed"])),
+});
+export type ServerRunScheduledRoutineResult = typeof ServerRunScheduledRoutineResult.Type;
+
 export const ServerSettings = Schema.Struct({
   worktreeCleanup: WorktreeCleanup.pipe(Schema.withDecodingDefault(Effect.succeed(null))),
   storageCleanup: StorageCleanupSettings.pipe(
@@ -1212,6 +1268,14 @@ export const ServerSettings = Schema.Struct({
   // Server-side for the same reason as `enableAgentBrowserAccess`: the turn
   // text is built here, and every client attached must send the same rules.
   behaviorRules: Schema.Array(BehaviorRule).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
+  scheduledRoutines: Schema.Array(ScheduledRoutine).pipe(
+    Schema.withDecodingDefault(Effect.succeed([])),
+  ),
+  // Written by the server after each run, keyed by routine id; kept apart from
+  // `scheduledRoutines` so a client saving the list never rewinds a run.
+  scheduledRoutineRuns: Schema.Record(Schema.String, ScheduledRoutineRun).pipe(
+    Schema.withDecodingDefault(Effect.succeed({})),
+  ),
   /**
    * Per-project overrides of the keys in `PROJECT_SCOPED_SERVER_SETTING_KEYS`.
    * The source of truth for project settings; `projectAgentBrowserAccessOverrides`,
@@ -1573,6 +1637,8 @@ export const ServerSettingsPatch = Schema.Struct({
   ),
   defaultModelSelection: Schema.optionalKey(Schema.NullOr(ModelSelection)),
   behaviorRules: Schema.optionalKey(Schema.Array(BehaviorRule)),
+  scheduledRoutines: Schema.optionalKey(Schema.Array(ScheduledRoutine)),
+  scheduledRoutineRuns: Schema.optionalKey(Schema.Record(Schema.String, ScheduledRoutineRun)),
   defaultRuntimeMode: Schema.optionalKey(RuntimeMode),
   /**
    * Per-project entry replacement: each entry replaces that project's whole

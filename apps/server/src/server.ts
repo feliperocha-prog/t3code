@@ -29,6 +29,7 @@ import {
   otlpTracesProxyRouteLayer,
   assetRouteLayer,
   attachmentUploadRouteLayer,
+  scheduledRoutinesActivityRouteLayer,
   serverEnvironmentHttpApiLayer,
   staticAndDevRouteLayer,
   browserApiCorsLayer,
@@ -91,6 +92,7 @@ import { ProviderCommandReactorLive } from "./orchestration/Layers/ProviderComma
 import { CheckpointReactorLive } from "./orchestration/Layers/CheckpointReactor.ts";
 import { ThreadDeletionReactorLive } from "./orchestration/Layers/ThreadDeletionReactor.ts";
 import * as ThreadSettlementReactor from "./orchestration/ThreadSettlementReactor.ts";
+import * as ScheduledRoutines from "./scheduledRoutines.ts";
 import * as StorageCleanup from "./storageCleanup.ts";
 import * as PullRequestSyncReactor from "./orchestration/PullRequestSyncReactor.ts";
 import * as ThreadPullRequestReactor from "./orchestration/ThreadPullRequestReactor.ts";
@@ -271,6 +273,7 @@ const ReactorLayerLive = Layer.empty.pipe(
   Layer.provideMerge(ProviderCommandReactorLive),
   Layer.provideMerge(CheckpointReactorLive),
   Layer.provideMerge(StorageCleanup.layer),
+  Layer.provideMerge(ScheduledRoutines.layer),
   Layer.provideMerge(ThreadDeletionReactorLive),
   Layer.provideMerge(ThreadSettlementReactor.layer),
   Layer.provideMerge(PullRequestSyncReactor.layer),
@@ -627,6 +630,7 @@ export const makeRoutesLayer = Layer.mergeAll(
     otlpTracesProxyRouteLayer,
     assetRouteLayer,
     attachmentUploadRouteLayer,
+    scheduledRoutinesActivityRouteLayer,
     deviceHubProxyRouteLayer,
     staticAndDevRouteLayer,
     websocketRpcRouteLayer,

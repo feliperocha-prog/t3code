@@ -584,6 +584,11 @@ const resolvePrimaryStartConfig = Effect.fn("desktop.backendConfiguration.resolv
       env: {
         ...backendChildEnvPatch(),
         ELECTRON_RUN_AS_NODE: "1",
+        // The server registers a Windows task that opens this exe for
+        // scheduled routines. Installed builds only, so dev never registers.
+        ...(environment.isPackaged && environment.platform === "win32"
+          ? { T3CODE_ROUTINES_LAUNCHER: process.execPath }
+          : {}),
       },
       // Primary wants process.env (PATH, dev-runner's T3CODE_HOME, etc.).
       extendEnv: true,

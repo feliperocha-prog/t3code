@@ -28,6 +28,7 @@ import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder";
 import { OtlpTracer, OtlpSerialization } from "effect/unstable/observability";
 
 import * as ServerConfig from "./config.ts";
+import { ScheduledRoutines } from "./scheduledRoutines.ts";
 import { ASSET_ROUTE_PREFIX, resolveAsset } from "./assets/AssetAccess.ts";
 import { githubMediaResponse } from "./assets/GitHubMediaFetch.ts";
 import { statMediaFile, streamMediaFile, type OpenMediaFile } from "./assets/MediaFile.ts";
@@ -49,6 +50,7 @@ import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
 import { browserApiCorsAllowedHeaders, browserApiCorsAllowedMethods } from "./httpCors.ts";
 
 const OTLP_TRACES_PROXY_PATH = "/api/observability/v1/traces";
+export const SCHEDULED_ROUTINES_ACTIVITY_PATH = "/api/scheduled-routines/activity";
 const LOOPBACK_HOSTNAMES = new Set(["127.0.0.1", "::1", "localhost"]);
 const DESKTOP_RENDERER_ORIGINS = ["t3code://app", "t3code-dev://app"];
 const SVG_CONTENT_SECURITY_POLICY = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
@@ -430,6 +432,17 @@ export const assetRouteLayer = HttpRouter.add(
     ).pipe(
       Effect.orElseSucceed(() => HttpServerResponse.text("Internal Server Error", { status: 500 })),
     );
+  }),
+);
+
+// Polled by the desktop app when it was opened only to run routines.
+export const scheduledRoutinesActivityRouteLayer = HttpRouter.add(
+  "GET",
+  SCHEDULED_ROUTINES_ACTIVITY_PATH,
+  Effect.gen(function* () {
+    yield* authenticateRawRouteWithScope(AuthOrchestrationReadScope);
+    const routines = yield* ScheduledRoutines;
+    return HttpServerResponse.jsonUnsafe({ busy: yield* routines.isBusy });
   }),
 );
 

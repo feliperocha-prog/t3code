@@ -1,7 +1,7 @@
 import type { BehaviorRule } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
-import { addBehaviorRule, behaviorRulesInFlight } from "./BehaviorRulesSettings";
+import { addBehaviorRule, listsInFlight } from "./BehaviorRulesSettings";
 
 const rule = (id: string, enabled = true): BehaviorRule => ({ id, text: `rule ${id}`, enabled });
 
@@ -16,25 +16,22 @@ describe("addBehaviorRule", () => {
   });
 });
 
-describe("behaviorRulesInFlight", () => {
+describe("listsInFlight", () => {
   const start = [rule("a"), rule("b"), rule("c")];
   const offA = [rule("a", false), rule("b"), rule("c")];
   const offAB = [rule("a", false), rule("b", false), rule("c")];
 
   it("keeps every sent list while the server still shows the old one", () => {
-    expect(behaviorRulesInFlight({ base: start, lists: [offA, offAB] }, start)).toEqual([
-      offA,
-      offAB,
-    ]);
+    expect(listsInFlight({ base: start, lists: [offA, offAB] }, start)).toEqual([offA, offAB]);
   });
 
   it("keeps the later edit when the server echoes only the first", () => {
     const echo = structuredClone(offA);
-    expect(behaviorRulesInFlight({ base: start, lists: [offA, offAB] }, echo)).toEqual([offAB]);
+    expect(listsInFlight({ base: start, lists: [offA, offAB] }, echo)).toEqual([offAB]);
   });
 
   it("lets a change made elsewhere win", () => {
     const elsewhere = [rule("z")];
-    expect(behaviorRulesInFlight({ base: start, lists: [offA] }, elsewhere)).toEqual([]);
+    expect(listsInFlight({ base: start, lists: [offA] }, elsewhere)).toEqual([]);
   });
 });

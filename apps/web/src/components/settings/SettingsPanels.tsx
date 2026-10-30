@@ -175,6 +175,7 @@ import {
 } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
 import { BehaviorRulesSettings } from "./BehaviorRulesSettings";
+import { RoutinesSettings } from "./RoutinesSettings";
 import { ProjectFavicon } from "../ProjectFavicon";
 import { PanelAnimationsPreview } from "./PanelAnimationsPreview";
 
@@ -3376,6 +3377,8 @@ export function GeneralSettingsPanel() {
       </SettingsSection>
 
       <BehaviorRulesSettings />
+
+      <RoutinesSettings />
 
       <SettingsSection id="text-generation" title={t("Text generation")}>
         <SettingsRow
