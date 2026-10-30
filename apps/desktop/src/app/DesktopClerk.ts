@@ -18,6 +18,7 @@ import * as ElectronProtocol from "../electron/ElectronProtocol.ts";
 import * as ElectronWindow from "../electron/ElectronWindow.ts";
 import * as DesktopAppIdentity from "./DesktopAppIdentity.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
+import { ROUTINES_LAUNCH_ARG } from "./DesktopState.ts";
 
 declare const __T3CODE_BUILD_CLERK_PUBLISHABLE_KEY__: string | undefined;
 
@@ -192,6 +193,8 @@ export const make = Effect.gen(function* () {
         if (startProviderAuthHandoff(url) || resumeProviderAuth(url)) event.preventDefault();
       });
       yield* electronApp.on("second-instance", (_event: unknown, argv: readonly string[]) => {
+        // The routines task relaunching an open app: the open app runs them.
+        if (argv?.includes(ROUTINES_LAUNCH_ARG)) return;
         if (argv?.some((value) => startProviderAuthHandoff(value) || resumeProviderAuth(value)))
           return;
         void runPromise(

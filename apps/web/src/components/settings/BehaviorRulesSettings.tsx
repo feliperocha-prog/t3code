@@ -26,23 +26,24 @@ export function addBehaviorRule(
   return [{ id, text: trimmed, enabled: true }, ...rules];
 }
 
-const sameRules = (left: ReadonlyArray<BehaviorRule>, right: ReadonlyArray<BehaviorRule>) =>
+const sameList = <T,>(left: ReadonlyArray<T>, right: ReadonlyArray<T>) =>
   JSON.stringify(left) === JSON.stringify(right);
 
 /**
  * The lists sent since `base` that the server has not echoed yet. An echo of
  * one of them settles it and every earlier one; any other server list means
- * someone else changed the rules, and that wins.
+ * someone else changed the list, and that wins. Shared by the settings lists
+ * that are saved whole (agent rules, routines).
  */
-export function behaviorRulesInFlight(
+export function listsInFlight<T>(
   sent: {
-    readonly base: ReadonlyArray<BehaviorRule>;
-    readonly lists: ReadonlyArray<ReadonlyArray<BehaviorRule>>;
+    readonly base: ReadonlyArray<T>;
+    readonly lists: ReadonlyArray<ReadonlyArray<T>>;
   },
-  saved: ReadonlyArray<BehaviorRule>,
-): ReadonlyArray<ReadonlyArray<BehaviorRule>> {
+  saved: ReadonlyArray<T>,
+): ReadonlyArray<ReadonlyArray<T>> {
   if (saved === sent.base) return sent.lists;
-  const echoed = sent.lists.findLastIndex((list) => sameRules(list, saved));
+  const echoed = sent.lists.findLastIndex((list) => sameList(list, saved));
   return echoed === -1 ? [] : sent.lists.slice(echoed + 1);
 }
 
@@ -61,7 +62,7 @@ export function BehaviorRulesSettings() {
     base: ReadonlyArray<BehaviorRule>;
     lists: ReadonlyArray<ReadonlyArray<BehaviorRule>>;
   }>({ base: savedRules, lists: [] });
-  const inFlight = behaviorRulesInFlight(sent, savedRules);
+  const inFlight = listsInFlight(sent, savedRules);
   const rules = inFlight.at(-1) ?? savedRules;
   const setRules = (behaviorRules: ReadonlyArray<BehaviorRule>) => {
     setSent({ base: savedRules, lists: [...inFlight, behaviorRules] });

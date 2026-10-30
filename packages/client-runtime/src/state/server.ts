@@ -1144,6 +1144,10 @@ export function createServerEnvironmentAtoms<R, E>(
         key: ({ environmentId }) => environmentId,
       },
     }),
+    runScheduledRoutine: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:run-scheduled-routine",
+      tag: WS_METHODS.serverRunScheduledRoutine,
+    }),
     retryResourceTelemetry: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:retry-resource-telemetry",
       tag: WS_METHODS.serverRetryResourceTelemetry,

@@ -119,6 +119,7 @@ import * as CheckpointDiffQuery from "./checkpointing/CheckpointDiffQuery.ts";
 import * as GitManager from "./git/GitManager.ts";
 import * as EnvironmentTheme from "./environmentTheme.ts";
 import * as UsageLimitSources from "./usage/UsageLimitSources.ts";
+import * as ScheduledRoutines from "./scheduledRoutines.ts";
 import * as ProjectBrief from "./projectBrief/ProjectBrief.ts";
 import * as ChangesExplanation from "./changesExplanation/ChangesExplanation.ts";
 import * as CheckScript from "./checkScript/CheckScript.ts";
@@ -800,6 +801,11 @@ const buildAppUnderTest = (options?: {
             streamChanges: Stream.make([]),
             refresh: Effect.void,
             ...options?.layers?.usageLimitSources,
+          }),
+          Layer.mock(ScheduledRoutines.ScheduledRoutines)({
+            start: () => Effect.void,
+            runNow: () => Effect.succeed({ threadId: null, problem: "routine-missing" }),
+            isBusy: Effect.succeed(false),
           }),
         ),
       ),
