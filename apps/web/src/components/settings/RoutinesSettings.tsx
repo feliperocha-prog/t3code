@@ -230,7 +230,7 @@ export function RoutinesSettings() {
                 type="time"
                 className="w-28"
                 value={time}
-                aria-label={t("Time")}
+                aria-label={t("Time of day")}
                 onChange={(event) => setTime(event.target.value)}
               />
             ) : (

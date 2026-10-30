@@ -13,6 +13,7 @@ const dictionary: Readonly<Record<string, string>> = {
   When: "Quando",
   "Every day at": "Todo dia às",
   "Every N hours": "A cada N horas",
+  "Time of day": "Horário",
   "Hours between runs": "Horas entre as rodadas",
   "Every day at {time}": "Todo dia às {time}",
   "Every hour": "De hora em hora",
