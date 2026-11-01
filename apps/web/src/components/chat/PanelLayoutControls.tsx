@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Toggle } from "../ui/toggle";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { t } from "~/i18n";
+import { closestSecondarySplitPane } from "~/lib/splitPane";
 
 /**
  * Width of the visible panel toggles, published for headers that sit under
@@ -14,16 +15,18 @@ export const PANEL_LAYOUT_CONTROLS_WIDTH_VAR = "--panel-layout-controls-width";
 
 function publishControlsWidth(node: HTMLDivElement | null) {
   if (!node || typeof ResizeObserver === "undefined") return;
-  const root = node.ownerDocument.documentElement;
+  // Split screen: the right pane's toggles publish on that pane, so its header
+  // reserves room for its own toggles and the routed pane keeps the root value.
+  const target = closestSecondarySplitPane(node) ?? node.ownerDocument.documentElement;
   const publish = () => {
-    root.style.setProperty(PANEL_LAYOUT_CONTROLS_WIDTH_VAR, `${node.offsetWidth}px`);
+    target.style.setProperty(PANEL_LAYOUT_CONTROLS_WIDTH_VAR, `${node.offsetWidth}px`);
   };
   publish();
   const observer = new ResizeObserver(publish);
   observer.observe(node);
   return () => {
     observer.disconnect();
-    root.style.removeProperty(PANEL_LAYOUT_CONTROLS_WIDTH_VAR);
+    target.style.removeProperty(PANEL_LAYOUT_CONTROLS_WIDTH_VAR);
   };
 }
 

@@ -984,6 +984,7 @@ import {
 import { searchProviderSkills } from "../../providerSkillSearch";
 import { useDelayedStatus } from "../../hooks/useDelayedStatus";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { keyEventBelongsToPane } from "../../lib/splitPane";
 import { usePanelAnimationSettings } from "../../panelAnimations";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { serverEnvironment } from "../../state/server";
@@ -5262,6 +5263,10 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         },
       });
       if (command !== "composer.stash") return;
+      // With the screen split, two composers listen here; only the one in the
+      // pane that holds focus stashes (stopPropagation can't stop a sibling
+      // window listener).
+      if (!keyEventBelongsToPane(composerFormRef.current, event.target)) return;
       // Always claim the shortcut so the browser save dialog never opens,
       // even when the composer is in a state that can't stash.
       event.preventDefault();

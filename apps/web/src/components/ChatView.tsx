@@ -11,6 +11,7 @@ import { feedbackBannerItem } from "./chat/ComposerFeedback";
 import { usageLimitsBannerItem } from "./chat/ComposerUsageLimits";
 import { heavyThreadBannerItem } from "./chat/HeavyThreadNotice";
 import { shouldShowHeavyNotice } from "./chat/heavyThread.logic";
+import { SplitPaneHeader } from "./chat/SplitPaneHeader";
 import { ThreadTabStrip } from "./chat/ThreadTabStrip";
 import { ThreadBrief } from "./chat/ThreadBrief";
 import { statusCardAnswered } from "./chat/statusCard.logic";
@@ -766,6 +767,12 @@ type ChatViewProps =
       threadSyncPhase?: ThreadSyncPhase | null;
       routeKind: "server";
       draftId?: never;
+      /**
+       * "secondary" is the right side of the split view: it keeps its own
+       * composer, timeline and right panel, but leaves the tab strip, the
+       * full header and every window-level shortcut to the routed pane.
+       */
+      paneRole?: ChatPaneRole;
     }
   | {
       environmentId: EnvironmentId;
@@ -776,7 +783,10 @@ type ChatViewProps =
       threadSyncPhase?: never;
       routeKind: "draft";
       draftId: DraftId;
+      paneRole?: ChatPaneRole;
     };
+
+type ChatPaneRole = "primary" | "secondary";
 
 interface TerminalLaunchContext {
   threadId: ThreadId;
@@ -1496,7 +1506,12 @@ export default function ChatView(props: ChatViewProps) {
     onDiffPanelOpen,
     reserveTitleBarControlInset = true,
     forceExpandedMobileComposer = false,
+    paneRole = "primary",
   } = props;
+  // Two ChatViews are mounted in the split view; only the routed (primary)
+  // one listens to window-level keys, paste, focus and the action buses, so
+  // a shortcut or a paste never lands in both conversations.
+  const isSecondaryPane = paneRole === "secondary";
   const draftId = routeKind === "draft" ? props.draftId : null;
   const threadSyncPhase = routeKind === "server" ? (props.threadSyncPhase ?? null) : null;
   const threadDetailLoading = threadSyncPhase === "loading";
@@ -4020,7 +4035,10 @@ export default function ChatView(props: ChatViewProps) {
   const focusComposer = useCallback(() => {
     composerRef.current?.focusAtEnd();
   }, [composerRef]);
-  useEffect(() => subscribeSnapShotComposerFocus(focusComposer), [focusComposer]);
+  useEffect(
+    () => (isSecondaryPane ? undefined : subscribeSnapShotComposerFocus(focusComposer)),
+    [focusComposer, isSecondaryPane],
+  );
   const scheduleComposerFocus = useCallback(() => {
     window.requestAnimationFrame(() => {
       focusComposer();
@@ -5255,18 +5273,22 @@ export default function ChatView(props: ChatViewProps) {
   }, []);
   useEffect(
     () =>
-      subscribePreviewAction((action) => {
-        if (action === "toggle-panel") togglePreviewPanel();
-      }),
-    [togglePreviewPanel],
+      isSecondaryPane
+        ? undefined
+        : subscribePreviewAction((action) => {
+            if (action === "toggle-panel") togglePreviewPanel();
+          }),
+    [isSecondaryPane, togglePreviewPanel],
   );
   useEffect(
     () =>
-      subscribeTerminalAction((action) => {
-        // "open" never closes: an already open terminal stays as it is.
-        if (action === "open" && !terminalUiState.terminalOpen) toggleTerminalVisibility();
-      }),
-    [terminalUiState.terminalOpen, toggleTerminalVisibility],
+      isSecondaryPane
+        ? undefined
+        : subscribeTerminalAction((action) => {
+            // "open" never closes: an already open terminal stays as it is.
+            if (action === "open" && !terminalUiState.terminalOpen) toggleTerminalVisibility();
+          }),
+    [isSecondaryPane, terminalUiState.terminalOpen, toggleTerminalVisibility],
   );
   const persistThreadSettingsForNextTurn = useCallback(
     async (input: {
@@ -5567,8 +5589,9 @@ export default function ChatView(props: ChatViewProps) {
           if (
             !(event.target instanceof Node) ||
             (!scrollNode.contains(event.target) &&
-              event.target !== document.body &&
-              event.target !== document.documentElement) ||
+              // Keys aimed at the page itself scroll the routed pane only.
+              (isSecondaryPane ||
+                (event.target !== document.body && event.target !== document.documentElement))) ||
             event.defaultPrevented ||
             event.isComposing ||
             event.altKey ||
@@ -5640,7 +5663,12 @@ export default function ChatView(props: ChatViewProps) {
       }
       removeListeners?.();
     };
-  }, [activeThread?.id, isTimelineAtLogicalEnd, timelineRealContentOverflowsViewport]);
+  }, [
+    activeThread?.id,
+    isSecondaryPane,
+    isTimelineAtLogicalEnd,
+    timelineRealContentOverflowsViewport,
+  ]);
 
   const onTimelineAnchorReady = useCallback((messageId: MessageId, anchorIndex: number) => {
     // Anchored-end space can be remeasured when the turn completes. Once the
@@ -5811,7 +5839,8 @@ export default function ChatView(props: ChatViewProps) {
   // terminal is a surface and is recognized by the predicate instead. Mobile is left alone so
   // returning to the app does not raise the keyboard.
   useEffect(() => {
-    if (!activeThread?.id || terminalUiState.terminalOpen || isMobileViewport) return;
+    if (!activeThread?.id || terminalUiState.terminalOpen || isMobileViewport || isSecondaryPane)
+      return;
     let frame: number | null = null;
     const onWindowFocus = () => {
       if (frame !== null) window.cancelAnimationFrame(frame);
@@ -5830,7 +5859,13 @@ export default function ChatView(props: ChatViewProps) {
       window.removeEventListener("focus", onWindowFocus);
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
-  }, [activeThread?.id, focusComposer, isMobileViewport, terminalUiState.terminalOpen]);
+  }, [
+    activeThread?.id,
+    focusComposer,
+    isMobileViewport,
+    isSecondaryPane,
+    terminalUiState.terminalOpen,
+  ]);
 
   useEffect(() => {
     if (!activeThread?.id) return;
@@ -6835,6 +6870,8 @@ export default function ChatView(props: ChatViewProps) {
   );
 
   useEffect(() => {
+    // Shortcuts and type-to-focus act on the routed conversation only.
+    if (isSecondaryPane) return;
     const handler = (event: globalThis.KeyboardEvent) => {
       if (preventRepeatedTerminalCloseShortcut(event, keybindings)) {
         event.stopPropagation();
@@ -7117,12 +7154,14 @@ export default function ChatView(props: ChatViewProps) {
     toggleRightPanelMaximized,
     toggleTerminalVisibility,
     composerRef,
+    isSecondaryPane,
   ]);
 
   // Paste-to-focus: the resting composer blurs on a click into the timeline,
   // so a paste that follows has no editable target and would be dropped.
   // Route it to the composer like a typed key, which also expands it.
   useEffect(() => {
+    if (isSecondaryPane) return;
     const keyHandler = (event: KeyboardEvent) => {
       if (
         shouldRedirectInputToComposer(event) &&
@@ -7155,7 +7194,7 @@ export default function ChatView(props: ChatViewProps) {
       window.removeEventListener("keydown", keyHandler, true);
       window.removeEventListener("paste", handler, true);
     };
-  }, [activeThreadId, composerRef]);
+  }, [activeThreadId, composerRef, isSecondaryPane]);
 
   const [pendingRevert, setPendingRevert] = useState<{
     turnCount: number;
@@ -10005,56 +10044,79 @@ export default function ChatView(props: ChatViewProps) {
         data-chat-column-maximized-away={rightPanelMaximized ? "true" : "false"}
       >
         {/* Top bar */}
-        <WorkspacePageHeader
-          data-chat-header
-          electron={isElectron}
-          reserveNativeControls={reserveTitleBarControlInset && !inlineRightPanelOwnsTitleBar}
-          className="relative bg-background"
-        >
-          {isElectron && rightPanelControlsAtRoot ? (
-            <span
-              aria-hidden
-              className="pointer-events-none fixed top-[var(--workspace-controls-top)] right-[var(--workspace-controls-right)] h-[var(--workspace-topbar-height)] w-28 [-webkit-app-region:no-drag]"
+        {isSecondaryPane ? (
+          // Right pane of a split screen: title, swap and close. The tab strip
+          // and the full header stay with the routed pane on the left.
+          <SplitPaneHeader
+            environmentId={activeThread.environmentId}
+            threadId={activeThread.id}
+            title={activeThread.title}
+            electron={isElectron}
+            reserveControls={!rightPanelControlsAtRoot && !rightPanelControlsInPanel}
+            reserveNativeControls={reserveTitleBarControlInset && !inlineRightPanelOwnsTitleBar}
+          >
+            {isElectron && rightPanelControlsAtRoot ? (
+              <span
+                aria-hidden
+                className="pointer-events-none fixed top-[var(--workspace-controls-top)] right-[var(--workspace-controls-right)] h-[var(--workspace-topbar-height)] w-28 [-webkit-app-region:no-drag]"
+              />
+            ) : null}
+            {!rightPanelControlsAtRoot && !rightPanelControlsInPanel ? panelLayoutControls : null}
+          </SplitPaneHeader>
+        ) : (
+          <WorkspacePageHeader
+            data-chat-header
+            electron={isElectron}
+            reserveNativeControls={reserveTitleBarControlInset && !inlineRightPanelOwnsTitleBar}
+            className="relative bg-background"
+          >
+            {isElectron && rightPanelControlsAtRoot ? (
+              <span
+                aria-hidden
+                className="pointer-events-none fixed top-[var(--workspace-controls-top)] right-[var(--workspace-controls-right)] h-[var(--workspace-topbar-height)] w-28 [-webkit-app-region:no-drag]"
+              />
+            ) : null}
+            {!rightPanelControlsAtRoot && !rightPanelControlsInPanel ? panelLayoutControls : null}
+            <ChatHeader
+              {...(!supportsPullRequests || activeProjectRepository === null
+                ? {}
+                : { onOpenPullRequest: openProjectPullRequest })}
+              activeThreadEnvironmentId={activeThread.environmentId}
+              activeThreadId={activeThread.id}
+              {...(routeKind === "draft" && draftId ? { draftId } : {})}
+              activeThreadTitle={activeThread.title}
+              isServerThread={isServerThread}
+              activeProject={activeProject}
+              openInCwd={gitCwd}
+              activeProjectScripts={activeProjectScripts}
+              preferredScriptId={
+                activeProject ? (lastInvokedScriptByProjectId[activeProject.id] ?? null) : null
+              }
+              keybindings={keybindings}
+              availableEditors={availableEditors}
+              rightPanelOpen={rightPanelOpen}
+              gitCwd={gitCwd}
+              onNewThreadInProject={handleNewThreadInActiveProject}
+              {...(activeDraftLogicalProjectKey
+                ? { onOpenProjectSettings: handleOpenDraftProjectSettings }
+                : {})}
+              onRunProjectScript={runProjectScript}
+              onAddProjectScript={saveProjectScript}
+              onUpdateProjectScript={updateProjectScript}
+              onDeleteProjectScript={deleteProjectScript}
+              {...(isServerThread ? { onStartObjectiveEdit: startObjectiveEdit } : {})}
             />
-          ) : null}
-          {!rightPanelControlsAtRoot && !rightPanelControlsInPanel ? panelLayoutControls : null}
-          <ChatHeader
-            {...(!supportsPullRequests || activeProjectRepository === null
-              ? {}
-              : { onOpenPullRequest: openProjectPullRequest })}
-            activeThreadEnvironmentId={activeThread.environmentId}
-            activeThreadId={activeThread.id}
-            {...(routeKind === "draft" && draftId ? { draftId } : {})}
-            activeThreadTitle={activeThread.title}
-            isServerThread={isServerThread}
-            activeProject={activeProject}
-            openInCwd={gitCwd}
-            activeProjectScripts={activeProjectScripts}
-            preferredScriptId={
-              activeProject ? (lastInvokedScriptByProjectId[activeProject.id] ?? null) : null
+          </WorkspacePageHeader>
+        )}
+        {isSecondaryPane ? null : (
+          <ThreadTabStrip
+            activeThreadRef={
+              isServerThread && activeThread
+                ? { environmentId: activeThread.environmentId, threadId: activeThread.id }
+                : null
             }
-            keybindings={keybindings}
-            availableEditors={availableEditors}
-            rightPanelOpen={rightPanelOpen}
-            gitCwd={gitCwd}
-            onNewThreadInProject={handleNewThreadInActiveProject}
-            {...(activeDraftLogicalProjectKey
-              ? { onOpenProjectSettings: handleOpenDraftProjectSettings }
-              : {})}
-            onRunProjectScript={runProjectScript}
-            onAddProjectScript={saveProjectScript}
-            onUpdateProjectScript={updateProjectScript}
-            onDeleteProjectScript={deleteProjectScript}
-            {...(isServerThread ? { onStartObjectiveEdit: startObjectiveEdit } : {})}
           />
-        </WorkspacePageHeader>
-        <ThreadTabStrip
-          activeThreadRef={
-            isServerThread && activeThread
-              ? { environmentId: activeThread.environmentId, threadId: activeThread.id }
-              : null
-          }
-        />
+        )}
         {isServerThread && activeThread && activeThreadShell ? (
           <ThreadBrief
             environmentId={activeThread.environmentId}

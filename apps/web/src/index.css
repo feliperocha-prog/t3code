@@ -123,16 +123,6 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --workspace-gutter: 0.75rem;
   --workspace-gutter-start: calc(env(safe-area-inset-left) + var(--workspace-gutter));
   --workspace-gutter-end: calc(env(safe-area-inset-right) + var(--workspace-gutter));
-  /* Room the chat header keeps clear under the fixed panel toggles: their
-     measured width (published by PanelLayoutControls), a 4px gap and the 1px
-     edge inset, less the header gutter beyond the controls' right offset. The
-     offset follows --workspace-controls-right so the native window buttons
-     (.wco) push the reserve along with the toggles. The fallback is two
-     icon-only toggles. */
-  --panel-layout-controls-reserve: calc(
-    var(--panel-layout-controls-width, 3.75rem) + var(--workspace-controls-right) + 5px -
-      var(--workspace-gutter)
-  );
 
   @variant sm {
     --workspace-gutter: 1.25rem;
@@ -145,6 +135,22 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     --glass-blur: 16px;
     --glass-saturation: 1.08;
   }
+}
+
+/* Room the chat header keeps clear under the fixed panel toggles: their
+   measured width (published by PanelLayoutControls), a 4px gap and the 1px
+   edge inset, less the header gutter beyond the controls' right offset. The
+   offset follows --workspace-controls-right so the native window buttons
+   (.wco) push the reserve along with the toggles. The fallback is two
+   icon-only toggles. The right pane of a split screen recomputes it from the
+   width its own toggles publish on it: a value computed on :root would reach
+   the pane already resolved with the routed pane's width. */
+:root,
+[data-split-pane="secondary"] {
+  --panel-layout-controls-reserve: calc(
+    var(--panel-layout-controls-width, 3.75rem) + var(--workspace-controls-right) + 5px -
+      var(--workspace-gutter)
+  );
 }
 
 .wco {

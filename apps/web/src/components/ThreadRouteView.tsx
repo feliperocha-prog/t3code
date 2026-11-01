@@ -1,12 +1,16 @@
 import { scopedThreadKey } from "@t3tools/client-runtime/environment";
 import type { ScopedThreadRef } from "@t3tools/contracts";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import ChatView from "./ChatView";
+import type { ChatComposerHandle } from "./chat/ChatComposer";
 import { resolveDraftPromotionNavigationTarget, threadHasStarted } from "./ChatView.logic";
 import { waitForDraftHeroTransition } from "./chat/draftHeroTransition";
 import { SidebarInset } from "./ui/sidebar";
+import { ComposerHandleContext } from "../composerHandleContext";
+import { useMediaQuery } from "../hooks/useMediaQuery";
+import { sameThreadRef, useSplitViewStore } from "../splitViewStore";
 import {
   finalizePromotedDraftThreadByRef,
   markPromotedDraftThreadByRef,
@@ -30,6 +34,48 @@ import {
   type ThreadRouteTarget,
 } from "../threadRoutes";
 import { resolveThreadSyncPhase } from "../threadSync";
+
+/**
+ * Right pane of the split screen: a second server thread with its own
+ * composer. CommandPalette provides one app-wide composer handle; without a
+ * provider here both panes would share it, and send, paste, drop and citation
+ * would land in the left composer.
+ */
+function SplitSecondaryPane({ threadRef }: { threadRef: ScopedThreadRef }) {
+  const shell = useEnvironmentQuery(environmentShell.stateAtom(threadRef.environmentId));
+  const bootstrapComplete = shell.data?.snapshot._tag === "Some";
+  const threadShell = useThreadShell(threadRef);
+  const threadDetail = useThreadDetail(threadRef);
+  const threadStatus = useThreadStatus(threadRef);
+  const composerHandleRef = useRef<ChatComposerHandle | null>(null);
+  const threadGone = threadStatus === "deleted" || (bootstrapComplete && threadShell === null);
+
+  useEffect(() => {
+    if (!threadGone) return;
+    // Deleted (or no longer known) on the right: the split has nothing to show.
+    useSplitViewStore.getState().closeSplitIfShowing(threadRef);
+  }, [threadGone, threadRef]);
+
+  if (threadShell === null || threadStatus === "deleted") {
+    return null;
+  }
+  const threadSyncPhase = resolveThreadSyncPhase({
+    detailExists: threadDetail !== null,
+    shellExists: true,
+    status: threadStatus,
+  });
+  return (
+    <ComposerHandleContext value={composerHandleRef}>
+      <ChatView
+        environmentId={threadRef.environmentId}
+        threadId={threadRef.threadId}
+        routeKind="server"
+        threadSyncPhase={threadSyncPhase}
+        paneRole="secondary"
+      />
+    </ComposerHandleContext>
+  );
+}
 
 /**
  * The single chat surface behind both `/draft/$draftId` and
@@ -122,6 +168,20 @@ export function ThreadRouteView({ target }: { target: ThreadRouteTarget }) {
   });
   const serverThreadStarted = threadHasStarted(serverThreadDetail);
   const environmentHasAnyThreads = environmentThreadRefs.length > 0 || environmentHasDraftThreads;
+  const secondaryThreadRef = useSplitViewStore((state) => state.secondaryThreadRef);
+  const splitFits = useMediaQuery("lg");
+  const routeServerThreadRef = target.kind === "server" ? target.threadRef : null;
+  // The split shows only beside a server thread on a wide window. Narrow
+  // windows and drafts hide it but keep it stored, so it comes back. The same
+  // thread on both sides (a frame of the swap, or the right thread opened in
+  // the route) shows only the left pane.
+  const splitThreadRef =
+    routeServerThreadRef !== null &&
+    splitFits &&
+    secondaryThreadRef !== null &&
+    !sameThreadRef(secondaryThreadRef, routeServerThreadRef)
+      ? secondaryThreadRef
+      : null;
 
   useEffect(() => {
     if (!inferredThreadRef || draftSession?.promotedTo) {
@@ -174,6 +234,14 @@ export function ThreadRouteView({ target }: { target: ThreadRouteTarget }) {
   }, [bootstrapComplete, environmentHasAnyThreads, navigate, renderState, target]);
 
   useEffect(() => {
+    // Opening the right-side thread in the route (tab, sidebar, palette) ends
+    // the split. Keyed on the route only: a swap navigates first and reopens
+    // the split with the old left thread afterwards.
+    if (routeServerThreadRef === null) return;
+    useSplitViewStore.getState().closeSplitIfShowing(routeServerThreadRef);
+  }, [routeServerThreadRef]);
+
+  useEffect(() => {
     if (target.kind !== "server" || !serverThreadStarted || !draftThread) {
       return;
     }
@@ -206,9 +274,32 @@ export function ThreadRouteView({ target }: { target: ThreadRouteTarget }) {
     );
   }
 
+  // The wrapper stays mounted with or without the split so opening or closing
+  // it never remounts the left ChatView. In split mode each pane is a layout
+  // container, so the fixed panel toggles inside a ChatView anchor to their
+  // own pane instead of the window.
   return (
     <SidebarInset className="h-svh min-h-0 overflow-hidden overscroll-y-none md:h-dvh">
-      {view}
+      <div data-split-root className="flex min-h-0 min-w-0 flex-1 flex-row">
+        <div
+          data-split-pane="primary"
+          className={
+            splitThreadRef
+              ? "flex min-h-0 min-w-0 shrink-0 grow-0 basis-1/2 [contain:layout]"
+              : "flex min-h-0 min-w-0 flex-1"
+          }
+        >
+          {view}
+        </div>
+        {splitThreadRef ? (
+          <div
+            data-split-pane="secondary"
+            className="flex min-h-0 min-w-0 shrink-0 grow-0 basis-1/2 border-l border-border [contain:layout]"
+          >
+            <SplitSecondaryPane key={scopedThreadKey(splitThreadRef)} threadRef={splitThreadRef} />
+          </div>
+        ) : null}
+      </div>
     </SidebarInset>
   );
 }
