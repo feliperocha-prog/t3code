@@ -5,10 +5,13 @@ import { useEffect, useRef, useState } from "react";
 
 import ChatView from "./ChatView";
 import type { ChatComposerHandle } from "./chat/ChatComposer";
+import { SplitPaneHeader } from "./chat/SplitPaneHeader";
 import { resolveDraftPromotionNavigationTarget, threadHasStarted } from "./ChatView.logic";
 import { waitForDraftHeroTransition } from "./chat/draftHeroTransition";
 import { SidebarInset } from "./ui/sidebar";
+import { t } from "~/i18n";
 import { ComposerHandleContext } from "../composerHandleContext";
+import { isElectron } from "../env";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { sameThreadRef, useSplitViewStore } from "../splitViewStore";
 import {
@@ -26,6 +29,7 @@ import {
   useThreadShell,
   useThreadStatus,
 } from "../state/entities";
+import { useEnvironments } from "../state/environments";
 import { useEnvironmentQuery } from "../state/query";
 import { environmentShell } from "../state/shell";
 import {
@@ -48,7 +52,14 @@ function SplitSecondaryPane({ threadRef }: { threadRef: ScopedThreadRef }) {
   const threadDetail = useThreadDetail(threadRef);
   const threadStatus = useThreadStatus(threadRef);
   const composerHandleRef = useRef<ChatComposerHandle | null>(null);
-  const threadGone = threadStatus === "deleted" || (bootstrapComplete && threadShell === null);
+  // An environment the client no longer knows (removed, or a persisted ref
+  // from another install) never completes bootstrap, so it counts as gone
+  // once the catalog has loaded.
+  const catalog = useEnvironments();
+  const environmentUnknown =
+    catalog.isReady && !catalog.presentationById.has(threadRef.environmentId);
+  const threadGone =
+    threadStatus === "deleted" || environmentUnknown || (bootstrapComplete && threadShell === null);
 
   useEffect(() => {
     if (!threadGone) return;
@@ -57,7 +68,20 @@ function SplitSecondaryPane({ threadRef }: { threadRef: ScopedThreadRef }) {
   }, [threadGone, threadRef]);
 
   if (threadShell === null || threadStatus === "deleted") {
-    return null;
+    // Still loading (or about to close): keep the header so the close button
+    // is never missing from a blank right half.
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <SplitPaneHeader
+          environmentId={threadRef.environmentId}
+          threadId={threadRef.threadId}
+          title={t("Loading conversation…")}
+          electron={isElectron}
+          reserveControls={false}
+          reserveNativeControls={isElectron}
+        />
+      </div>
+    );
   }
   const threadSyncPhase = resolveThreadSyncPhase({
     detailExists: threadDetail !== null,

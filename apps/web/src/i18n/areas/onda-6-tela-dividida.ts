@@ -7,6 +7,7 @@ const dictionary: Readonly<Record<string, string>> = {
   "Close split screen": "Fechar tela dividida",
   "Drop here to split the screen": "Soltar aqui para dividir a tela",
   "Split screen with...": "Dividir a tela com…",
+  "Loading conversation…": "Carregando a conversa…",
 };
 
 export default dictionary;
