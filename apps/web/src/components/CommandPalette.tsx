@@ -43,6 +43,7 @@ import * as Option from "effect/Option";
 import {
   ArrowLeftIcon,
   ChartNoAxesColumnIcon,
+  Columns2Icon,
   CornerLeftUpIcon,
   FileSearchIcon,
   FolderIcon,
@@ -57,6 +58,7 @@ import {
   SquarePenIcon,
   SunIcon,
   TextSearchIcon,
+  XIcon,
 } from "lucide-react";
 import {
   useCallback,
@@ -128,7 +130,13 @@ import {
   newProjectId,
 } from "../lib/utils";
 import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
-import { buildThreadRouteParams, resolveThreadRouteTarget } from "../threadRoutes";
+import {
+  buildThreadRouteParams,
+  resolveThreadRouteRef,
+  resolveThreadRouteTarget,
+} from "../threadRoutes";
+import { useMediaQuery } from "../hooks/useMediaQuery";
+import { sameThreadRef, useSplitViewStore } from "../splitViewStore";
 import { useAvailableSettingsSearchItems } from "./settings/useAvailableSettingsSearchItems";
 import {
   applyWslEnvironmentConfiguration,
@@ -1416,6 +1424,37 @@ function OpenCommandPaletteDialog(props: {
   );
   const recentThreadItems = allThreadItems.slice(0, RECENT_THREAD_LIMIT);
 
+  // Split screen: any other thread can open beside the routed one. Only on a
+  // server thread and a window wide enough to show both panes.
+  const routeThreadRef = useParams({
+    strict: false,
+    select: (params) => resolveThreadRouteRef(params),
+  });
+  const splitSecondaryThreadRef = useSplitViewStore((state) => state.secondaryThreadRef);
+  const splitFits = useMediaQuery("lg");
+  const splitThreadItems = useMemo(() => {
+    if (routeThreadRef === null || !splitFits) return [];
+    return buildThreadActionItems({
+      threads: threads.filter((thread) => {
+        const ref = scopeThreadRef(thread.environmentId, thread.id);
+        return !sameThreadRef(ref, routeThreadRef) && !sameThreadRef(ref, splitSecondaryThreadRef);
+      }),
+      projectTitleById,
+      sortOrder: clientSettings.sidebarThreadSortOrder,
+      icon: <MessageSquareIcon className={ITEM_ICON_CLASS} />,
+      runThread: async (thread) => {
+        useSplitViewStore.getState().openSplit(scopeThreadRef(thread.environmentId, thread.id));
+      },
+    }).map((item) => Object.assign(item, { value: `split:${item.value}` }));
+  }, [
+    clientSettings.sidebarThreadSortOrder,
+    projectTitleById,
+    routeThreadRef,
+    splitFits,
+    splitSecondaryThreadRef,
+    threads,
+  ]);
+
   const pushPaletteView = useCallback(
     (view: CommandPaletteView): void => {
       browseNavigation.invalidate();
@@ -1822,6 +1861,38 @@ function OpenCommandPaletteDialog(props: {
       icon: <SquarePenIcon className={ITEM_ICON_CLASS} />,
       addonIcon: <SquarePenIcon className={ADDON_ICON_CLASS} />,
       groups: [{ value: "projects", label: t("Projects"), items: projectThreadItems }],
+    });
+  }
+
+  if (splitThreadItems.length > 0) {
+    actionItems.push({
+      kind: "submenu",
+      value: "action:split-screen-with",
+      searchTerms: [
+        "split screen",
+        "side by side",
+        "two threads",
+        "dividir a tela",
+        "tela dividida",
+        "lado a lado",
+      ],
+      title: t("Split screen with..."),
+      icon: <Columns2Icon className={ITEM_ICON_CLASS} />,
+      addonIcon: <Columns2Icon className={ADDON_ICON_CLASS} />,
+      groups: [{ value: "split-threads", label: t("Threads"), items: splitThreadItems }],
+    });
+  }
+
+  if (splitSecondaryThreadRef !== null) {
+    actionItems.push({
+      kind: "action",
+      value: "action:close-split-screen",
+      searchTerms: ["close split screen", "single pane", "fechar tela dividida"],
+      title: t("Close split screen"),
+      icon: <XIcon className={ITEM_ICON_CLASS} />,
+      run: async () => {
+        useSplitViewStore.getState().closeSplit();
+      },
     });
   }
 

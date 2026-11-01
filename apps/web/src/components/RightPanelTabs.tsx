@@ -43,6 +43,7 @@ import {
 import { isElectron } from "~/env";
 import type { DesktopPreviewOverlay } from "~/previewStateStore";
 import type { RightPanelSurface } from "~/rightPanelStore";
+import { keyEventBelongsToPane } from "~/lib/splitPane";
 import { cn } from "~/lib/utils";
 import { readLocalApi } from "~/localApi";
 import { Button } from "~/components/ui/button";
@@ -476,11 +477,15 @@ function RightPanelEmptyState(props: {
   useEffect(() => {
     shortcutActionsRef.current = availableActions;
   });
+  const launcherNodeRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       const action = surfaceShortcutActionForKey(shortcutActionsRef.current, event);
       if (!action) return;
       if (document.querySelector(LAUNCHER_SHORTCUT_BLOCKING_LAYERS)) return;
+      // Split screen: each pane may show a launcher; the letter opens the
+      // surface only in the pane that holds focus.
+      if (!keyEventBelongsToPane(launcherNodeRef.current, event.target)) return;
       const target = event.target;
       if (target instanceof Element && surfaceShortcutTargetsTypingContext(target)) return;
       event.preventDefault();
@@ -521,6 +526,7 @@ function RightPanelEmptyState(props: {
   // Stable identity so React only runs this callback ref on mount/unmount;
   // an inline arrow would re-attach and re-focus on every render.
   const focusOnMount = useCallback((node: HTMLDivElement | null) => {
+    launcherNodeRef.current = node;
     node?.focus();
   }, []);
 

@@ -8,6 +8,7 @@ import {
   closestCenter,
   DndContext,
   type DragEndEvent,
+  type DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -18,16 +19,21 @@ import { CSS } from "@dnd-kit/utilities";
 import { useAtomValue } from "@effect/atom-react";
 import { useRouter } from "@tanstack/react-router";
 import { TriangleAlertIcon, XIcon } from "lucide-react";
+import { createPortal } from "react-dom";
 import {
   memo,
   useCallback,
   useEffect,
   useMemo,
+  useRef,
+  useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
 
 import { isCommandPaletteOpen } from "~/commandPaletteBus";
+import { useMediaQuery } from "~/hooks/useMediaQuery";
+import { resolveSplitDropZone, type SplitDropZone, useSplitViewStore } from "~/splitViewStore";
 import { t, tc } from "~/i18n";
 import { resolveShortcutCommand } from "~/keybindings";
 import { isTerminalFocused } from "~/lib/terminalFocus";
@@ -194,13 +200,68 @@ export function ThreadTabStrip({ activeThreadRef }: { activeThreadRef: ScopedThr
       conflictKeys: conflicts,
     };
   }, [shells, storedTabs]);
+  // Drag a tab into the right half of the chat area to open it beside the
+  // current conversation. dnd-kit reports the drag after the horizontal-axis
+  // modifier (vertical delta is always 0), so the pointer is read from the
+  // window while a tab is being dragged.
+  const splitFits = useMediaQuery("lg");
+  const tabListRef = useRef<HTMLDivElement | null>(null);
+  const splitDropActiveRef = useRef(false);
+  const stopSplitTrackingRef = useRef<(() => void) | null>(null);
+  const [splitDropZone, setSplitDropZone] = useState<SplitDropZone | null>(null);
+  const stopSplitTracking = useCallback(() => {
+    stopSplitTrackingRef.current?.();
+    stopSplitTrackingRef.current = null;
+    splitDropActiveRef.current = false;
+    setSplitDropZone(null);
+  }, []);
+  useEffect(() => stopSplitTracking, [stopSplitTracking]);
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      stopSplitTracking();
+      // The routed tab is already on screen; it only reorders.
+      if (!splitFits || activeKey === null || String(event.active.id) === activeKey) return;
+      const tabList = tabListRef.current;
+      const area = tabList?.closest("[data-split-root]");
+      if (!tabList || !area) return;
+      const onPointerMove = (pointer: PointerEvent) => {
+        const zone = resolveSplitDropZone({
+          area: area.getBoundingClientRect(),
+          tabStripBottom: tabList.getBoundingClientRect().bottom,
+          x: pointer.clientX,
+          y: pointer.clientY,
+        });
+        splitDropActiveRef.current = zone !== null;
+        setSplitDropZone((previous) =>
+          previous !== null &&
+          zone !== null &&
+          previous.left === zone.left &&
+          previous.top === zone.top &&
+          previous.width === zone.width &&
+          previous.height === zone.height
+            ? previous
+            : zone,
+        );
+      };
+      window.addEventListener("pointermove", onPointerMove);
+      stopSplitTrackingRef.current = () => window.removeEventListener("pointermove", onPointerMove);
+    },
+    [activeKey, splitFits, stopSplitTracking],
+  );
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      const dropOnSplit = splitDropActiveRef.current;
+      stopSplitTracking();
       const { active, over } = event;
+      if (dropOnSplit) {
+        const ref = parseScopedThreadKey(String(active.id));
+        if (ref) useSplitViewStore.getState().openSplit(ref);
+        return;
+      }
       if (!over || active.id === over.id) return;
       moveTab(String(active.id), String(over.id));
     },
-    [moveTab],
+    [moveTab, stopSplitTracking],
   );
 
   if (tabs.length === 0) return null;
@@ -210,10 +271,32 @@ export function ThreadTabStrip({ activeThreadRef }: { activeThreadRef: ScopedThr
       sensors={sensors}
       collisionDetection={closestCenter}
       modifiers={[restrictToHorizontalAxis]}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragCancel={stopSplitTracking}
     >
+      {splitDropZone
+        ? createPortal(
+            <div
+              data-split-drop-zone
+              className="pointer-events-none fixed z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10"
+              style={{
+                left: splitDropZone.left,
+                top: splitDropZone.top,
+                width: splitDropZone.width,
+                height: splitDropZone.height,
+              }}
+            >
+              <span className="rounded-md bg-background/90 px-3 py-1.5 text-sm font-medium text-foreground shadow-sm">
+                {t("Drop here to split the screen")}
+              </span>
+            </div>,
+            document.body,
+          )
+        : null}
       <SortableContext items={tabKeys} strategy={horizontalListSortingStrategy}>
         <div
+          ref={tabListRef}
           role="tablist"
           aria-label={t("Open tabs")}
           className="flex h-8 shrink-0 items-stretch overflow-x-auto overflow-y-hidden border-b border-border bg-muted/30 [-webkit-app-region:no-drag] [scrollbar-width:thin]"
