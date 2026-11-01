@@ -10,9 +10,10 @@ import { useId, useState } from "react";
 import { create } from "zustand";
 
 import { useHandleNewThread } from "~/hooks/useHandleNewThread";
-import { t } from "~/i18n";
+import { t, tc } from "~/i18n";
 import { ensureBrowseDirectoryPath } from "~/lib/projectPaths";
 import { cn, newProjectId } from "~/lib/utils";
+import { useProjects } from "~/state/entities";
 import { useEnvironments } from "~/state/environments";
 import { filesystemEnvironment } from "~/state/filesystem";
 import { projectEnvironment } from "~/state/projects";
@@ -93,10 +94,14 @@ function NewProjectAssistant({
   const formId = useId();
   const { environments } = useEnvironments();
   const { handleNewThread } = useHandleNewThread();
+  // refresh: the listing is cached per path, and a stale one (read before a
+  // folder appeared) would let the create command fail with a raw invariant.
   const browse = useAtomQueryRunner(filesystemEnvironment.browse, {
     reportFailure: false,
     reportDefect: false,
+    refresh: true,
   });
+  const projects = useProjects();
   const createProject = useAtomCommand(projectEnvironment.create, { reportFailure: false });
   const writeFile = useAtomCommand(projectEnvironment.writeFile, { reportFailure: false });
   const initRepository = useAtomCommand(vcsEnvironment.init, { reportFailure: false });
@@ -118,8 +123,13 @@ function NewProjectAssistant({
 
   const slug = newProjectSlug(name);
   const base = ensureBrowseDirectoryPath(baseDirectory.trim() || "~/");
-  const ready =
-    slug !== "" && purpose.trim() !== "" && brand !== null && owner.trim() !== "" && step === null;
+  const missing = [
+    slug === "" ? tc("new project field", "name") : null,
+    purpose.trim() === "" ? tc("new project field", "purpose") : null,
+    brand === null ? tc("new project field", "brand") : null,
+    owner.trim() === "" ? tc("new project field", "owner") : null,
+  ].filter((field) => field !== null);
+  const ready = missing.length === 0 && step === null;
 
   const create = async () => {
     if (!ready || brand === null) return;
@@ -142,6 +152,22 @@ function NewProjectAssistant({
     }
     const separator = parentPath.includes("\\") ? "\\" : "/";
     const root = `${parentPath.replace(/[\\/]+$/, "")}${separator}${slug}`;
+    const normalizedRoot = root.replace(/[\\/]+$/, "").toLowerCase();
+    const registered = projects.find(
+      (project) =>
+        project.environmentId === environmentId &&
+        project.workspaceRoot.replace(/[\\/]+$/, "").toLowerCase() === normalizedRoot,
+    );
+    if (registered) {
+      setStep(null);
+      setError(
+        t("{title} is already in the sidebar, at {folder}.", {
+          title: registered.title,
+          folder: root,
+        }),
+      );
+      return;
+    }
     // The listing skips junctions and symlinks; browsing into the path itself
     // still succeeds for them, and writing the starter files would overwrite.
     const inside = await browse({ environmentId, input: { partialPath: `${root}${separator}` } });
@@ -168,7 +194,15 @@ function NewProjectAssistant({
     if (created._tag === "Failure") {
       setStep(null);
       if (!isAtomCommandInterrupted(created)) {
-        setError(errorMessage(squashAtomCommandFailure(created)));
+        const reason = errorMessage(squashAtomCommandFailure(created));
+        setError(
+          /already exists for workspace root/.test(reason)
+            ? t("{title} is already in the sidebar, at {folder}.", {
+                title: name.trim(),
+                folder: root,
+              })
+            : t("Could not create the project: {reason}", { reason }),
+        );
       }
       return;
     }
@@ -308,7 +342,13 @@ function NewProjectAssistant({
             <p className="truncate font-mono text-xs text-muted-foreground">
               {slug === "" ? t("The folder name comes from the project name.") : `${base}${slug}`}
             </p>
-            {error ? <p className="text-xs text-destructive-foreground">{error}</p> : null}
+            {error ? (
+              <p className="text-xs text-destructive-foreground">{error}</p>
+            ) : missing.length > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {t("Still missing: {fields}", { fields: missing.join(", ") })}
+              </p>
+            ) : null}
           </form>
         </DialogPanel>
         <DialogFooter>

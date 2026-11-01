@@ -3,7 +3,7 @@ import { ProjectId, type ScheduledRoutine } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 
 import { routineDueSlot } from "./scheduledRoutines.ts";
-import { routinesTaskXml } from "./scheduledRoutinesWindowsTask.ts";
+import { registerTaskCommand, routinesTaskXml } from "./scheduledRoutinesWindowsTask.ts";
 
 // São Paulo has no daylight saving, so local 09:00 is always 12:00 UTC.
 const at = (iso: string) => DateTime.makeZonedUnsafe(iso, { timeZone: "America/Sao_Paulo" });
@@ -100,5 +100,23 @@ describe("routinesTaskXml", () => {
     expect(xml?.match(/<Interval>PT1H<\/Interval>/g)).toHaveLength(1);
     expect(xml).toContain("<Command>C:\\Program Files\\T3 &amp; Co\\T3.exe</Command>");
     expect(xml).toContain("<Arguments>--t3-routines</Arguments>");
+  });
+});
+
+describe("registerTaskCommand", () => {
+  it("registers through the Task Scheduler cmdlet with the file as a literal", () => {
+    const args = registerTaskCommand(
+      "C:\\Users\\o'neil\\.t3\\userdata\\scheduled-routines-task.xml",
+    );
+    expect(args.slice(0, 5)).toEqual([
+      "-NoProfile",
+      "-NonInteractive",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+    ]);
+    expect(args[5]).toBe(
+      "Register-ScheduledTask -TaskPath '\\T3 Code\\' -TaskName 'Rotinas' -Xml (Get-Content -Raw -LiteralPath 'C:\\Users\\o''neil\\.t3\\userdata\\scheduled-routines-task.xml') -Force | Out-Null",
+    );
   });
 });

@@ -32,6 +32,7 @@ import {
   summarizeToolGroup,
   omitSupersededLifecycleMarkers,
 } from "@t3tools/client-runtime/work-log/presentation";
+import { translateWorkSummary } from "./workSummary.logic";
 import { resolveWorkGroupScrollAnchor } from "@t3tools/client-runtime/work-log/scroll-anchor";
 import type {
   AgentPanelModel,
@@ -1770,7 +1771,9 @@ const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: Time
             anchorKey={row.id}
             groupedEntries={row.groupedEntries}
             isExpandedToolGroup={row.isExpandedToolGroup}
-            displayLabel={row.displayLabel}
+            displayLabel={
+              row.displayLabel === undefined ? undefined : translateWorkSummary(row.displayLabel)
+            }
           />
         ) : null}
         {row.kind === "work-live" ? <LiveWorkEntryTimelineRow row={row} /> : null}
@@ -2706,7 +2709,7 @@ function ActivityGroupTimelineRow({
       ? liveWorkEntryLabel(liveWork, ctx.workspaceRoot, true)
       : t("Thinking")
     : work.length > 0
-      ? summarizeToolGroup(work)
+      ? translateWorkSummary(summarizeToolGroup(work))
       : thoughtCount > 1
         ? t("Thought (×{count})", { count: thoughtCount })
         : t("Thought");
@@ -3418,7 +3421,9 @@ function WorkGroupToggleTimelineRow({
       type="button"
       className="group/tool-group group/timeline-row relative flex min-h-6 w-full cursor-pointer items-center gap-1.5 rounded-md px-0.5 py-0.5 text-left text-sm leading-relaxed transition-colors duration-150 hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
       aria-label={
-        row.hasFailure ? t("{label}, tool call failed", { label: row.summary }) : undefined
+        row.hasFailure
+          ? t("{label}, tool call failed", { label: translateWorkSummary(row.summary) })
+          : undefined
       }
       aria-expanded={row.expanded}
       onClick={() => ctx.onToggleWorkGroup(row.groupId, row.id)}
@@ -3433,7 +3438,9 @@ function WorkGroupToggleTimelineRow({
           muted
         />
       </span>
-      <span className="min-w-0 flex-1 truncate text-secondary-label">{row.summary}</span>
+      <span className="min-w-0 flex-1 truncate text-secondary-label">
+        {translateWorkSummary(row.summary)}
+      </span>
       <TimelineRowTimestamp createdAt={row.createdAt} timestampFormat={ctx.timestampFormat} />
     </button>
   );

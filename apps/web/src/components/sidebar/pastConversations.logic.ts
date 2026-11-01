@@ -54,13 +54,19 @@ function parseBlock(lines: ReadonlyArray<string>): PastConversation | null {
   };
 }
 
+// T3 itself runs Claude Code for helper jobs (project briefs, checklists) from
+// folders under its userdata; those sessions are never worth reopening.
+function isInternalSession(conversation: PastConversation): boolean {
+  return /t3-userdata/i.test(conversation.projectDir);
+}
+
 /** Blocks are separated by blank lines; anything without a valid header (summary, "Nada para…") is dropped. */
 export function parsePastConversations(output: string): PastConversation[] {
   const results: PastConversation[] = [];
   for (const block of output.replace(/\r\n?/g, "\n").split(/\n\s*\n/)) {
     const lines = block.split("\n").filter((line) => line.trim().length > 0);
     const parsed = parseBlock(lines);
-    if (parsed) results.push(parsed);
+    if (parsed && !isInternalSession(parsed)) results.push(parsed);
   }
   return results;
 }
@@ -120,5 +126,9 @@ export function formatPastConversationDate(isoDate: string): string {
 
 /** The one line shown under the date: the first message, else the first excerpt. */
 export function pastConversationSummary(conversation: PastConversation): string {
-  return conversation.firstMessage ?? conversation.excerpts[0] ?? "";
+  const first = conversation.firstMessage;
+  // A first message that is an injected block (`<browser_instruction>…`) says
+  // nothing about the conversation; the matching excerpt does.
+  const usable = first !== null && !first.startsWith("<") ? first : null;
+  return usable ?? conversation.excerpts[0] ?? first ?? "";
 }

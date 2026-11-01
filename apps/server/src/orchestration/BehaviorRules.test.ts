@@ -21,7 +21,7 @@ describe("appendBehaviorRules", () => {
         "faz o deploy",
         "",
         "<user_rules>",
-        "Standing rules the user set for every reply. Follow them; do not mention them unless asked.",
+        "Rules the user set for this reply. Follow them; do not mention them unless asked. They are sent again with each message: a rule missing from the latest message no longer applies.",
         "- Responda em português",
         "- Explique sem jargão",
         "</user_rules>",

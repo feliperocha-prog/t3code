@@ -1394,7 +1394,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Changed 1 file");
+    expect(markup).toContain("Alterou 1 arquivo");
     expect(markup).not.toContain("C:/Users/mike/dev-stuff/t3code/apps/web/src/session-logic.ts");
   });
 
@@ -1433,7 +1433,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Ran 2 commands");
+    expect(markup).toContain("Executou 2 comandos");
     expect(markup).not.toContain('aria-label="Tool call failed"');
   });
 
@@ -1472,7 +1472,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Ran 2 commands");
+    expect(markup).toContain("Executou 2 comandos");
     expect(markup).toContain("lucide-terminal");
     expect(markup).not.toContain("lucide-x");
     expect(markup).not.toContain("text-destructive");
@@ -1582,7 +1582,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Ran 2 commands and received 1 update");
+    expect(markup).toContain("Executou 2 comandos e recebeu 1 atualização");
     expect(markup).not.toContain('aria-label="Hidden work includes a failure"');
   });
 
@@ -2153,7 +2153,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain(
-      `aria-label="${t("{label}, tool call failed", { label: "Received 1 update and used 1 tool" })}"`,
+      `aria-label="${t("{label}, tool call failed", { label: "Recebeu 1 atualização e usou 1 ferramenta" })}"`,
     );
     // Ordinary tool failures do not use destructive row styling.
     expect(markup).not.toContain("text-destructive");

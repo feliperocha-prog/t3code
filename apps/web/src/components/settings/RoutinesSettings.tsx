@@ -53,11 +53,13 @@ export function draftSchedule(
 }
 
 const lastRunTime = (run: ScheduledRoutineRun) =>
-  new Date(run.at).toLocaleString(undefined, {
+  // Electron reports the system locale as en-US, so the format is pinned.
+  new Date(run.at).toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   });
 
 /**

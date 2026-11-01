@@ -32,8 +32,34 @@ function toFinding(block: string): ReviewFinding {
   };
 }
 
+const FENCE_LINE = /^[ \t]*`{3,}[^\n]*$/;
+// Everything after the hand-back trailer or the STATUS block is bookkeeping,
+// not a defect.
+const TRAILER_LINE = /^(?:agentId:|<usage>|STATUS:)/;
+// Reviewers often wrap the report in markdown; the structure is what matters.
+// `__` stays: reviewers write `__init__.py` and `__tests__` far more than __bold__.
+const MARKDOWN_NOISE = /\*\*|(?<!`)`(?!`)/g;
+const MARKDOWN_LINK = /\[([^\]]+)\]\([^)]*\)/g;
+
+/** Plain text of a report: no fences, bold, links, indentation or trailer. */
+function cleanReport(result: string): string {
+  const lines = result.replace(/\r\n?/g, "\n").split("\n");
+  const end = lines.findIndex((line) => TRAILER_LINE.test(line.trim()));
+  const kept = (end === -1 ? lines : lines.slice(0, end)).filter((line) => !FENCE_LINE.test(line));
+  const indents = kept
+    .filter((line) => line.trim().length > 0)
+    .map((line) => line.length - line.trimStart().length);
+  const indent = indents.length > 0 ? Math.min(...indents) : 0;
+  return kept
+    .map((line) => line.slice(Math.min(indent, line.length - line.trimStart().length)))
+    .join("\n")
+    .replace(MARKDOWN_LINK, "$1")
+    .replace(MARKDOWN_NOISE, "")
+    .trim();
+}
+
 export function parseReviewFindings(result: string): ReviewFindings {
-  const text = result.trim();
+  const text = cleanReport(result);
   // The verdict lives on the first line; the rest is commentary.
   const firstLine = text.split("\n")[0] ?? "";
   if (

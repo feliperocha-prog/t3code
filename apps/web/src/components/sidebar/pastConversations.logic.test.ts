@@ -55,12 +55,12 @@ describe("parsePastConversations", () => {
 
   it("still parses when the console mangles the non-ASCII separators", () => {
     const mangled =
-      "\nâ–  2026-10-08 â†’ 2026-10-09 Â· -t3-userdata-project-briefs Â· 07713a1e-9c0f-43f9-80bb-5df0e67a2843\n  1Âª msg: You summarize\n";
+      "\nâ–  2026-10-08 â†’ 2026-10-09 Â· OneDrive-Documentos-Projetos-dashboard-b2b Â· 07713a1e-9c0f-43f9-80bb-5df0e67a2843\n  1Âª msg: You summarize\n";
     expect(parsePastConversations(mangled)).toEqual([
       {
         startDate: "2026-10-08",
         endDate: "2026-10-09",
-        projectDir: "-t3-userdata-project-briefs",
+        projectDir: "OneDrive-Documentos-Projetos-dashboard-b2b",
         sessionId: "07713a1e-9c0f-43f9-80bb-5df0e67a2843",
         firstMessage: "You summarize",
         excerpts: [],
@@ -129,5 +129,20 @@ describe("helpers", () => {
     const [first, second] = parsePastConversations(REAL_OUTPUT);
     expect(first && pastConversationSummary(first)).toMatch(/^Cláudia/);
     expect(second && pastConversationSummary(second)).toMatch(/^Felipe:/);
+  });
+
+  it("hides T3's own helper sessions and skips an injected first message", () => {
+    const output = [
+      "■ 2026-11-01 · -t3-userdata-project-briefs · cd241077-a576-4fcc-b3a4-34ddd07c06ab",
+      "  1ª msg: You summarize a project's state note for its owner",
+      "",
+      "■ 2026-11-01 · OneDrive-Documentos-Projetos-mcp-sheets-felipe · d9a16092-6a6a-4c69-b1c4-2f3932dc2969",
+      "  1ª msg: <browser_instruction># Claude in Chrome browser automation",
+      "  Felipe: …Base-Klaviyo 28/11; C76 30d 21/11…",
+      "",
+    ].join("\n");
+    const parsed = parsePastConversations(output);
+    expect(parsed.map((row) => row.sessionId)).toEqual(["d9a16092-6a6a-4c69-b1c4-2f3932dc2969"]);
+    expect(parsed[0] && pastConversationSummary(parsed[0])).toMatch(/^Felipe:/);
   });
 });

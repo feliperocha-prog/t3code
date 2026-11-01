@@ -1,0 +1,33 @@
+// Collapsed work-group summaries ("Worked for 20s" row), built in English by
+// client-runtime and translated by components/chat/workSummary.logic.ts.
+export default {
+  "Used 1 tool": "Usou 1 ferramenta",
+  "Used {count} tools": "Usou {count} ferramentas",
+  "Changed 1 file": "Alterou 1 arquivo",
+  "Changed {count} files": "Alterou {count} arquivos",
+  "Read 1 file": "Leu 1 arquivo",
+  "Read {count} files": "Leu {count} arquivos",
+  "Ran 1 command": "Executou 1 comando",
+  "Ran {count} commands": "Executou {count} comandos",
+  "Received 1 update": "Recebeu 1 atualização",
+  "Received {count} updates": "Recebeu {count} atualizações",
+  "Linked 1 pull request": "Vinculou 1 pull request",
+  "Linked {count} pull requests": "Vinculou {count} pull requests",
+  "Unlinked 1 pull request": "Desvinculou 1 pull request",
+  "Unlinked {count} pull requests": "Desvinculou {count} pull requests",
+  "Checked linked pull requests": "Conferiu os pull requests vinculados",
+  "Checked linked pull requests {count} times":
+    "Conferiu os pull requests vinculados {count} vezes",
+  "Searched the web once": "Buscou na web 1 vez",
+  "Searched the web {count} times": "Buscou na web {count} vezes",
+  "Searched code once": "Buscou no código 1 vez",
+  "Searched code {count} times": "Buscou no código {count} vezes",
+  "Used browser once": "Usou o navegador 1 vez",
+  "Used browser {count} times": "Usou o navegador {count} vezes",
+  "Used device controls once": "Usou o dispositivo 1 vez",
+  "Used device controls {count} times": "Usou o dispositivo {count} vezes",
+  "Used {name} integration": "Usou a integração {name}",
+  "Used {names} integrations": "Usou as integrações {names}",
+  "Used {names}": "Usou {names}",
+  "{head} and {last}": "{head} e {last}",
+};

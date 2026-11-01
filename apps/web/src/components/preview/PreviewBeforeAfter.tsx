@@ -11,7 +11,7 @@ import { useThreadShell } from "~/state/entities";
 import { previewBridge } from "./previewBridge";
 import { turnCaptureMoment, usePreviewBeforeAfterStore } from "./previewBeforeAfterStore";
 
-// Gives a dev server's hot reload time to repaint before the "after" shot.
+// Gives the reloaded page time to paint before the "after" shot.
 const AFTER_SETTLE_MS = 2000;
 // Lets a hidden native surface present again before it is photographed.
 const SURFACE_SHOW_MS = 400;
@@ -54,6 +54,7 @@ export function usePreviewBeforeAfterCapture(
   const [pendingAfter, setPendingAfter] = useState<{ threadKey: string; turnId: string } | null>(
     null,
   );
+  const reloadedForTurnRef = useRef<string | null>(null);
 
   useEffect(() => {
     // A thread switch is a first observation: the other thread's turn state
@@ -83,6 +84,14 @@ export function usePreviewBeforeAfterCapture(
   useEffect(() => {
     if (!pendingAfter || pendingAfter.threadKey !== threadKey) return;
     if (!canCapture || !runtimeTabId) return;
+    // A page without hot reload still shows the files as they were before the
+    // reply, so reload once per turn; a static site or a plain server never
+    // repaints on its own. Only once: the reload can flip `canCapture` and
+    // re-run this effect.
+    if (reloadedForTurnRef.current !== pendingAfter.turnId) {
+      reloadedForTurnRef.current = pendingAfter.turnId;
+      void previewBridge?.refresh(runtimeTabId);
+    }
     const timer = window.setTimeout(() => {
       void captureInto("after", pendingAfter.threadKey, pendingAfter.turnId, runtimeTabId);
       setPendingAfter(null);
@@ -155,7 +164,7 @@ function Shot({ title, shot }: { title: string; shot: DesktopPreviewThumbnail | 
         <span className="font-medium text-foreground">{title}</span>
         {shot ? (
           <span className="text-muted-foreground">
-            {new Date(shot.createdAt).toLocaleTimeString()}
+            {new Date(shot.createdAt).toLocaleTimeString("pt-BR", { hour12: false })}
           </span>
         ) : null}
       </figcaption>

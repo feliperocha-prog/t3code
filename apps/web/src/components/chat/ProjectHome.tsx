@@ -207,11 +207,8 @@ function ProjectSummaryCard({
           tc("project home", "Reading the hub…")
         ) : (
           <ErrorHint error={note.error ?? null}>
-            {tc(
-              "project home",
-              "Couldn't read the hub at {path}. If it doesn't exist yet, create it there.",
-              { path: `${vaultFolder}/${notePath}` },
-            )}
+            {tc("project home", "This project has no hub in the vault yet.")}{" "}
+            <span className="font-mono">{notePath}</span>
           </ErrorHint>
         )}
       </Muted>

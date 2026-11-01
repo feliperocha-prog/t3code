@@ -21,6 +21,14 @@ const dictionary: Readonly<Record<string, string>> = {
   "Could not open {folder}. Check that it exists.":
     "Não consegui abrir {folder}. Confira se a pasta existe.",
   "{folder} already has a folder named {name}.": "{folder} já tem uma pasta chamada {name}.",
+  "{title} is already in the sidebar, at {folder}.":
+    "{title} já está na barra lateral, em {folder}.",
+  "Could not create the project: {reason}": "Não consegui criar o projeto: {reason}",
+  "Still missing: {fields}": "Falta: {fields}",
+  "new project field|name": "nome",
+  "new project field|purpose": "pra que serve",
+  "new project field|brand": "marca",
+  "new project field|owner": "dono",
   "Creating the project…": "Criando o projeto…",
   "Writing README, .gitignore and CLAUDE.md…": "Gravando README, .gitignore e CLAUDE.md…",
   "Starting git…": "Iniciando o git…",

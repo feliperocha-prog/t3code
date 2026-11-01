@@ -68,13 +68,38 @@ export function routinesTaskXml(
   ].join("\r\n");
 }
 
-const schtasks = (args: ReadonlyArray<string>) =>
+const exitCodeOf = (command: string, args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     return yield* spawner.exitCode(
-      ChildProcess.make("schtasks", args, { stdin: "ignore", stdout: "ignore", stderr: "ignore" }),
+      ChildProcess.make(command, args, { stdin: "ignore", stdout: "ignore", stderr: "ignore" }),
     );
   });
+
+const schtasks = (args: ReadonlyArray<string>) => exitCodeOf("schtasks", args);
+
+/** Single-quoted PowerShell literal: only the quote itself needs escaping. */
+const psLiteral = (value: string) => `'${value.replaceAll("'", "''")}'`;
+
+/**
+ * The PowerShell command that registers the task from `file`. Smart App
+ * Control and Defender block `schtasks /Create` when an app they do not trust
+ * launches it (32 s, then spawn EPERM), while the same registration through
+ * the Task Scheduler cmdlet goes through. Query and delete are not blocked.
+ */
+export function registerTaskCommand(file: string): ReadonlyArray<string> {
+  const separator = ROUTINES_TASK_NAME.lastIndexOf("\\");
+  const taskPath = `\\${ROUTINES_TASK_NAME.slice(0, separator)}\\`;
+  const taskName = ROUTINES_TASK_NAME.slice(separator + 1);
+  return [
+    "-NoProfile",
+    "-NonInteractive",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-Command",
+    `Register-ScheduledTask -TaskPath ${psLiteral(taskPath)} -TaskName ${psLiteral(taskName)} -Xml (Get-Content -Raw -LiteralPath ${psLiteral(file)}) -Force | Out-Null`,
+  ];
+}
 
 /** Creates, replaces or removes the task so it matches `xml`. */
 export const syncRoutinesTask = Effect.fn("syncRoutinesTask")(function* (
@@ -92,7 +117,7 @@ export const syncRoutinesTask = Effect.fn("syncRoutinesTask")(function* (
   // schtasks reads the XML as UTF-16 LE with a byte order mark.
   const body = Buffer.from(String.fromCharCode(0xfeff) + xml, "utf16le");
   yield* fs.writeFile(file, new Uint8Array(body));
-  const code = yield* schtasks(["/Create", "/TN", ROUTINES_TASK_NAME, "/XML", file, "/F"]);
+  const code = yield* exitCodeOf("powershell", registerTaskCommand(file));
   if (code !== 0) {
     yield* Effect.logWarning("could not register the scheduled routines task", { exitCode: code });
   }

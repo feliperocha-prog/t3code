@@ -36,8 +36,8 @@ const dictionary: Readonly<Record<string, string>> = {
   "project home|What could go wrong": "O que pode dar errado",
   "project home|Nothing pending in the hub.": "Nada pendente no hub.",
   "project home|Reading the hub…": "Lendo o hub…",
-  "project home|Couldn't read the hub at {path}. If it doesn't exist yet, create it there.":
-    "Não consegui ler o hub em {path}. Se ele ainda não existe, crie nesse lugar.",
+  "project home|This project has no hub in the vault yet.":
+    "Este projeto ainda não tem hub no vault. Quando criar, use o caminho:",
   "project home|The hub has no Estado, Pendente or Armadilhas sections.":
     "O hub não tem as seções Estado, Pendente ou Armadilhas.",
   "project home|How to run and publish": "Como rodar e publicar",

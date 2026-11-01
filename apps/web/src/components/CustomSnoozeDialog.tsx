@@ -126,7 +126,7 @@ function CustomSnoozeDialog() {
                             />
                           }
                         >
-                          {date.toLocaleDateString(undefined, {
+                          {date.toLocaleDateString("pt-BR", {
                             month: "short",
                             day: "numeric",
                             year: "numeric",
