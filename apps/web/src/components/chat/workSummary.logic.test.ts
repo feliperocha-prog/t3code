@@ -20,11 +20,16 @@ describe("translateWorkSummary", () => {
 
   it("does not split a list of sources joined with and", () => {
     expect(translateWorkSummary("Used BigQuery and Sheets integrations and changed 1 file")).toBe(
-      "Usou as integrações BigQuery and Sheets e alterou 1 arquivo",
+      "Usou as integrações BigQuery e Sheets e alterou 1 arquivo",
     );
     expect(translateWorkSummary("Used Chrome, Figma, and Linear and read 2 files")).toBe(
-      "Usou Chrome, Figma, and Linear e leu 2 arquivos",
+      "Usou Chrome, Figma e Linear e leu 2 arquivos",
     );
+  });
+
+  it("translates the join of a source list", () => {
+    expect(translateWorkSummary("Used Playwright and Chrome")).toBe("Usou Playwright e Chrome");
+    expect(translateWorkSummary("Used BigQuery integration")).toBe("Usou a integração BigQuery");
   });
 
   it("leaves an unknown sentence alone", () => {

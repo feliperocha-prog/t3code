@@ -48,9 +48,18 @@ const RULES: ReadonlyArray<Rule> = [
     (m) => counted(m, "Used device controls once", "Used device controls {count} times"),
   ],
   [/^used (.+) integration$/i, (m) => t("Used {name} integration", { name: m[1]! })],
-  [/^used (.+) integrations$/i, (m) => t("Used {names} integrations", { names: m[1]! })],
-  [/^used (.+)$/i, (m) => t("Used {names}", { names: m[1]! })],
+  [
+    /^used (.+) integrations$/i,
+    (m) => t("Used {names} integrations", { names: translateNameList(m[1]!) }),
+  ],
+  [/^used (.+)$/i, (m) => t("Used {names}", { names: translateNameList(m[1]!) })],
 ];
+
+// The builder joins source names as "A, B, and C" / "A and B": only the last
+// join is the English "and".
+function translateNameList(names: string): string {
+  return names.replace(/,? and (?=[^,]*$)/, ` ${t("and")} `);
+}
 
 // Source names are joined with the same ", " / " and " as the labels ("Used
 // BigQuery and Sheets integrations"), so only a join followed by a label verb
