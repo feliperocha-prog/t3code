@@ -802,7 +802,7 @@ export function BranchToolbarBranchSelector({
         {/* Context menu lives on the wrapper: the disabled Button has
             pointer-events-none, so the trigger itself never sees right-clicks
             while refs are loading or a branch action is pending. */}
-        <Tooltip>
+        <Tooltip open={isBranchMenuOpen ? false : undefined}>
           <TooltipTrigger
             render={
               <span
