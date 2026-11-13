@@ -23,6 +23,7 @@ import { Textarea } from "../ui/textarea";
 import { toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { listsInFlight } from "./BehaviorRulesSettings";
+import { normalizeDailyTime } from "./RoutinesSettings.logic";
 import { useSettingsScope } from "./SettingsScopeContext";
 import { SettingsRow, SettingsSection } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
@@ -242,6 +243,7 @@ export function RoutinesSettings() {
                 aria-label={t("Time of day")}
                 aria-invalid={time.length > 0 && schedule === null ? true : undefined}
                 onChange={(event) => setTime(event.target.value.replace(/[^\d:]/g, ""))}
+                onBlur={() => setTime(normalizeDailyTime(time))}
               />
             ) : (
               <Input
