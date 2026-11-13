@@ -68,6 +68,14 @@ export function shouldUseRestingComposerLayout(input: {
 export const COMPOSER_RESTING_EXPANSION_MIN_PX = 94;
 
 /**
+ * Extra end space the timeline reserves while the "Scroll to end" pill is
+ * shown, so the last rows can scroll clear of it: the xs button (28px on
+ * mobile, 24px from sm), the wrapper's py-1.5 (12px), the 4px lift above the
+ * composer, plus a 4px gap.
+ */
+export const SCROLL_TO_END_PILL_CLEARANCE_PX = 48;
+
+/**
  * The space the timeline reserves at its end for the composer overlay.
  *
  * The overlay is measured live, but a resting composer is much shorter than
