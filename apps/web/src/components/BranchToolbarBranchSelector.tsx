@@ -232,6 +232,8 @@ export function BranchToolbarBranchSelector({
   // Git ref queries
   // ---------------------------------------------------------------------------
   const [isBranchMenuOpen, setIsBranchMenuOpen] = useState(false);
+  // The full-ref tooltip opens upward like the menu, so it stays shut while the menu is open.
+  const [isBranchTooltipOpen, setIsBranchTooltipOpen] = useState(false);
   const [branchQuery, setBranchQuery] = useState("");
   const deferredBranchQuery = useDeferredValue(branchQuery);
 
@@ -802,7 +804,10 @@ export function BranchToolbarBranchSelector({
         {/* Context menu lives on the wrapper: the disabled Button has
             pointer-events-none, so the trigger itself never sees right-clicks
             while refs are loading or a branch action is pending. */}
-        <Tooltip open={isBranchMenuOpen ? false : undefined}>
+        <Tooltip
+          open={!isBranchMenuOpen && isBranchTooltipOpen}
+          onOpenChange={setIsBranchTooltipOpen}
+        >
           <TooltipTrigger
             render={
               <span
