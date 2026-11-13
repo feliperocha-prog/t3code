@@ -19,6 +19,12 @@ describe("plainTextExcerpt", () => {
     expect(plainTextExcerpt(answer, 220)).toBe("Resumo primeiro item segundo item terceiro item");
   });
 
+  it("troca link e imagem pelo texto visível", () => {
+    expect(plainTextExcerpt("Veja [a doc](https://x.com/y) e ![print](img.png)", 220)).toBe(
+      "Veja a doc e print",
+    );
+  });
+
   it("corta depois de limpar, então o markdown não conta no tamanho", () => {
     expect(plainTextExcerpt("## Título longo demais aqui", 12)).toBe("Título longo…");
     expect(plainTextExcerpt("**curto**", 5)).toBe("curto");

@@ -10,19 +10,24 @@ function stripEmphasis(text: string): string {
     .replace(/(^|[^\w])_(?=\S)([^_]+?)(?<=\S)_(?!\w)/g, "$1$2");
 }
 
+// Links and images keep only their visible text: [a doc](url) -> "a doc".
+function stripLinks(text: string): string {
+  return text.replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1");
+}
+
 function stripProseLine(line: string): string {
   const withoutMarker = line.replace(/^\s*#{1,6}\s+/, "").replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "");
   return withoutMarker
     .split(INLINE_CODE)
-    .map((part, index) => (index % 2 === 1 ? part : stripEmphasis(part)))
+    .map((part, index) => (index % 2 === 1 ? part : stripEmphasis(stripLinks(part))))
     .join("")
     .replace(/`+/g, "");
 }
 
 /**
  * Turns a markdown answer into a one-paragraph plain-text quote: drops code
- * fences (keeping their content), inline backticks, emphasis markers, heading
- * hashes and list markers, collapses whitespace, then truncates to `max`.
+ * fences (keeping their content), inline backticks, link/image syntax, emphasis
+ * markers, heading hashes and list markers, collapses whitespace, then truncates to `max`.
  */
 export function plainTextExcerpt(answerText: string, max: number): string {
   const lines: string[] = [];
