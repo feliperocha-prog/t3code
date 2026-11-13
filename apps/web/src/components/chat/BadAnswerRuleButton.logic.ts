@@ -3,9 +3,11 @@ const FENCE_LINE = /^\s*(?:```|~~~)/;
 // stripped outside them so `snake_case` or `**kwargs` survive.
 const INLINE_CODE = /(`+[^`]*?`+)/;
 
+// `__bold__` is left as-is on purpose: it has the same shape as `__dirname__`
+// or `__init__.py`, and a raw marker is better than a mangled identifier.
 function stripEmphasis(text: string): string {
   return text
-    .replace(/(\*\*|__)(?=\S)(.+?)(?<=\S)\1/g, "$2")
+    .replace(/\*\*(?=\S)(.+?)(?<=\S)\*\*/g, "$1")
     .replace(/(^|[^\w*])\*(?=\S)([^*]+?)(?<=\S)\*(?![\w*])/g, "$1$2")
     .replace(/(^|[^\w])_(?=\S)([^_]+?)(?<=\S)_(?!\w)/g, "$1$2");
 }

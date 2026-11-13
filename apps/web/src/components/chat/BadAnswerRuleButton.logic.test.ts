@@ -19,6 +19,15 @@ describe("plainTextExcerpt", () => {
     expect(plainTextExcerpt(answer, 220)).toBe("Resumo primeiro item segundo item terceiro item");
   });
 
+  // Escolha: `__` nunca é removido. "__negrito__" tem a mesma forma de
+  // "__dirname__", e é melhor sobrar o marcador do que apagar código.
+  it("nunca remove __, nem quando é negrito", () => {
+    expect(plainTextExcerpt("edite __init__.py e use __dirname__", 220)).toBe(
+      "edite __init__.py e use __dirname__",
+    );
+    expect(plainTextExcerpt("__negrito__ aqui", 220)).toBe("__negrito__ aqui");
+  });
+
   it("troca link e imagem pelo texto visível", () => {
     expect(plainTextExcerpt("Veja [a doc](https://x.com/y) e ![print](img.png)", 220)).toBe(
       "Veja a doc e print",
