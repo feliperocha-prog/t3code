@@ -102,7 +102,7 @@ export function RoutinesSettings() {
     updateSettings({ scheduledRoutines });
   };
 
-  const schedule = draftSchedule(kind, time, hours);
+  const schedule = draftSchedule(kind, normalizeDailyTime(time), hours);
   const chosenProject = projects.find((project) => project.id === projectId) ?? null;
   const canAdd =
     name.trim().length > 0 && prompt.trim().length > 0 && chosenProject !== null && schedule;
