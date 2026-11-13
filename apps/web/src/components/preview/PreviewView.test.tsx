@@ -214,21 +214,37 @@ vi.mock("./previewBridge", () => ({
   },
 }));
 
+// `trailingActions` is a Fragment wrapping several buttons; walk it to find the
+// element that carries the native picture-in-picture handler.
+function findNativePictureInPictureHandler(node: unknown): (() => void) | null {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const handler = findNativePictureInPictureHandler(child);
+      if (handler) return handler;
+    }
+    return null;
+  }
+  if (typeof node !== "object" || node === null || !("props" in node)) return null;
+  const props = (node as { props?: Record<string, unknown> }).props;
+  if (!props) return null;
+  if (typeof props.onNativePictureInPicture === "function") {
+    return props.onNativePictureInPicture as () => void;
+  }
+  return findNativePictureInPictureHandler(props.children);
+}
+
 vi.mock("./PreviewChromeRow", () => ({
   PreviewChromeRow: (props: {
     onSubmit: (url: string) => void;
     onPickElement?: () => void;
     onPictureInPicture?: () => void;
     pictureInPicture?: boolean;
-    trailingActions?: {
-      props: { onNativePictureInPicture?: () => void };
-    };
+    trailingActions?: unknown;
   }) => {
     mocks.submittedUrl = props.onSubmit;
     mocks.toggleAnnotation = props.onPickElement ?? null;
     mocks.togglePictureInPicture = props.onPictureInPicture ?? null;
-    mocks.toggleNativePictureInPicture =
-      props.trailingActions?.props.onNativePictureInPicture ?? null;
+    mocks.toggleNativePictureInPicture = findNativePictureInPictureHandler(props.trailingActions);
     mocks.pictureInPicturePressed = props.pictureInPicture ?? false;
     return null;
   },
