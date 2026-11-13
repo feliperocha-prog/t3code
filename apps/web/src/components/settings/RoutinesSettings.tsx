@@ -227,13 +227,21 @@ export function RoutinesSettings() {
               </SelectPopup>
             </Select>
             {kind === "daily" ? (
+              // A text field instead of type="time": the native picker follows the
+              // system locale and shows "09:00 AM". The value stays "HH:MM" (24h),
+              // and draftSchedule keeps Add disabled until it is a real time.
               <Input
                 size="sm"
-                type="time"
+                type="text"
+                inputMode="numeric"
+                placeholder="09:00"
+                maxLength={5}
+                pattern="([01]\d|2[0-3]):[0-5]\d"
                 className="w-28"
                 value={time}
                 aria-label={t("Time of day")}
-                onChange={(event) => setTime(event.target.value)}
+                aria-invalid={time.length > 0 && schedule === null ? true : undefined}
+                onChange={(event) => setTime(event.target.value.replace(/[^\d:]/g, ""))}
               />
             ) : (
               <Input
