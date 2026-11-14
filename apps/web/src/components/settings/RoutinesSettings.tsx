@@ -23,6 +23,7 @@ import { Textarea } from "../ui/textarea";
 import { toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { listsInFlight } from "./BehaviorRulesSettings";
+import { normalizeDailyTime } from "./RoutinesSettings.logic";
 import { useSettingsScope } from "./SettingsScopeContext";
 import { SettingsRow, SettingsSection } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
@@ -101,7 +102,7 @@ export function RoutinesSettings() {
     updateSettings({ scheduledRoutines });
   };
 
-  const schedule = draftSchedule(kind, time, hours);
+  const schedule = draftSchedule(kind, normalizeDailyTime(time), hours);
   const chosenProject = projects.find((project) => project.id === projectId) ?? null;
   const canAdd =
     name.trim().length > 0 && prompt.trim().length > 0 && chosenProject !== null && schedule;
@@ -227,13 +228,22 @@ export function RoutinesSettings() {
               </SelectPopup>
             </Select>
             {kind === "daily" ? (
+              // A text field instead of type="time": the native picker follows the
+              // system locale and shows "09:00 AM". The value stays "HH:MM" (24h),
+              // and draftSchedule keeps Add disabled until it is a real time.
               <Input
                 size="sm"
-                type="time"
+                type="text"
+                inputMode="numeric"
+                placeholder="09:00"
+                maxLength={5}
+                pattern="([01]\d|2[0-3]):[0-5]\d"
                 className="w-28"
                 value={time}
                 aria-label={t("Time of day")}
-                onChange={(event) => setTime(event.target.value)}
+                aria-invalid={time.length > 0 && schedule === null ? true : undefined}
+                onChange={(event) => setTime(event.target.value.replace(/[^\d:]/g, ""))}
+                onBlur={() => setTime(normalizeDailyTime(time))}
               />
             ) : (
               <Input

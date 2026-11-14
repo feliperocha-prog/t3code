@@ -232,6 +232,8 @@ export function BranchToolbarBranchSelector({
   // Git ref queries
   // ---------------------------------------------------------------------------
   const [isBranchMenuOpen, setIsBranchMenuOpen] = useState(false);
+  // The full-ref tooltip opens upward like the menu, so it stays shut while the menu is open.
+  const [isBranchTooltipOpen, setIsBranchTooltipOpen] = useState(false);
   const [branchQuery, setBranchQuery] = useState("");
   const deferredBranchQuery = useDeferredValue(branchQuery);
 
@@ -802,32 +804,43 @@ export function BranchToolbarBranchSelector({
         {/* Context menu lives on the wrapper: the disabled Button has
             pointer-events-none, so the trigger itself never sees right-clicks
             while refs are loading or a branch action is pending. */}
-        <span
-          className="flex min-w-0"
-          onContextMenu={(event) => handleBranchContextMenu(event, resolvedActiveBranch)}
+        <Tooltip
+          open={!isBranchMenuOpen && isBranchTooltipOpen}
+          onOpenChange={setIsBranchTooltipOpen}
         >
-          <ComboboxTrigger
-            render={<ComposerControl size="xs" />}
-            // No press-scale: the popup aligns live to this trigger, so a
-            // momentary 0.97 shrink would drag the open popup ~3px sideways.
-            className="min-w-0 max-w-full active:scale-100"
-            disabled={isInitialBranchesLoadPending || isBranchActionPending}
-          >
-            <GitBranchIcon className="size-3 shrink-0 opacity-70" />
-            <span
-              data-composer-label
-              className="min-w-0 max-w-[240px] group-data-[compact]/composer-context:max-w-0"
-            >
+          <TooltipTrigger
+            render={
               <span
-                data-composer-label-motion
-                className="flex w-full max-w-[240px] transition-opacity duration-180 ease-drawer group-data-[compact]/composer-context:opacity-0 motion-reduce:transition-none"
+                className="flex min-w-0"
+                onContextMenu={(event) => handleBranchContextMenu(event, resolvedActiveBranch)}
+              />
+            }
+          >
+            <ComboboxTrigger
+              render={<ComposerControl size="xs" />}
+              // No press-scale: the popup aligns live to this trigger, so a
+              // momentary 0.97 shrink would drag the open popup ~3px sideways.
+              className="min-w-0 max-w-full active:scale-100"
+              disabled={isInitialBranchesLoadPending || isBranchActionPending}
+            >
+              <GitBranchIcon className="size-3 shrink-0 opacity-70" />
+              <span
+                data-composer-label
+                className="min-w-0 max-w-[240px] group-data-[compact]/composer-context:max-w-0"
               >
-                <MiddleTruncate value={triggerLabel} />
+                <span
+                  data-composer-label-motion
+                  className="flex w-full max-w-[240px] transition-opacity duration-180 ease-drawer group-data-[compact]/composer-context:opacity-0 motion-reduce:transition-none"
+                >
+                  <MiddleTruncate value={triggerLabel} />
+                </span>
               </span>
-            </span>
-            <ChevronDownIcon className="size-3 shrink-0 opacity-50" />
-          </ComboboxTrigger>
-        </span>
+              <ChevronDownIcon className="size-3 shrink-0 opacity-50" />
+            </ComboboxTrigger>
+          </TooltipTrigger>
+          {/* The label is middle-truncated at 240px, so the full ref lives here. */}
+          <TooltipPopup side="top">{triggerLabel}</TooltipPopup>
+        </Tooltip>
       </div>
       <ComboboxPopup
         align="end"

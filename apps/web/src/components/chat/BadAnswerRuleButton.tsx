@@ -6,6 +6,7 @@ import { useEnvironmentSettings, useUpdateEnvironmentSettings } from "~/hooks/us
 import { t } from "~/i18n";
 import { randomUUID } from "~/lib/utils";
 import { addBehaviorRule } from "../settings/BehaviorRulesSettings";
+import { plainTextExcerpt } from "./BadAnswerRuleButton.logic";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -47,10 +48,7 @@ export function BadAnswerRuleButton({
   const textareaId = useId();
   const rules = useEnvironmentSettings(environmentId, (settings) => settings.behaviorRules);
   const updateSettings = useUpdateEnvironmentSettings(environmentId);
-  const excerpt =
-    answerText.length > EXCERPT_LENGTH
-      ? `${answerText.slice(0, EXCERPT_LENGTH).trimEnd()}…`
-      : answerText;
+  const excerpt = plainTextExcerpt(answerText, EXCERPT_LENGTH);
 
   const save = () => {
     const next = addBehaviorRule(rules, draft, randomUUID());
