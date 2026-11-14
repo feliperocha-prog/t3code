@@ -34,6 +34,12 @@ describe("plainTextExcerpt", () => {
     );
   });
 
+  it("aceita parêntese dentro da URL do link", () => {
+    expect(plainTextExcerpt("Veja [Foo](https://pt.wikipedia.org/wiki/Foo_(bar)) aqui", 220)).toBe(
+      "Veja Foo aqui",
+    );
+  });
+
   it("corta depois de limpar, então o markdown não conta no tamanho", () => {
     expect(plainTextExcerpt("## Título longo demais aqui", 12)).toBe("Título longo…");
     expect(plainTextExcerpt("**curto**", 5)).toBe("curto");
