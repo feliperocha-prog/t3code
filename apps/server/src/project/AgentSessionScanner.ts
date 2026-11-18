@@ -209,6 +209,29 @@ export interface AgentSessionRecentThreadsOptions {
   readonly windowMs?: number;
   /** Leave out transcripts written within this span; they may still be in use. */
   readonly minIdleMs?: number;
+  /**
+   * Sessions to leave unread, checked against the session id the file name
+   * carries before the file is read (native T3 sessions, imports the user
+   * deleted or archived, imports owned by another project). A skipped session
+   * spends no part of the import budget.
+   */
+  readonly skipSession?: (session: {
+    readonly source: AgentSessionSource;
+    readonly providerInstanceId: ProviderInstanceId;
+    readonly providerSessionId: string;
+  }) => boolean;
+}
+
+const CODEX_ROLLOUT_SESSION_ID_PATTERN =
+  /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+/**
+ * Session id a transcript's file name carries, known before reading it.
+ * Claude names the file after the session; a Codex rollout name ends with it.
+ */
+function transcriptFileSessionId(source: AgentSessionSource, baseName: string): string | null {
+  if (source === "claudeAgent") return baseName.length > 0 ? baseName : null;
+  return CODEX_ROLLOUT_SESSION_ID_PATTERN.exec(baseName)?.[1] ?? null;
 }
 
 /**
@@ -1396,6 +1419,10 @@ export const make = Effect.gen(function* () {
     }
 
     metadataCache = nextMetadataCache;
+    // Forget verdicts for files that are no longer discovered.
+    for (const filePath of unimportableTranscripts.keys()) {
+      if (!nextMetadataCache.has(filePath)) unimportableTranscripts.delete(filePath);
+    }
     return { candidates: raw, truncated };
   });
 
@@ -1611,6 +1638,20 @@ export const make = Effect.gen(function* () {
           ) {
             return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
           }
+          const fileSessionId = transcriptFileSessionId(
+            candidate.source,
+            path.basename(transcript.filePath, ".jsonl"),
+          );
+          if (
+            fileSessionId !== null &&
+            options.skipSession?.({
+              source: candidate.source,
+              providerInstanceId: candidate.providerInstanceId,
+              providerSessionId: fileSessionId,
+            }) === true
+          ) {
+            return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
+          }
           const completed = completedByFile.get(
             `${candidate.providerInstanceId}\0${transcript.filePath}`,
           );
@@ -1625,6 +1666,15 @@ export const make = Effect.gen(function* () {
             return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
           }
           const identity = transcriptIdentity(transcript.filePath, stats.value);
+          // Discovery's mtime can be a pass old; a write since then means the
+          // session may still be running.
+          if (
+            options.minIdleMs !== undefined &&
+            identity.mtimeMs !== null &&
+            identity.mtimeMs > idleCutoffMs
+          ) {
+            return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
+          }
           const completedSource = completed?.find(
             (source) =>
               source.provider === candidate.source && sameTranscriptIdentity(source, identity),

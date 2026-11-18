@@ -58,6 +58,8 @@ const makeProjectionSnapshotQueryLayer = (importedWorkspaceRoots: ReadonlyArray<
     getProjectShells: () => Effect.die("unused"),
     getProjectShellById: () => Effect.die("unused"),
     getImportedAgentSessionSources: () => Effect.succeed([]),
+    getImportedThreadIdsToSkip: () => Effect.succeed([]),
+    threadRowExists: () => Effect.succeed(false),
     getFirstActiveThreadIdByProjectId: () => Effect.die("unused"),
     getThreadCheckpointContext: () => Effect.die("unused"),
     getFullThreadDiffContext: () => Effect.die("unused"),
@@ -2757,6 +2759,155 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
 
         expect(importableIds(onboarding)).toEqual(["fresh", "idle"]);
         expect(importableIds(autoSync)).toEqual(["idle", "older"]);
+      }),
+    );
+
+    it.effect("skips a session chosen by skipSession before reading its transcript", () =>
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const fileSystem = yield* FileSystem.FileSystem;
+        const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
+        yield* TestClock.setTime(nowMs);
+        const claudeHomePath = yield* makeTempDir("t3code-skip-claude-");
+        const codexHomePath = yield* makeTempDir("t3code-skip-codex-");
+        const workspace = yield* makeTempDir("t3code-skip-project-");
+        const skippedClaudeId = "123e4567-e89b-42d3-a456-426614174001";
+        const keptClaudeId = "123e4567-e89b-42d3-a456-426614174002";
+        const skippedCodexId = "123e4567-e89b-42d3-a456-426614174003";
+        const skippedClaudePath = path.join(
+          claudeHomePath,
+          "projects",
+          "-p",
+          `${skippedClaudeId}.jsonl`,
+        );
+        const keptClaudePath = path.join(claudeHomePath, "projects", "-p", `${keptClaudeId}.jsonl`);
+        const skippedCodexPath = path.join(
+          codexHomePath,
+          "sessions",
+          "2026",
+          "08",
+          "24",
+          `rollout-2026-08-24T10-00-00-${skippedCodexId}.jsonl`,
+        );
+        yield* writeTranscript({
+          filePath: skippedClaudePath,
+          contents: claudeSession({ cwd: workspace, sessionId: skippedClaudeId }),
+          mtimeMs: nowMs - 60 * 60 * 1000,
+        });
+        yield* writeTranscript({
+          filePath: keptClaudePath,
+          contents: claudeSession({ cwd: workspace, sessionId: keptClaudeId }),
+          mtimeMs: nowMs - 2 * 60 * 60 * 1000,
+        });
+        yield* writeTranscript({
+          filePath: skippedCodexPath,
+          contents: [
+            encodeTranscriptRecord({
+              type: "session_meta",
+              payload: { id: skippedCodexId, cwd: workspace },
+            }),
+            encodeTranscriptRecord({
+              type: "event_msg",
+              payload: { type: "user_message", message: "Skipped Codex prompt" },
+            }),
+          ].join("\n"),
+          mtimeMs: nowMs - 30 * 60 * 1000,
+        });
+        const openCounts = new Map<string, number>();
+        const observedFileSystem = FileSystem.FileSystem.of({
+          ...fileSystem,
+          open: (filePath, options) =>
+            Effect.suspend(() => {
+              openCounts.set(filePath, (openCounts.get(filePath) ?? 0) + 1);
+              return fileSystem.open(filePath, options);
+            }),
+        });
+        const asked: Array<string> = [];
+
+        const outcomes = yield* Effect.gen(function* () {
+          const scanner = yield* AgentSessionScanner.AgentSessionScanner;
+          return yield* collectOutcomes(scanner, workspace, [], {
+            skipSession: (session) => {
+              asked.push(
+                `${session.source}:${session.providerInstanceId}:${session.providerSessionId}`,
+              );
+              return session.providerSessionId !== keptClaudeId;
+            },
+          });
+        }).pipe(
+          Effect.provide(makeScannerTestLayer({ claudeHomePath, codexHomePath })),
+          Effect.provideService(FileSystem.FileSystem, observedFileSystem),
+        );
+
+        expect(importableIds(outcomes)).toEqual([keptClaudeId]);
+        expect(outcomes.filter((outcome) => outcome._tag === "Skipped")).toHaveLength(2);
+        expect([...asked].toSorted()).toEqual(
+          [
+            `claudeAgent:claudeAgent:${keptClaudeId}`,
+            `claudeAgent:claudeAgent:${skippedClaudeId}`,
+            `codex:codex:${skippedCodexId}`,
+          ].toSorted(),
+        );
+        // Discovery opens every transcript once; only the kept one is read again.
+        expect(openCounts.get(skippedClaudePath)).toBe(1);
+        expect(openCounts.get(skippedCodexPath)).toBe(1);
+        expect(openCounts.get(keptClaudePath)).toBe(2);
+      }),
+    );
+
+    it.effect("skips a transcript whose current mtime is inside the idle time", () =>
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const fileSystem = yield* FileSystem.FileSystem;
+        const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
+        const minuteMs = 60 * 1000;
+        yield* TestClock.setTime(nowMs);
+        const claudeHomePath = yield* makeTempDir("t3code-idle-stat-claude-");
+        const codexHomePath = yield* makeTempDir("t3code-idle-stat-codex-");
+        const workspace = yield* makeTempDir("t3code-idle-stat-project-");
+        const transcriptPath = path.join(claudeHomePath, "projects", "-p", "written-again.jsonl");
+        yield* writeTranscript({
+          filePath: transcriptPath,
+          contents: claudeSession({ cwd: workspace, sessionId: "written-again" }),
+          mtimeMs: nowMs - 30 * minuteMs,
+        });
+        let transcriptStatCount = 0;
+        let transcriptOpenCount = 0;
+        // Discovery sees the old mtime; the stat before reading sees a write 5 minutes ago.
+        const simulatedFileSystem = FileSystem.FileSystem.of({
+          ...fileSystem,
+          stat: (filePath) => {
+            if (filePath !== transcriptPath) return fileSystem.stat(filePath);
+            transcriptStatCount += 1;
+            return transcriptStatCount === 1
+              ? fileSystem.stat(filePath)
+              : fileSystem.stat(filePath).pipe(
+                  Effect.map((info) => ({
+                    ...info,
+                    mtime: Option.some(new Date(nowMs - 5 * minuteMs)),
+                  })),
+                );
+          },
+          open: (filePath, options) => {
+            if (filePath === transcriptPath) transcriptOpenCount += 1;
+            return fileSystem.open(filePath, options);
+          },
+        });
+
+        const outcomes = yield* Effect.gen(function* () {
+          const scanner = yield* AgentSessionScanner.AgentSessionScanner;
+          return yield* collectOutcomes(scanner, workspace, [], {
+            windowMs: 60 * 24 * 60 * minuteMs,
+            minIdleMs: 20 * minuteMs,
+          });
+        }).pipe(
+          Effect.provide(makeScannerTestLayer({ claudeHomePath, codexHomePath })),
+          Effect.provideService(FileSystem.FileSystem, simulatedFileSystem),
+        );
+
+        expect(transcriptStatCount).toBe(2);
+        expect(transcriptOpenCount).toBe(1);
+        expect(outcomes).toEqual([{ _tag: "Skipped" }]);
       }),
     );
 

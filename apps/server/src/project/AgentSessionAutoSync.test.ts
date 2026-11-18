@@ -47,6 +47,8 @@ const makeRunner = (input: {
           getProjectShells: input.getProjectShells,
           getProjectShellById: input.getProjectShellById ?? (() => Effect.die("unused")),
           getImportedAgentSessionSources: () => Effect.succeed([]),
+          getImportedThreadIdsToSkip: () => Effect.succeed([]),
+          threadRowExists: () => Effect.succeed(false),
         }),
       ),
     ),
@@ -117,6 +119,7 @@ it.layer(NodeServices.layer)("AgentSessionAutoSync", (it) => {
             options: {
               windowMs: 60 * 24 * 60 * 60 * 1000,
               minIdleMs: 20 * 60 * 1000,
+              skipSession: expect.any(Function),
             },
           },
         ]);

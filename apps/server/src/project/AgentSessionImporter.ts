@@ -112,6 +112,15 @@ function nativeClaudeResumeIds(
   return ids;
 }
 
+/** `instance\0session` for an `import:<instance>:<session>` thread id; session ids carry no colon. */
+function importedSessionKey(threadId: string): string | null {
+  if (!isImportedAgentSessionThreadId(threadId)) return null;
+  const rest = threadId.slice("import:".length);
+  const split = rest.lastIndexOf(":");
+  if (split <= 0 || split === rest.length - 1) return null;
+  return `${rest.slice(0, split)}\0${rest.slice(split + 1)}`;
+}
+
 /** Import recent transcript text and persist the cursor needed to resume its provider session. */
 export const importRecentAgentThreads = Effect.fn("importRecentAgentThreads")(function* (
   input: AgentSessionImportInput,
@@ -155,10 +164,30 @@ export const importRecentAgentThreads = Effect.fn("importRecentAgentThreads")(fu
         ),
       ),
   );
+  // Imports the user deleted or archived, or that another project owns, must
+  // not be read or recreated.
+  const retiredImports = new Set(
+    (yield* snapshots
+      .getImportedThreadIdsToSkip(input.projectId)
+      .pipe(
+        Effect.mapError(
+          (cause) => new AgentSessionScanError({ operation: "read-projects", cause }),
+        ),
+      )).flatMap((threadId) => {
+      const key = importedSessionKey(threadId);
+      return key === null ? [] : [key];
+    }),
+  );
+  const skipSession: NonNullable<
+    AgentSessionScanner.AgentSessionRecentThreadsOptions["skipSession"]
+  > = (session) =>
+    (session.source === "claudeAgent" && nativeResumeIds.has(session.providerSessionId)) ||
+    retiredImports.has(`${session.providerInstanceId}\0${session.providerSessionId}`) ||
+    options.skipSession?.(session) === true;
   const threads = scanner.recentThreads(
     workspaceRoot,
     completedSources.map((entry) => entry.source),
-    options,
+    { ...options, skipSession },
   );
   const importedThreadIds = new Set<ThreadId>();
   let importedCount = 0;
@@ -192,7 +221,8 @@ export const importRecentAgentThreads = Effect.fn("importRecentAgentThreads")(fu
         return;
       }
       const thread = outcome.thread;
-      if (thread.source === "claudeAgent" && nativeResumeIds.has(thread.providerSessionId)) {
+      // Backstop for files whose name does not carry the session id.
+      if (skipSession(thread)) {
         skippedCount += 1;
         return;
       }
@@ -204,6 +234,11 @@ export const importRecentAgentThreads = Effect.fn("importRecentAgentThreads")(fu
         const model = thread.model ?? DEFAULT_MODEL_BY_PROVIDER[provider] ?? DEFAULT_MODEL;
         const existingThread = yield* snapshots.getThreadDetailById(threadId);
         const existingBinding = yield* directory.getBinding(threadId);
+        // A deleted or archived row means the user removed this import, even
+        // if that happened during this pass: never recreate it.
+        if (Option.isNone(existingThread) && (yield* snapshots.threadRowExists(threadId))) {
+          return false;
+        }
 
         if (
           thread.source === "claudeAgent" &&

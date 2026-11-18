@@ -229,6 +229,20 @@ export interface ProjectionSnapshotQueryShape {
   >;
 
   /**
+   * Imported thread ids the importer must not read again for this project:
+   * deleted, archived, or owned by another project. Deleted rows are included
+   * so an import the user removed is never recreated.
+   */
+  readonly getImportedThreadIdsToSkip: (
+    projectId: ProjectId,
+  ) => Effect.Effect<ReadonlyArray<ThreadId>, ProjectionRepositoryError>;
+
+  /** Whether any thread row exists for this id, including deleted and archived ones. */
+  readonly threadRowExists: (
+    threadId: ThreadId,
+  ) => Effect.Effect<boolean, ProjectionRepositoryError>;
+
+  /**
    * Read the checkpoint context needed to resolve a single thread diff.
    */
   readonly getThreadCheckpointContext: (

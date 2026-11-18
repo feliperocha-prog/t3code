@@ -171,11 +171,14 @@ const makeProjectedThread = (input: {
 const makeSnapshotsLayer = (input: {
   readonly project?: OrchestrationProjectShell;
   readonly getThread?: (threadId: ThreadId) => Option.Option<OrchestrationThread>;
+  readonly rowExists?: (threadId: ThreadId) => boolean;
 }) =>
   Layer.mock(ProjectionSnapshotQuery.ProjectionSnapshotQuery)({
     getProjectShellById: () =>
       Effect.succeed(input.project === undefined ? Option.none() : Option.some(input.project)),
     getImportedAgentSessionSources: () => Effect.succeed([]),
+    getImportedThreadIdsToSkip: () => Effect.succeed([]),
+    threadRowExists: (threadId) => Effect.succeed(input.rowExists?.(threadId) ?? false),
     getThreadDetailById: (threadId) => Effect.succeed(input.getThread?.(threadId) ?? Option.none()),
   });
 
@@ -354,6 +357,49 @@ it.layer(NodeServices.layer)("AgentSessionImporter", (it) => {
       }),
     );
 
+    it.effect("does not recreate a thread whose row survives as deleted or archived", () =>
+      Effect.gen(function* () {
+        const scanner = AgentSessionScanner.AgentSessionScanner.of({
+          scan: Effect.die("unused"),
+          recentThreads: () => Stream.succeed(makeThreadOutcome(makeThread("codex"))),
+        });
+        const engine = OrchestrationEngine.OrchestrationEngineService.of({
+          dispatch: () => Effect.die("must not recreate a retired import"),
+          readEvents: () => Stream.empty,
+          readThreadEvents: () => Stream.empty,
+          getThreadReplayStats: () => Effect.die("unused"),
+          streamDomainEvents: Stream.empty,
+          subscribeDomainEvents: Effect.succeed(Stream.empty),
+          latestSequence: Effect.succeed(0),
+        });
+        const directory = ProviderSessionDirectory.ProviderSessionDirectory.of({
+          upsert: () => Effect.die("must not bind a retired import"),
+          getProvider: () => Effect.die("unused"),
+          recordImportedTranscript: () => Effect.die("unused"),
+          getBinding: () => Effect.succeed(Option.none()),
+          listThreadIds: () => Effect.die("unused"),
+          listBindings: () => Effect.succeed([]),
+        });
+        const checkedRows: Array<ThreadId> = [];
+
+        const result = yield* runImport({
+          scanner,
+          engine,
+          directory,
+          snapshots: makeSnapshotsLayer({
+            project: makeProject(),
+            rowExists: (threadId) => {
+              checkedRows.push(threadId);
+              return true;
+            },
+          }),
+        });
+
+        expect(result).toEqual({ importedCount: 0, skippedCount: 1 });
+        expect(checkedRows).toEqual([ThreadId.make("import:codex:codex-session")]);
+      }),
+    );
+
     it.effect.each([
       { label: "native", threadId: "native-thread", imported: false },
       { label: "imported", threadId: `import:claudeAgent:${CLAUDE_SESSION_ID}`, imported: true },
@@ -386,6 +432,7 @@ it.layer(NodeServices.layer)("AgentSessionImporter", (it) => {
                 provider: ProviderDriverKind.make("claudeAgent"),
                 providerInstanceId: ProviderInstanceId.make("claudeAgent"),
                 resumeCursor: { threadId: binding.threadId, resume: CLAUDE_SESSION_ID },
+                lastSeenAt: "2026-08-24T09:00:00.000Z",
               },
             ]),
         });
@@ -910,6 +957,221 @@ it.layer(integrationLayer)("AgentSessionImporter integration", (it) => {
           ).toEqual([`Prompt ${transcript.providerSessionId}`]);
         }
       }),
+  );
+
+  const retiredNowMs = Date.parse("2026-08-24T12:00:00.000Z");
+  const makeRetiredImportFixture = Effect.fn("makeRetiredImportFixture")(function* (input: {
+    readonly label: string;
+    readonly sessionId: string;
+  }) {
+    const engine = yield* OrchestrationEngine.OrchestrationEngineService;
+    const fileSystem = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    yield* TestClock.setTime(retiredNowMs);
+    const fixtureDir = yield* fileSystem.makeTempDirectoryScoped({
+      prefix: `t3-import-${input.label}-`,
+    });
+    const workspaceRoot = path.join(fixtureDir, "workspace");
+    const claudeHomePath = path.join(fixtureDir, "claude");
+    const codexHomePath = path.join(fixtureDir, "codex");
+    const filePath = path.join(
+      claudeHomePath,
+      "projects",
+      "-workspace",
+      `${input.sessionId}.jsonl`,
+    );
+    yield* fileSystem.makeDirectory(workspaceRoot);
+    yield* fileSystem.makeDirectory(codexHomePath);
+    yield* fileSystem.makeDirectory(path.dirname(filePath), { recursive: true });
+    yield* fileSystem.writeFileString(
+      filePath,
+      `${[
+        encodeTranscriptRecord({
+          type: "user",
+          cwd: workspaceRoot,
+          sessionId: input.sessionId,
+          timestamp: "2026-08-24T10:00:00.000Z",
+          message: { role: "user", content: `Prompt ${input.label}` },
+        }),
+        encodeTranscriptRecord({
+          type: "assistant",
+          sessionId: input.sessionId,
+          timestamp: "2026-08-24T10:01:00.000Z",
+          message: { role: "assistant", content: [{ type: "text", text: "Done" }] },
+        }),
+      ].join("\n")}\n`,
+    );
+    const seconds = retiredNowMs / 1_000 - 60 * 60;
+    yield* fileSystem.utimes(filePath, seconds, seconds);
+    const projectId = ProjectId.make(`project-retired-import-${input.label}`);
+    yield* engine.dispatch({
+      type: "project.create",
+      commandId: CommandId.make(`create-retired-import-project-${input.label}`),
+      projectId,
+      title: `Retired import ${input.label}`,
+      workspaceRoot,
+      defaultModelSelection: null,
+      createdAt: "2026-08-24T09:00:00.000Z",
+    });
+    const settingsLayer = ServerSettingsService.layerTest({
+      providers: {
+        claudeAgent: { homePath: claudeHomePath },
+        codex: { homePath: codexHomePath },
+      },
+    });
+    const runPass = Effect.fn("runRetiredImportPass")(function* (targetProjectId: ProjectId) {
+      let opens = 0;
+      const createdThreadIds: Array<ThreadId> = [];
+      const observedFileSystem = FileSystem.FileSystem.of({
+        ...fileSystem,
+        open: (openedPath, options) =>
+          Effect.suspend(() => {
+            if (openedPath === filePath) opens += 1;
+            return fileSystem.open(openedPath, options);
+          }),
+      });
+      const recordingEngine = OrchestrationEngine.OrchestrationEngineService.of({
+        ...engine,
+        dispatch: (command) => {
+          if (command.type === "thread.create") createdThreadIds.push(command.threadId);
+          return engine.dispatch(command);
+        },
+      });
+      const sequenceBefore = yield* engine.latestSequence;
+      const result = yield* importRecentAgentThreads({ projectId: targetProjectId }).pipe(
+        Effect.provide(
+          Layer.fresh(AgentSessionScanner.layer).pipe(
+            Layer.provide(settingsLayer),
+            Layer.provide(Layer.succeed(FileSystem.FileSystem, observedFileSystem)),
+          ),
+        ),
+        Effect.provideService(OrchestrationEngine.OrchestrationEngineService, recordingEngine),
+      );
+      return {
+        result,
+        // A fresh scanner opens each transcript once for discovery; more opens are full reads.
+        fullReads: Math.max(0, opens - 1),
+        createdThreadIds,
+        newEvents: (yield* engine.latestSequence) - sequenceBefore,
+      };
+    });
+    return {
+      projectId,
+      workspaceRoot,
+      threadId: ThreadId.make(`import:claudeAgent:${input.sessionId}`),
+      runPass,
+    };
+  });
+
+  for (const retirement of ["deleted", "archived"] as const) {
+    it.effect(`does not reread or recreate a ${retirement} import on the next pass`, () =>
+      Effect.gen(function* () {
+        const engine = yield* OrchestrationEngine.OrchestrationEngineService;
+        const snapshots = yield* ProjectionSnapshotQuery.ProjectionSnapshotQuery;
+        const fixture = yield* makeRetiredImportFixture({
+          label: retirement,
+          sessionId:
+            retirement === "deleted"
+              ? "123e4567-e89b-42d3-a456-426614174101"
+              : "123e4567-e89b-42d3-a456-426614174102",
+        });
+
+        const first = yield* fixture.runPass(fixture.projectId);
+        expect(first.result).toEqual({ importedCount: 1, skippedCount: 0 });
+        expect(first.createdThreadIds).toEqual([fixture.threadId]);
+        expect(first.fullReads).toBe(1);
+
+        yield* engine.dispatch(
+          retirement === "deleted"
+            ? {
+                type: "thread.delete",
+                commandId: CommandId.make("delete-retired-import"),
+                threadId: fixture.threadId,
+              }
+            : {
+                type: "thread.archive",
+                commandId: CommandId.make("archive-retired-import"),
+                threadId: fixture.threadId,
+              },
+        );
+        const second = yield* fixture.runPass(fixture.projectId);
+
+        expect(second.result).toEqual({ importedCount: 0, skippedCount: 1 });
+        expect(second.createdThreadIds).toEqual([]);
+        expect(second.fullReads).toBe(0);
+        expect(second.newEvents).toBe(0);
+        expect(yield* snapshots.threadRowExists(fixture.threadId)).toBe(true);
+        expect(yield* snapshots.getImportedThreadIdsToSkip(fixture.projectId)).toContain(
+          fixture.threadId,
+        );
+      }),
+    );
+  }
+
+  it.effect("does not read an import owned by another project for the same folder", () =>
+    Effect.gen(function* () {
+      const engine = yield* OrchestrationEngine.OrchestrationEngineService;
+      const snapshots = yield* ProjectionSnapshotQuery.ProjectionSnapshotQuery;
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const fixture = yield* makeRetiredImportFixture({
+        label: "moved",
+        sessionId: "123e4567-e89b-42d3-a456-426614174103",
+      });
+      const first = yield* fixture.runPass(fixture.projectId);
+      expect(first.result).toEqual({ importedCount: 1, skippedCount: 0 });
+
+      const movedRoot = path.join(path.dirname(fixture.workspaceRoot), "moved");
+      yield* fileSystem.makeDirectory(movedRoot);
+      yield* engine.dispatch({
+        type: "project.meta.update",
+        commandId: CommandId.make("move-retired-import-project"),
+        projectId: fixture.projectId,
+        workspaceRoot: movedRoot,
+      });
+      const otherProjectId = ProjectId.make("project-retired-import-same-folder");
+      yield* engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.make("create-retired-import-same-folder"),
+        projectId: otherProjectId,
+        title: "Same folder",
+        workspaceRoot: fixture.workspaceRoot,
+        defaultModelSelection: null,
+        createdAt: "2026-08-24T11:00:00.000Z",
+      });
+      const second = yield* fixture.runPass(otherProjectId);
+
+      expect(second.result).toEqual({ importedCount: 0, skippedCount: 1 });
+      expect(second.createdThreadIds).toEqual([]);
+      expect(second.fullReads).toBe(0);
+      expect(second.newEvents).toBe(0);
+      expect(
+        Option.getOrThrow(yield* snapshots.getThreadDetailById(fixture.threadId)).projectId,
+      ).toBe(fixture.projectId);
+    }),
+  );
+
+  it.effect("skips a T3 thread's own Claude session without reading it", () =>
+    Effect.gen(function* () {
+      const directory = yield* ProviderSessionDirectory.ProviderSessionDirectory;
+      const sessionId = "123e4567-e89b-42d3-a456-426614174104";
+      const fixture = yield* makeRetiredImportFixture({ label: "native", sessionId });
+      yield* directory.upsert({
+        threadId: ThreadId.make("t3-native-claude-thread"),
+        provider: ProviderDriverKind.make("claudeAgent"),
+        providerInstanceId: ProviderInstanceId.make("claudeAgent"),
+        status: "stopped",
+        resumeCursor: { resume: sessionId },
+        runtimePayload: { cwd: fixture.workspaceRoot },
+      });
+
+      const pass = yield* fixture.runPass(fixture.projectId);
+
+      expect(pass.result).toEqual({ importedCount: 0, skippedCount: 1 });
+      expect(pass.createdThreadIds).toEqual([]);
+      expect(pass.fullReads).toBe(0);
+      expect(pass.newEvents).toBe(0);
+    }),
   );
 
   for (const source of ["codex", "claudeAgent"] as const) {

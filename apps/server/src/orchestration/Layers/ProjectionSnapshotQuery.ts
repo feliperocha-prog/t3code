@@ -1255,6 +1255,37 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
       `,
   });
 
+  const listImportedThreadIdsToSkip = SqlSchema.findAll({
+    Request: ProjectIdLookupInput,
+    Result: ProjectionThreadIdLookupRowSchema,
+    execute: ({ projectId }) =>
+      sql`
+        SELECT
+          thread_id AS "threadId"
+        FROM projection_threads
+        WHERE thread_id GLOB 'import:*'
+          AND (
+            deleted_at IS NOT NULL
+            OR archived_at IS NOT NULL
+            OR project_id <> ${projectId}
+          )
+        ORDER BY thread_id ASC
+      `,
+  });
+
+  const findAnyThreadRowById = SqlSchema.findOneOption({
+    Request: ThreadIdLookupInput,
+    Result: ProjectionThreadIdLookupRowSchema,
+    execute: ({ threadId }) =>
+      sql`
+        SELECT
+          thread_id AS "threadId"
+        FROM projection_threads
+        WHERE thread_id = ${threadId}
+        LIMIT 1
+      `,
+  });
+
   const listImportedAgentSessionSourceRows = SqlSchema.findAll({
     Request: ProjectIdLookupInput,
     Result: ProjectionImportedAgentSessionSourcesRowSchema,
@@ -3219,6 +3250,30 @@ pending_approval_requests AS (
       });
     });
 
+  const getImportedThreadIdsToSkip: ProjectionSnapshotQueryShape["getImportedThreadIdsToSkip"] = (
+    projectId,
+  ) =>
+    listImportedThreadIdsToSkip({ projectId }).pipe(
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          "ProjectionSnapshotQuery.getImportedThreadIdsToSkip:query",
+          "ProjectionSnapshotQuery.getImportedThreadIdsToSkip:decodeRows",
+        ),
+      ),
+      Effect.map((rows) => rows.map((row) => row.threadId)),
+    );
+
+  const threadRowExists: ProjectionSnapshotQueryShape["threadRowExists"] = (threadId) =>
+    findAnyThreadRowById({ threadId }).pipe(
+      Effect.mapError(
+        toPersistenceSqlOrDecodeError(
+          "ProjectionSnapshotQuery.threadRowExists:query",
+          "ProjectionSnapshotQuery.threadRowExists:decodeRow",
+        ),
+      ),
+      Effect.map(Option.isSome),
+    );
+
   const getThreadCheckpointContext: ProjectionSnapshotQueryShape["getThreadCheckpointContext"] = (
     threadId,
   ) =>
@@ -3887,6 +3942,8 @@ pending_approval_requests AS (
     getProjectShells,
     getFirstActiveThreadIdByProjectId,
     getImportedAgentSessionSources,
+    getImportedThreadIdsToSkip,
+    threadRowExists,
     getThreadCheckpointContext,
     getFullThreadDiffContext,
     getThreadShellById,
