@@ -573,6 +573,98 @@ function shouldRetainDecodedRecord(
   );
 }
 
+type TranscriptRead =
+  | {
+      readonly _tag: "Read";
+      readonly records: ReadonlyArray<DecodedTranscriptRecord>;
+      readonly recordCount: number;
+    }
+  /** This version of the file can never be imported; safe to remember by identity. */
+  | { readonly _tag: "Unimportable" }
+  /** The read did not finish (pass budget, I/O, file changed); try again later. */
+  | { readonly _tag: "Unavailable" };
+
+/**
+ * Selected history kept within a byte budget. The leading records, through the
+ * one that yields the first visible user message (the whole first turn for
+ * Codex, whose prompt deduplication spans the turn), are never dropped, so the
+ * derived title, cwd and entrypoint match a full read. Past the budget, the
+ * oldest later records go first; the newest dropped Claude `aiTitle` is kept
+ * so the title also matches.
+ */
+function makeTranscriptHistoryWindow(source: AgentSessionSource, budgetBytes: number) {
+  const prefix: Array<DecodedTranscriptRecord> = [];
+  let prefixBytes = 0;
+  let prefixOpen = true;
+  let codexSawUser = false;
+  let window: Array<{ readonly record: DecodedTranscriptRecord; readonly bytes: number }> = [];
+  let windowStart = 0;
+  let windowBytes = 0;
+  let droppedTitle: string | undefined;
+
+  const closesPrefix = (record: DecodedTranscriptRecord): boolean => {
+    if (source === "claudeAgent") {
+      return (
+        record.isSidechain !== true &&
+        record.isMeta !== true &&
+        record.isCompactSummary !== true &&
+        record.type === "user" &&
+        extractText(record.message?.content).length > 0
+      );
+    }
+    if (record.type === "event_msg" && record.payload?.type === "user_message") {
+      if ((record.payload.message?.trim() ?? "").length > 0) codexSawUser = true;
+      return false;
+    }
+    if (record.type !== "response_item" || record.payload?.type !== "message") return false;
+    if (record.payload.role === "user" && extractText(record.payload.content).length > 0) {
+      codexSawUser = true;
+      return false;
+    }
+    return codexSawUser && record.payload.role === "assistant";
+  };
+
+  return {
+    /** Returns false when the protected leading records alone exceed the budget. */
+    push(record: DecodedTranscriptRecord, bytes: number): boolean {
+      if (prefixOpen) {
+        prefix.push(record);
+        prefixBytes += bytes;
+        if (closesPrefix(record)) prefixOpen = false;
+        return prefixBytes <= budgetBytes;
+      }
+      window.push({ record, bytes });
+      windowBytes += bytes;
+      while (prefixBytes + windowBytes > budgetBytes && windowStart < window.length) {
+        const dropped = window[windowStart]!;
+        windowStart += 1;
+        windowBytes -= dropped.bytes;
+        const title = dropped.record.aiTitle?.trim();
+        if (
+          source === "claudeAgent" &&
+          title &&
+          dropped.record.isSidechain !== true &&
+          dropped.record.isMeta !== true &&
+          dropped.record.isCompactSummary !== true
+        ) {
+          droppedTitle = title;
+        }
+      }
+      if (windowStart > 1024 && windowStart * 2 > window.length) {
+        window = window.slice(windowStart);
+        windowStart = 0;
+      }
+      return true;
+    },
+    records(): ReadonlyArray<DecodedTranscriptRecord> {
+      const kept = window.slice(windowStart).map((entry) => entry.record);
+      return droppedTitle === undefined
+        ? [...prefix, ...kept]
+        : [...prefix, { aiTitle: droppedTitle }, ...kept];
+    },
+  };
+}
+
 /**
  * T3 Code runs its own agent sessions inside disposable worktrees. Their
  * transcripts look exactly like user sessions, but re-importing the app's own
@@ -872,8 +964,10 @@ export const make = Effect.gen(function* () {
 
   /**
    * Project history fields while reading, before allocating whole JSON records.
-   * Check the file identity on both sides of the read. A selected-history budget
-   * failure rejects the entire transcript before any imported messages persist.
+   * Check the file identity on both sides of the read. Selected history past
+   * the budget drops its oldest records (see makeTranscriptHistoryWindow); only
+   * a single record over the budget, or JSON the reader refuses, makes this
+   * version of the file unimportable.
    */
   const readTranscript = Effect.fn("AgentSessionScanner.readTranscript")(function* (
     filePath: string,
@@ -881,25 +975,37 @@ export const make = Effect.gen(function* () {
     recordLimit: number,
     source: AgentSessionSource,
   ) {
-    if (expected.size > MAX_IMPORTED_TRANSCRIPT_BYTES) return null;
+    const unavailable: TranscriptRead = { _tag: "Unavailable" };
+    const unimportable: TranscriptRead = { _tag: "Unimportable" };
+    if (expected.size > MAX_IMPORTED_TRANSCRIPT_BYTES) return unimportable;
+    // The JSON reader refused this file version: a record over the budget or
+    // nesting past the depth limit. Any other failure is worth retrying.
+    let refused = false;
+    const tryRead = <A>(body: () => A) =>
+      Effect.try({
+        try: body,
+        catch: (error) => {
+          if (error instanceof TranscriptJsonLimitError) refused = true;
+          return error;
+        },
+      });
 
     return yield* Effect.scoped(
       fileSystem.open(filePath, { flag: "r" }).pipe(
         Effect.flatMap((file) =>
           Effect.gen(function* () {
             if (!sameTranscriptIdentity(expected, transcriptIdentity(filePath, yield* file.stat))) {
-              return null;
+              return unavailable;
             }
-            const records: Array<DecodedTranscriptRecord> = [];
-            let historyBytes = 0;
+            const history = makeTranscriptHistoryWindow(source, MAX_IMPORT_HISTORY_BYTES);
             let recordBytes = 0;
             let recordCount = 0;
             let bytesRead = 0;
             const reserve = (bytes: number) => {
               recordBytes += bytes;
-              if (historyBytes + recordBytes > MAX_IMPORT_HISTORY_BYTES) {
+              if (recordBytes > MAX_IMPORT_HISTORY_BYTES) {
                 throw new TranscriptJsonLimitError(
-                  "Transcript selected history exceeds the 32 MiB memory budget",
+                  "A transcript record exceeds the 32 MiB selected history budget",
                 );
               }
             };
@@ -912,9 +1018,14 @@ export const make = Effect.gen(function* () {
               recordCount += 1;
               if (recordCount > recordLimit) return false;
               const decoded = decodeTranscriptValue(reader.finish());
-              if (Option.isSome(decoded) && shouldRetainDecodedRecord(source, decoded.value)) {
-                records.push(decoded.value);
-                historyBytes += recordBytes;
+              if (
+                Option.isSome(decoded) &&
+                shouldRetainDecodedRecord(source, decoded.value) &&
+                !history.push(decoded.value, recordBytes)
+              ) {
+                throw new TranscriptJsonLimitError(
+                  "Transcript leading history exceeds the 32 MiB selected history budget",
+                );
               }
               recordBytes = 0;
               reader = createTranscriptJsonReader(reserve, selectTranscriptPath);
@@ -928,11 +1039,11 @@ export const make = Effect.gen(function* () {
                 Math.min(TRANSCRIPT_PREFIX_BYTES, expected.size - bytesRead),
               );
               if (Option.isNone(next)) {
-                return null;
+                return unavailable;
               }
 
               bytesRead += next.value.byteLength;
-              const withinBudget = yield* Effect.try(() => {
+              const withinBudget = yield* tryRead(() => {
                 let start = 0;
                 while (start < next.value.byteLength) {
                   const newline = next.value.indexOf(10, start);
@@ -945,20 +1056,22 @@ export const make = Effect.gen(function* () {
                 }
                 return true;
               });
-              if (!withinBudget) return null;
+              if (!withinBudget) return unavailable;
             }
 
-            if (recordStarted && !(yield* Effect.try(finishRecord))) return null;
-            return sameTranscriptIdentity(expected, transcriptIdentity(filePath, yield* file.stat))
-              ? { records, recordCount }
-              : null;
+            if (recordStarted && !(yield* tryRead(finishRecord))) return unavailable;
+            if (!sameTranscriptIdentity(expected, transcriptIdentity(filePath, yield* file.stat))) {
+              return unavailable;
+            }
+            const read: TranscriptRead = { _tag: "Read", records: history.records(), recordCount };
+            return read;
           }),
         ),
       ),
     ).pipe(
       Effect.catch((cause) =>
         Effect.logWarning("Could not read imported transcript", { filePath, cause }).pipe(
-          Effect.as(null),
+          Effect.andThen(Effect.sync(() => (refused ? unimportable : unavailable))),
         ),
       ),
     );
@@ -1529,10 +1642,13 @@ export const make = Effect.gen(function* () {
           if (unimportable !== undefined && sameTranscriptIdentity(unimportable, identity)) {
             return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
           }
+          if (identity.size > MAX_IMPORTED_TRANSCRIPT_BYTES) {
+            unimportableTranscripts.set(transcript.filePath, identity);
+            return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
+          }
           if (
             transcriptsRemaining === 0 ||
             recordsRemaining === 0 ||
-            identity.size > MAX_IMPORTED_TRANSCRIPT_BYTES ||
             identity.size > bytesRemaining
           ) {
             return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
@@ -1546,7 +1662,11 @@ export const make = Effect.gen(function* () {
             recordsRemaining,
             candidate.source,
           );
-          if (snapshot === null) {
+          if (snapshot._tag === "Unimportable") {
+            unimportableTranscripts.set(transcript.filePath, identity);
+            return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
+          }
+          if (snapshot._tag === "Unavailable") {
             return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
           }
           recordsRemaining -= snapshot.recordCount;

@@ -2830,6 +2830,183 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         expect(result.secondPassOpens.get("second.jsonl") ?? 0).toBeGreaterThan(0);
       }),
     );
+
+    const mebibyte = 1024 * 1024;
+    const assistantLine = (sessionId: string, minute: number, text: string) =>
+      encodeTranscriptRecord({
+        type: "assistant",
+        sessionId,
+        timestamp: `2026-08-23T13:${String(minute).padStart(2, "0")}:00.000Z`,
+        message: { role: "assistant", content: [{ type: "text", text }] },
+      });
+
+    it.effect("imports the title and latest messages when selected history passes the budget", () =>
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
+        yield* TestClock.setTime(nowMs);
+        const claudeHomePath = yield* makeTempDir("t3code-window-budget-claude-");
+        const codexHomePath = yield* makeTempDir("t3code-window-budget-codex-");
+        const workspace = yield* makeTempDir("t3code-window-budget-project-");
+        const sessionId = "long-session";
+        const filler = "x".repeat(mebibyte);
+        const lines = [
+          encodeTranscriptRecord({
+            type: "user",
+            cwd: workspace,
+            sessionId,
+            entrypoint: "claude-vscode",
+            timestamp: "2026-08-23T12:00:00.000Z",
+            message: { role: "user", content: "Plan the long project" },
+          }),
+          encodeTranscriptRecord({ type: "ai-title", sessionId, aiTitle: "Long project plan" }),
+          ...Array.from({ length: 40 }, (_, index) =>
+            assistantLine(sessionId, index, `${index}:${filler}`),
+          ),
+          assistantLine(sessionId, 59, "Final answer"),
+        ];
+        yield* writeTranscript({
+          filePath: path.join(claudeHomePath, "projects", "-p", `${sessionId}.jsonl`),
+          contents: `${lines.join("\n")}\n`,
+          mtimeMs: nowMs - 60 * 60 * 1000,
+        });
+
+        const outcomes = yield* runRecentThreadOutcomes({
+          claudeHomePath,
+          codexHomePath,
+          workspaceRoot: workspace,
+        });
+
+        expect(outcomes.map((outcome) => outcome._tag)).toEqual(["Importable"]);
+        const thread = outcomes[0]?._tag === "Importable" ? outcomes[0].thread : undefined;
+        expect(thread?.title).toBe("Long project plan");
+        expect(thread?.messages[0]).toMatchObject({ role: "user", text: "Plan the long project" });
+        expect(thread?.messages.at(-1)).toMatchObject({ role: "assistant", text: "Final answer" });
+        // The oldest assistant replies were dropped to stay within the budget.
+        expect(thread?.messages[1]?.text.startsWith("0:")).toBe(false);
+        expect(thread?.messages.length).toBeLessThan(lines.length - 1);
+      }),
+    );
+
+    it.effect("remembers a transcript whose single record passes the budget", () =>
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const fileSystem = yield* FileSystem.FileSystem;
+        const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
+        yield* TestClock.setTime(nowMs);
+        const claudeHomePath = yield* makeTempDir("t3code-giant-record-claude-");
+        const codexHomePath = yield* makeTempDir("t3code-giant-record-codex-");
+        const workspace = yield* makeTempDir("t3code-giant-record-project-");
+        const directory = path.join(claudeHomePath, "projects", "-p");
+        yield* writeTranscript({
+          filePath: path.join(directory, "giant.jsonl"),
+          contents: `${[
+            encodeTranscriptRecord({
+              type: "user",
+              cwd: workspace,
+              sessionId: "giant",
+              timestamp: "2026-08-23T12:00:00.000Z",
+              message: { role: "user", content: "Paste everything" },
+            }),
+            assistantLine("giant", 0, "y".repeat(33 * mebibyte)),
+          ].join("\n")}\n`,
+          mtimeMs: nowMs - 60 * 60 * 1000,
+        });
+        const opens = new Map<string, number>();
+        const observedFileSystem = FileSystem.FileSystem.of({
+          ...fileSystem,
+          open: (filePath, options) => {
+            const name = path.basename(filePath);
+            opens.set(name, (opens.get(name) ?? 0) + 1);
+            return fileSystem.open(filePath, options);
+          },
+        });
+
+        const result = yield* Effect.gen(function* () {
+          const scanner = yield* AgentSessionScanner.AgentSessionScanner;
+          const firstPass = yield* collectOutcomes(scanner, workspace);
+          const firstPassOpens = opens.get("giant.jsonl") ?? 0;
+          opens.clear();
+          yield* TestClock.setTime(nowMs + 2 * 60 * 1000);
+          const secondPass = yield* collectOutcomes(scanner, workspace);
+          return { firstPass, firstPassOpens, secondPass, secondPassOpens: new Map(opens) };
+        }).pipe(
+          Effect.provide(makeScannerTestLayer({ claudeHomePath, codexHomePath })),
+          Effect.provideService(FileSystem.FileSystem, observedFileSystem),
+        );
+
+        expect(result.firstPass.map((outcome) => outcome._tag)).toEqual(["Skipped"]);
+        expect(result.firstPassOpens).toBeGreaterThan(0);
+        expect(result.secondPass.map((outcome) => outcome._tag)).toEqual(["Skipped"]);
+        expect(result.secondPassOpens.get("giant.jsonl")).toBeUndefined();
+      }),
+    );
+
+    it.effect("reads a transcript within the budget exactly like a full parse", () =>
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
+        const mtimeMs = nowMs - 60 * 60 * 1000;
+        yield* TestClock.setTime(nowMs);
+        const claudeHomePath = yield* makeTempDir("t3code-window-exact-claude-");
+        const codexHomePath = yield* makeTempDir("t3code-window-exact-codex-");
+        const workspace = yield* makeTempDir("t3code-window-exact-project-");
+        const sessionId = "exact-session";
+        const contents = `${[
+          encodeTranscriptRecord({ type: "ai-title", sessionId, aiTitle: "First title" }),
+          encodeTranscriptRecord({
+            type: "user",
+            cwd: workspace,
+            sessionId,
+            isMeta: true,
+            timestamp: "2026-08-23T11:59:00.000Z",
+            message: { role: "user", content: "<command>setup</command>" },
+          }),
+          encodeTranscriptRecord({
+            type: "user",
+            cwd: workspace,
+            sessionId,
+            timestamp: "2026-08-23T12:00:00.000Z",
+            message: { role: "user", content: "Review the checkout" },
+          }),
+          ...Array.from({ length: 12 }, (_, index) =>
+            assistantLine(sessionId, index, `Reply ${index} ${"z".repeat(64 * 1024)}`),
+          ),
+          encodeTranscriptRecord({ type: "ai-title", sessionId, aiTitle: "Checkout review" }),
+          encodeTranscriptRecord({
+            type: "user",
+            sessionId,
+            timestamp: "2026-08-23T13:30:00.000Z",
+            message: { role: "user", content: "Ship it" },
+          }),
+        ].join("\n")}\n`;
+        yield* writeTranscript({
+          filePath: path.join(claudeHomePath, "projects", "-p", `${sessionId}.jsonl`),
+          contents,
+          mtimeMs,
+        });
+
+        const outcomes = yield* runRecentThreadOutcomes({
+          claudeHomePath,
+          codexHomePath,
+          workspaceRoot: workspace,
+        });
+
+        expect(outcomes.map((outcome) => outcome._tag)).toEqual(["Importable"]);
+        const thread = outcomes[0]?._tag === "Importable" ? outcomes[0].thread : undefined;
+        expect(thread).toEqual(
+          AgentSessionScanner.parseAgentSessionTranscript({
+            contents,
+            source: "claudeAgent",
+            providerInstanceId: thread!.providerInstanceId,
+            fallbackSessionId: sessionId,
+            lastActiveAtMs: mtimeMs,
+          }),
+        );
+        expect(thread?.title).toBe("Checkout review");
+        expect(thread?.messages).toHaveLength(14);
+      }),
+    );
   });
 });
 
