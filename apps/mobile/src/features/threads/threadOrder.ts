@@ -97,8 +97,12 @@ export function createThreadMovePlanner(input: {
       .filter((row) => input.reorderableEnvironmentIds.has(row.environmentId))
       .map(rowId),
   );
+  const orderedIdSet = new Set(orderedIds);
   return (movedId: string, direction: ThreadMoveDestination) => {
     if (!writableIds.has(movedId)) return null;
+    // The active list orders itself by last activity: a thread already there
+    // cannot be rearranged by hand. Moving one in from another section still works.
+    if (input.section === "active" && orderedIdSet.has(movedId)) return null;
     const nextIds = threadOrderAfterMove(orderedIds, movedId, direction);
     if (nextIds === null) return null;
     const assignments = planPinnedReorder({ orderedIds: nextIds, keysById, movedId });
@@ -133,6 +137,8 @@ export function computeThreadMoveAvailability(input: {
   const result = new Map<string, ThreadMoveAvailability>();
   // A reorder in flight locks the whole list until its receipt lands.
   if (input.pendingOrder != null) return result;
+  // The active list orders itself by last activity: no Move up/down there.
+  if (input.section === "active") return result;
   const rows = input.ordered;
   const orderedIds = rows.map(rowId);
   const indexById = new Map(orderedIds.map((id, index) => [id, index] as const));

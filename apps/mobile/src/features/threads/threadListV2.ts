@@ -142,14 +142,12 @@ function parseTimestampMs(isoDate: string): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-/** The active order shared by web and native: new/reopened rows, then the
-    saved arrangement. Activity does not move a thread. */
+/** The active order shared by web and native: most recently active first. */
 export function sortThreadsForListV2<
   T extends {
     readonly id: string;
-    readonly createdAt: string;
-    readonly unsettledAt?: string | null | undefined;
-    readonly activeOrderKey?: string | null | undefined;
+    readonly updatedAt: string;
+    readonly latestUserMessageAt?: string | null | undefined;
     readonly environmentId?: string | undefined;
   },
 >(threads: readonly T[]): T[] {

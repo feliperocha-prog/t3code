@@ -116,21 +116,15 @@ export function getThreadSortTimestamp(
 }
 
 /**
- * Sort anchor for the active thread list: creation time, re-anchored to
- * unsettledAt when the thread last re-entered the active list (an explicit
- * un-settle, or a settled thread waking on activity). The list stays static
- * between lifecycle transitions, but an un-settled thread surfaces at the
- * top instead of sinking back to its creation-order slot. Shared by web and
- * mobile so both render the same order. Malformed timestamps sink to 0.
+ * When a thread was last active: its latest user message, else its last
+ * update. The active list sorts by it and the row's age label shows it, so
+ * the order and the label can never disagree.
  */
-function activeThreadAnchorTimestampMs(thread: {
-  readonly createdAt: string;
-  readonly unsettledAt?: string | null | undefined;
-}): number {
-  return Math.max(
-    toSortableTimestamp(thread.createdAt) ?? 0,
-    toSortableTimestamp(thread.unsettledAt ?? undefined) ?? 0,
-  );
+export function threadLastActivityAt(thread: {
+  readonly updatedAt: string;
+  readonly latestUserMessageAt?: string | null | undefined;
+}): string {
+  return thread.latestUserMessageAt ?? thread.updatedAt;
 }
 
 export function sortThreads<T extends { readonly id: string } & ThreadSortInput>(
@@ -335,35 +329,29 @@ export function sortPinnedThreadsByOrderKey<
   return [...keyed, ...keyless];
 }
 
-/** New and reopened threads lead the active list. Arranged threads follow
-    their saved keys; activity leaves both groups in place. */
+/** Most recently active first, by the same timestamp the row's age label
+    shows. Saved activeOrderKey values are ignored (and left untouched), so
+    the active list cannot be arranged by hand. Malformed timestamps sink. */
 export function sortActiveThreadsByOrderKey<
   T extends {
     readonly id: string;
-    readonly createdAt: string;
-    readonly unsettledAt?: string | null | undefined;
-    readonly activeOrderKey?: string | null | undefined;
+    readonly updatedAt: string;
+    readonly latestUserMessageAt?: string | null | undefined;
     readonly environmentId?: string | undefined;
   },
 >(threads: readonly T[]): T[] {
   if (threads.length < 2) return [...threads];
   const timestamps = new Map<T, number>();
   for (const thread of threads) {
-    if (thread.activeOrderKey == null) {
-      timestamps.set(thread, activeThreadAnchorTimestampMs(thread));
-    }
+    timestamps.set(
+      thread,
+      toSortableTimestamp(threadLastActivityAt(thread)) ?? Number.NEGATIVE_INFINITY,
+    );
   }
   return [...threads].sort((left, right) => {
-    const leftKey = left.activeOrderKey;
-    const rightKey = right.activeOrderKey;
-    if (leftKey == null && rightKey != null) return -1;
-    if (leftKey != null && rightKey == null) return 1;
-    let order = 0;
-    if (leftKey != null && rightKey != null) {
-      order = leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
-    } else {
-      order = timestamps.get(right)! - timestamps.get(left)!;
-    }
+    const leftMs = timestamps.get(left)!;
+    const rightMs = timestamps.get(right)!;
+    const order = leftMs === rightMs ? 0 : rightMs > leftMs ? 1 : -1;
     return (
       order ||
       left.id.localeCompare(right.id) ||

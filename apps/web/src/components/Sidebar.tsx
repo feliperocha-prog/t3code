@@ -24,6 +24,7 @@ import {
 import {
   resolveSettledThreadTimestamp,
   sortSettledThreads,
+  threadLastActivityAt,
 } from "@t3tools/client-runtime/state/thread-sort";
 import {
   threadSearchMatchKey,
@@ -37,6 +38,7 @@ import {
   scopedThreadKey,
 } from "@t3tools/client-runtime/environment";
 import {
+  isImportedAgentSessionThreadId,
   resolveEnvironmentMachineKind,
   type EnvironmentMachineKind,
   type ProjectIconOverride,
@@ -56,6 +58,7 @@ import {
   EyeIcon,
   FolderIcon,
   GitBranchIcon,
+  ImportIcon,
   MessageCircleQuestionIcon,
   PinIcon,
   PinOffIcon,
@@ -271,8 +274,8 @@ function compactSidebarTimeLabel(label: string): string {
 }
 
 function threadTimeLabel(thread: SidebarThreadSummary): string {
-  const timestamp = thread.latestUserMessageAt ?? thread.updatedAt;
-  return compactSidebarTimeLabel(formatRelativeTimeLabel(timestamp));
+  // Same timestamp the active list sorts by, so label and order agree.
+  return compactSidebarTimeLabel(formatRelativeTimeLabel(threadLastActivityAt(thread)));
 }
 
 // Settled rows read "how long ago did this wrap up", matching their sort
@@ -1604,6 +1607,25 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: {
       />
     )
   ) : null;
+  // Conversations synced from Claude Code outside T3 carry an import: id.
+  const importedIndicator = isImportedAgentSessionThreadId(thread.id) ? (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            role="img"
+            aria-label={t("Claude Code conversation held outside T3 (VS Code, terminal or phone)")}
+            className="inline-flex shrink-0 items-center text-muted-foreground/65"
+          />
+        }
+      >
+        <ImportIcon aria-hidden className="size-3 shrink-0" />
+      </TooltipTrigger>
+      <TooltipPopup>
+        {t("Claude Code conversation held outside T3 (VS Code, terminal or phone)")}
+      </TooltipPopup>
+    </Tooltip>
+  ) : null;
 
   if (variant === "slim") {
     return (
@@ -1650,6 +1672,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: {
             </span>
             {draftIndicator}
             {title}
+            {importedIndicator}
             {pinIndicator}
             {terminalStatusIcon}
             {isRegeneratingTitle ? (
@@ -1811,6 +1834,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: {
               ) : (
                 <span className="flex-1" />
               )}
+              {importedIndicator}
               {pinIndicator}
               {/* The visible state owns this slot's width: status at rest,
                   actions on hover/keyboard focus or while the popover is open. Keeping

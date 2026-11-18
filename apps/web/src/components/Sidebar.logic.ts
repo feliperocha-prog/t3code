@@ -287,7 +287,6 @@ export function planSidebarThreadDrop(input: {
     pinnedOrder,
     pinnedKeysById,
     reorderableKeys,
-    activeOrder,
     activeKeysById,
     activeReorderableKeys,
   } = input;
@@ -296,14 +295,11 @@ export function planSidebarThreadDrop(input: {
   }
   switch (target.section) {
     case "active": {
+      // The active list orders itself by last activity, so a thread already
+      // there cannot be rearranged by hand. Moving one in from another
+      // section (unpin, unsettle, wake) still works.
+      if (activeSection === "active") return { kind: "none" };
       const order = target.activeOrder;
-      if (
-        activeSection === "active" &&
-        order.length === activeOrder.length &&
-        order.every((key, index) => key === activeOrder[index])
-      ) {
-        return { kind: "none" };
-      }
       const assignments = planPinnedReorder({
         orderedIds: order,
         keysById: activeKeysById,

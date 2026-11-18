@@ -639,6 +639,8 @@ const dictionary: Readonly<Record<string, string>> = {
   "Failed to pin thread": "Não foi possível fixar a thread",
   "Failed to unpin thread": "Não foi possível desafixar a thread",
   "Failed to reorder active threads": "Não foi possível reordenar as threads ativas",
+  "Claude Code conversation held outside T3 (VS Code, terminal or phone)":
+    "Conversa do Claude Code feita fora do T3 (VS Code, terminal ou celular)",
   "Failed to reorder pinned threads": "Não foi possível reordenar as threads fixadas",
   "Failed to snooze thread": "Não foi possível adiar a thread",
   "Settle ({count})": "Concluir ({count})",

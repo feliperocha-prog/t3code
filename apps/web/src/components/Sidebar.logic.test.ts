@@ -1091,55 +1091,51 @@ describe("reduceSidebarProjectScopeMenuState", () => {
 });
 
 describe("sortThreadsForSidebar", () => {
-  const sortable = (input: { id: string; createdAt: string }) => ({
-    id: input.id,
-    createdAt: input.createdAt,
-  });
-
-  it("orders by creation time, newest first, ignoring activity", () => {
+  it("orders by last activity, newest first, ignoring creation time", () => {
     const sorted = sortThreadsForSidebar([
-      sortable({ id: "oldest", createdAt: "2026-03-09T08:00:00.000Z" }),
-      sortable({ id: "newest", createdAt: "2026-03-09T12:00:00.000Z" }),
-      sortable({ id: "middle", createdAt: "2026-03-09T10:00:00.000Z" }),
+      {
+        id: "created-last",
+        createdAt: "2026-03-09T12:00:00.000Z",
+        updatedAt: "2026-03-09T12:00:00.000Z",
+        latestUserMessageAt: "2026-03-09T12:00:00.000Z",
+      },
+      {
+        id: "created-first",
+        createdAt: "2026-03-01T08:00:00.000Z",
+        updatedAt: "2026-03-09T14:00:00.000Z",
+        latestUserMessageAt: "2026-03-09T13:00:00.000Z",
+      },
+      {
+        id: "no-user-message",
+        createdAt: "2026-03-09T09:00:00.000Z",
+        updatedAt: "2026-03-09T10:00:00.000Z",
+        latestUserMessageAt: null,
+      },
     ]);
 
-    expect(sorted.map((thread) => thread.id)).toEqual(["newest", "middle", "oldest"]);
+    expect(sorted.map((thread) => thread.id)).toEqual([
+      "created-first",
+      "created-last",
+      "no-user-message",
+    ]);
   });
 
-  it("breaks creation-time ties by id so the order is stable", () => {
+  it("breaks activity ties by id so the order is stable", () => {
     const sorted = sortThreadsForSidebar([
-      sortable({ id: "b", createdAt: "2026-03-09T10:00:00.000Z" }),
-      sortable({ id: "a", createdAt: "2026-03-09T10:00:00.000Z" }),
+      { id: "b", updatedAt: "2026-03-09T10:00:00.000Z" },
+      { id: "a", updatedAt: "2026-03-09T10:00:00.000Z" },
     ]);
 
     expect(sorted.map((thread) => thread.id)).toEqual(["a", "b"]);
   });
 
-  it("surfaces an un-settled thread at the top via its re-entry stamp", () => {
+  it("ignores saved active order keys", () => {
     const sorted = sortThreadsForSidebar([
-      {
-        id: "old-unsettled",
-        createdAt: "2026-03-09T08:00:00.000Z",
-        unsettledAt: "2026-03-09T13:00:00.000Z",
-      },
-      sortable({ id: "newest", createdAt: "2026-03-09T12:00:00.000Z" }),
-      sortable({ id: "middle", createdAt: "2026-03-09T10:00:00.000Z" }),
+      { id: "arranged-first", updatedAt: "2026-03-09T08:00:00.000Z", activeOrderKey: "a" },
+      { id: "recent", updatedAt: "2026-03-09T12:00:00.000Z", activeOrderKey: "z" },
     ]);
 
-    expect(sorted.map((thread) => thread.id)).toEqual(["old-unsettled", "newest", "middle"]);
-  });
-
-  it("ignores a re-entry stamp older than the thread's creation", () => {
-    const sorted = sortThreadsForSidebar([
-      {
-        id: "stale-stamp",
-        createdAt: "2026-03-09T10:00:00.000Z",
-        unsettledAt: "2026-03-09T09:00:00.000Z",
-      },
-      sortable({ id: "newest", createdAt: "2026-03-09T12:00:00.000Z" }),
-    ]);
-
-    expect(sorted.map((thread) => thread.id)).toEqual(["newest", "stale-stamp"]);
+    expect(sorted.map((thread) => thread.id)).toEqual(["recent", "arranged-first"]);
   });
 });
 
@@ -1445,14 +1441,15 @@ describe("planSidebarThreadDrop", () => {
   });
 
   it.each(["pinned", "active"] as const)("reserves hidden %s slots during a drop", (section) => {
-    const order = section === "pinned" ? ["p2", "p1", "p3"] : ["a2", "a1", "a3"];
+    // Active cannot be rearranged from inside, so its case moves a pinned thread in.
+    const order = section === "pinned" ? ["p2", "p1", "p3"] : ["a2", "p1", "a3"];
     const keys = new Map(section === "pinned" ? pinnedKeysById : activeKeysById);
-    const moved = section === "pinned" ? "p1" : "a1";
+    const moved = "p1";
     const reserved = pinOrderKeyBetween(keys.get(order[0]!)!, keys.get(order[2]!)!)!;
     keys.set("snoozed", reserved);
     const result = plan({
       activeKey: moved,
-      activeSection: section,
+      activeSection: "pinned",
       pinnedKeysById: section === "pinned" ? keys : pinnedKeysById,
       activeKeysById: section === "active" ? keys : activeKeysById,
       target: {
@@ -1518,44 +1515,20 @@ describe("planSidebarThreadDrop", () => {
     });
   });
 
-  it("saves the first Active reorder, then moves only one key on subsequent drops", () => {
-    const rows = ["a1", "a2", "a3"].map((id, index) => ({
-      id,
-      createdAt: new Date(Date.UTC(2026, 8, 4, 12 - index)).toISOString(),
-      activeOrderKey: null as string | null,
-    }));
-    const firstOrder = ["a2", "a3", "a1"];
-    const first = plan({
-      activeKey: "a1",
-      activeSection: "active",
-      target: { section: "active", pinnedOrder: [], activeOrder: firstOrder },
-      activeKeysById: new Map(rows.map((row) => [row.id, row.activeOrderKey])),
-    });
-    expect(first.kind).toBe("move-active");
-    if (first.kind !== "move-active") return;
-    expect(first.unpin || first.unsettle || first.unsnooze).toBe(false);
-    const savedKeys = new Map(first.assignments.map(({ id, orderKey }) => [id, orderKey]));
-    const savedRows = rows.map((row) => ({
-      ...row,
-      activeOrderKey: savedKeys.get(row.id) ?? null,
-    }));
-    expect(sortThreadsForSidebar(savedRows).map((row) => row.id)).toEqual(firstOrder);
-
-    const secondOrder = ["a2", "a1", "a3"];
-    const second = plan({
-      activeKey: "a1",
-      activeSection: "active",
-      activeOrder: firstOrder,
-      activeKeysById: savedKeys,
-      target: { section: "active", pinnedOrder: [], activeOrder: secondOrder },
-    });
-    expect(second.kind).toBe("move-active");
-    if (second.kind !== "move-active") return;
-    expect(second.assignments).toEqual([{ id: "a1", orderKey: expect.any(String) }]);
-    const finalRows = savedRows.map((row) =>
-      row.id === "a1" ? { ...row, activeOrderKey: second.assignments[0]!.orderKey } : row,
-    );
-    expect(sortThreadsForSidebar(finalRows).map((row) => row.id)).toEqual(secondOrder);
+  it("refuses to rearrange a thread that is already in Active", () => {
+    for (const activeOrder of [
+      ["a2", "a3", "a1"],
+      ["a2", "a1", "a3"],
+      ["a1", "a3", "a2"],
+    ]) {
+      expect(
+        plan({
+          activeKey: "a1",
+          activeSection: "active",
+          target: { section: "active", pinnedOrder: [], activeOrder },
+        }),
+      ).toEqual({ kind: "none" });
+    }
   });
 
   it("does not write when an Active thread is dropped in its existing slot", () => {
@@ -1570,10 +1543,14 @@ describe("planSidebarThreadDrop", () => {
 
   it("requires Active ordering support only for the threads whose keys must change", () => {
     const input = {
-      activeKey: "a3",
-      activeSection: "active" as const,
-      target: { section: "active" as const, pinnedOrder: [], activeOrder: ["a1", "a3", "a2"] },
-      activeReorderableKeys: new Set(["a3"]),
+      activeKey: "p2",
+      activeSection: "pinned" as const,
+      target: {
+        section: "active" as const,
+        pinnedOrder: [],
+        activeOrder: ["a1", "p2", "a2", "a3"],
+      },
+      activeReorderableKeys: new Set(["p2"]),
     };
     expect(plan(input).kind).toBe("move-active");
     expect(
@@ -1593,20 +1570,24 @@ describe("planSidebarThreadDrop", () => {
     // Displayed a1, a3, a2 (grouping) over manual keys f, m, t: moving a1 to the
     // end needs a key after "t" only, so the drop is allowed...
     const single = plan({
-      activeKey: "a1",
-      activeSection: "active",
+      activeKey: "p2",
+      activeSection: "pinned",
       activeOrderDerived: true,
-      target: { section: "active", pinnedOrder: [], activeOrder: ["a3", "a2", "a1"] },
+      target: { section: "active", pinnedOrder: [], activeOrder: ["a3", "a2", "a1", "p2"] },
     });
     expect(single.kind).toBe("move-active");
     if (single.kind !== "move-active") return;
-    expect(single.assignments.map(({ id }) => id)).toEqual(["a1"]);
+    expect(single.assignments.map(({ id }) => id)).toEqual(["p2"]);
     // ...while dropping between inverted neighbours (a3 "t" before a2 "m") would
     // rewrite the whole section with the grouped order, so nothing is written.
     const input = {
-      activeKey: "a1",
-      activeSection: "active" as const,
-      target: { section: "active" as const, pinnedOrder: [], activeOrder: ["a3", "a1", "a2"] },
+      activeKey: "p2",
+      activeSection: "pinned" as const,
+      target: {
+        section: "active" as const,
+        pinnedOrder: [],
+        activeOrder: ["a3", "p2", "a2", "a1"],
+      },
     };
     const whole = plan(input);
     expect(whole.kind).toBe("move-active");
@@ -1816,7 +1797,12 @@ describe("applySidebarThreadDrop", () => {
       snoozedUntil: wakeAt,
     },
   ])("preserves the active sort anchor when clearing a $state", ({ state: _state, ...parked }) => {
-    const source = thread({ ...parked, settledOverride: "active", unsettledAt: earlier });
+    const source = thread({
+      ...parked,
+      settledOverride: "active",
+      unsettledAt: earlier,
+      latestUserMessageAt: createdAt,
+    });
     const preview = applySidebarThreadDrop(source, "active", now);
     const final = {
       ...source,
@@ -1950,17 +1936,22 @@ describe("applySidebarThreadDrop", () => {
     });
   });
 
-  it("keeps an Active drop at its chosen position after unpinning", () => {
-    const source = thread({ pinnedAt: earlier, pinOrderKey: "g", activeOrderKey: "z" });
+  it("places an unpinned thread by its last activity, not by the drop key", () => {
+    const source = thread({
+      pinnedAt: earlier,
+      pinOrderKey: "g",
+      activeOrderKey: "z",
+      latestUserMessageAt: earlier,
+    });
     const preview = applySidebarThreadDrop(source, "active", now, "m");
     expect(preview).toMatchObject({ pinnedAt: null, pinOrderKey: null, activeOrderKey: "m" });
     expect(
       sortThreadsForSidebar([
-        thread({ id: ThreadId.make("after"), activeOrderKey: "t" }),
+        thread({ id: ThreadId.make("older"), activeOrderKey: "a", latestUserMessageAt: createdAt }),
         preview,
-        thread({ id: ThreadId.make("before"), activeOrderKey: "f" }),
+        thread({ id: ThreadId.make("recent"), activeOrderKey: "t", latestUserMessageAt: now }),
       ]).map((row) => row.id),
-    ).toEqual(["before", "dragged", "after"]);
+    ).toEqual(["recent", "dragged", "older"]);
   });
 
   it("clears the manual Active position when settling so reopening returns to the top", () => {
