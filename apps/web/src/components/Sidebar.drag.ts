@@ -116,8 +116,15 @@ export function createSidebarSortingStrategy(input: {
     const active = items[activeIndex];
     const over = items[overIndex] ?? active;
     if (active?.kind !== "thread" || !over || !rects[0]) return [];
-    const target = resolveSidebarDropTarget(items, active.key, sidebarListItemId(over));
+    let target = resolveSidebarDropTarget(items, active.key, sidebarListItemId(over));
     if (!target) return [];
+    // Active orders itself by last activity, so a drop from another section
+    // targets the section, not a slot: keep every row where it was picked up
+    // and let the lit "Active" label mark the destination.
+    if (target.section === "active" && active.section !== "active") {
+      target = resolveSidebarDropTarget(items, active.key, active.key);
+      if (!target) return [];
+    }
     const groups: Record<SidebarSection, ThreadItem[]> = {
       pinned: [],
       active: [],

@@ -627,17 +627,24 @@ export function useThreadListActions(): {
           ),
         ),
       });
-      const assignments = createThreadMovePlanner({
-        allThreads: shells,
-        ordered,
-        section,
-        reorderableEnvironmentIds: new Set([...configs.keys()].filter(supportsReorder)),
-      })(scopedThreadKey(thread.environmentId, thread.id), direction);
-      if (assignments === null) return false;
-      const lifecycle = threadDropLifecycle(thread, section, new Date().toISOString());
       const crossSection = !ordered.some(
         (row) => row.id === thread.id && row.environmentId === thread.environmentId,
       );
+      // Active orders itself by last activity: entering it only clears the
+      // pin/settle/snooze state and never writes an order key, here or on the
+      // neighbours. Up/down steps only exist inside a section.
+      const entersActive = section === "active" && crossSection;
+      if (entersActive && typeof direction === "string") return false;
+      const assignments = entersActive
+        ? []
+        : createThreadMovePlanner({
+            allThreads: shells,
+            ordered,
+            section,
+            reorderableEnvironmentIds: new Set([...configs.keys()].filter(supportsReorder)),
+          })(scopedThreadKey(thread.environmentId, thread.id), direction);
+      if (assignments === null) return false;
+      const lifecycle = threadDropLifecycle(thread, section, new Date().toISOString());
       if (
         crossSection &&
         (((section === "pinned" || thread.pinnedAt != null) &&
