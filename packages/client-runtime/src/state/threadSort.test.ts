@@ -435,6 +435,38 @@ describe("sortActiveThreadsByOrderKey", () => {
     expect(sortActiveThreadsByOrderKey(threads).map((thread) => thread.id)).toEqual(["b", "a"]);
   });
 
+  it("counts reopening as activity, so a reopened thread rises and reads as fresh", () => {
+    const threads = [
+      {
+        id: "a-recent-message",
+        updatedAt: "2026-03-09T11:00:00.000Z",
+        latestUserMessageAt: "2026-03-09T11:00:00.000Z",
+      },
+      {
+        id: "z-reopened",
+        updatedAt: "2026-03-09T09:00:00.000Z",
+        latestUserMessageAt: "2026-03-09T08:00:00.000Z",
+        unsettledAt: "2026-03-09T12:00:00.000Z",
+      },
+      {
+        id: "y-reopened-before-message",
+        updatedAt: "2026-03-09T10:00:00.000Z",
+        latestUserMessageAt: "2026-03-09T10:30:00.000Z",
+        unsettledAt: "2026-03-09T10:00:00.000Z",
+      },
+    ];
+    expect(threadLastActivityAt(threads[1]!)).toBe("2026-03-09T12:00:00.000Z");
+    expect(threadLastActivityAt(threads[2]!)).toBe("2026-03-09T10:30:00.000Z");
+    expect(threadLastActivityAt({ ...threads[1]!, unsettledAt: "not-a-date" })).toBe(
+      "2026-03-09T08:00:00.000Z",
+    );
+    expect(sortActiveThreadsByOrderKey(threads).map((thread) => thread.id)).toEqual([
+      "z-reopened",
+      "a-recent-message",
+      "y-reopened-before-message",
+    ]);
+  });
+
   it("breaks equal timestamps by thread then environment", () => {
     const threads = [
       { id: "thread-b", environmentId: "env-a" },

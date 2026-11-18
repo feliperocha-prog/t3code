@@ -116,15 +116,23 @@ export function getThreadSortTimestamp(
 }
 
 /**
- * When a thread was last active: its latest user message, else its last
- * update. The active list sorts by it and the row's age label shows it, so
- * the order and the label can never disagree.
+ * When a thread was last active: its latest user message (else its last
+ * update) or its last return to the active list, whichever is later, so a
+ * reopened thread counts as fresh activity. The active list sorts by it and
+ * the row's age label shows it, so the order and the label can never disagree.
  */
 export function threadLastActivityAt(thread: {
   readonly updatedAt: string;
   readonly latestUserMessageAt?: string | null | undefined;
+  readonly unsettledAt?: string | null | undefined;
 }): string {
-  return thread.latestUserMessageAt ?? thread.updatedAt;
+  const activity = thread.latestUserMessageAt ?? thread.updatedAt;
+  const reopened = thread.unsettledAt;
+  if (reopened == null) return activity;
+  const activityMs = Date.parse(activity);
+  const reopenedMs = Date.parse(reopened);
+  if (Number.isNaN(reopenedMs)) return activity;
+  return Number.isNaN(activityMs) || reopenedMs > activityMs ? reopened : activity;
 }
 
 export function sortThreads<T extends { readonly id: string } & ThreadSortInput>(
@@ -250,8 +258,8 @@ export function generateSpreadPinOrderKeys(count: number): string[] {
  * sits between two keyed (or absent) neighbors, this is a single write to
  * the moved thread. When a neighbor is keyless (threads pinned before
  * reordering shipped), the whole section gets fresh spread keys — a
- * one-time materialization; every move after that is single-write. Active
- * reordering uses the same planner with activeOrderKey values.
+ * one-time materialization; every move after that is single-write. The
+ * active list has no manual order, so only pinned rows use this planner.
  */
 export function planPinnedReorder(input: {
   /** Thread ids in the desired visual order (after the move). */
@@ -337,6 +345,7 @@ export function sortActiveThreadsByOrderKey<
     readonly id: string;
     readonly updatedAt: string;
     readonly latestUserMessageAt?: string | null | undefined;
+    readonly unsettledAt?: string | null | undefined;
     readonly environmentId?: string | undefined;
   },
 >(threads: readonly T[]): T[] {

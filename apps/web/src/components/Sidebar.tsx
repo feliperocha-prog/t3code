@@ -2227,7 +2227,6 @@ export default function Sidebar() {
     unpinThread,
     confirmAndUnpinThread,
     reorderPinnedThread,
-    reorderActiveThread,
     setThreadAutoSettle,
     archiveThread,
     deleteThread,
@@ -2586,7 +2585,7 @@ export default function Sidebar() {
     readonly section: "pinned" | "active" | "settled";
     readonly occurredAt: string;
     readonly clearsSnooze: boolean;
-    /** Full destination order for pinned and active drops. */
+    /** Full destination order for pinned drops; null elsewhere. */
     readonly order: readonly string[] | null;
     /** Destination order keys before the drop, to recognize concurrent writes. */
     readonly keysAtDrop: ReadonlyMap<string, string | null>;
@@ -2598,7 +2597,6 @@ export default function Sidebar() {
     pinnedThreads,
     draggableThreadKeys,
     activeReorderableThreadKeys,
-    activeOrderDerived,
     activeThreads,
     snoozedThreads,
     settledThreads,
@@ -2690,14 +2688,10 @@ export default function Sidebar() {
       classifyLive,
     );
     // Waiting first, then working, then the rest — stable inside each group.
-    // Sorted before the optimistic drop order so the rendered order and the
-    // drag planner's order come from the same array.
+    // A drop into Active holds no order: the list renders sorted directly.
     const manualActive = sortThreadsForSidebar(active);
     const inboxActive = sortSidebarThreadsByInbox(manualActive, classifyLive);
     const sortedActive = filterSidebarThreadsByInbox(inboxActive, inboxFilter, classifyLive);
-    // Grouping moved something: a drop may only touch the dragged key, or it
-    // would persist the grouped order as the manual one.
-    const activeOrderDerived = inboxActive.some((thread, index) => thread !== manualActive[index]);
     return {
       pinnedThreads:
         optimisticDrop?.section !== "pinned" || optimisticDrop.order === null
@@ -2712,15 +2706,7 @@ export default function Sidebar() {
       // persist an order nobody saw under "Tudo". Dragging waits for "Tudo".
       draggableThreadKeys: inboxFilter === "tudo" ? draggable : new Set<string>(),
       activeReorderableThreadKeys: inboxFilter === "tudo" ? activeReorderable : new Set<string>(),
-      activeOrderDerived,
-      activeThreads:
-        optimisticDrop?.section !== "active" || optimisticDrop.order === null
-          ? sortedActive
-          : orderItemsByPreferredIds({
-              items: sortedActive,
-              preferredIds: optimisticDrop.order,
-              getId: (thread) => scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
-            }),
+      activeThreads: sortedActive,
       // Soonest wake first: "what comes back next" is the shelf's question.
       snoozedThreads: filterSidebarThreadsByInbox(
         snoozed.toSorted(
@@ -3643,10 +3629,7 @@ export default function Sidebar() {
             pinnedOrder: pinnedKeys,
             pinnedKeysById,
             reorderableKeys: draggableThreadKeys,
-            activeOrder: activeKeys,
-            activeKeysById,
             activeReorderableKeys: activeReorderableThreadKeys,
-            activeOrderDerived,
           }).kind !== "none"
         );
       },
@@ -3656,12 +3639,9 @@ export default function Sidebar() {
       },
     );
   }, [
-    activeKeysById,
     pinnedKeysById,
     serverConfigs,
-    activeKeys,
     activeReorderableThreadKeys,
-    activeOrderDerived,
     draggedThreadKey,
     draggedFromSection,
     dragActivationY,
@@ -3693,10 +3673,7 @@ export default function Sidebar() {
         pinnedOrder: pinnedKeys,
         pinnedKeysById,
         reorderableKeys: draggableThreadKeys,
-        activeOrder: activeKeys,
-        activeKeysById,
         activeReorderableKeys: activeReorderableThreadKeys,
-        activeOrderDerived,
       });
       if (plan.kind === "none") return;
       if (plan.kind === "settle" && settlingThreadKeysRef.current.has(activeKey)) return;
@@ -3706,7 +3683,7 @@ export default function Sidebar() {
               ...(plan.orderKey === undefined ? [] : [{ id: activeKey, orderKey: plan.orderKey }]),
               ...plan.extraAssignments,
             ]
-          : plan.kind === "reorder-pinned" || plan.kind === "move-active"
+          : plan.kind === "reorder-pinned"
             ? plan.assignments
             : [];
       const drop = {
@@ -3718,7 +3695,8 @@ export default function Sidebar() {
           plan.kind === "pin" ||
           plan.kind === "settle" ||
           (plan.kind === "move-active" && plan.unsnooze),
-        order: plan.kind === "settle" ? null : plan.order,
+        // The active list orders itself, so an active drop holds no order.
+        order: plan.kind === "pin" || plan.kind === "reorder-pinned" ? plan.order : null,
         keysAtDrop: target.section === "active" ? activeKeysById : pinnedKeysById,
         assignedKeys: new Map(assignments.map(({ id, orderKey }) => [id, orderKey])),
       };
@@ -3796,19 +3774,22 @@ export default function Sidebar() {
             break;
         }
         // Stop on failure; each successful key write remains a valid placement.
-        const keyWrites = plan.kind === "pin" ? plan.extraAssignments : plan.assignments;
+        const keyWrites =
+          plan.kind === "pin"
+            ? plan.extraAssignments
+            : plan.kind === "reorder-pinned"
+              ? plan.assignments
+              : [];
         for (const assignment of keyWrites) {
           const thread = threadByKey.get(assignment.id);
           if (thread === undefined) continue;
           if (
             !(await run(
-              (plan.kind === "move-active" ? reorderActiveThread : reorderPinnedThread)(
+              reorderPinnedThread(
                 scopeThreadRef(thread.environmentId, thread.id),
                 assignment.orderKey,
               ),
-              plan.kind === "move-active"
-                ? t("Failed to reorder active threads")
-                : t("Failed to reorder pinned threads"),
+              t("Failed to reorder pinned threads"),
             ))
           )
             return;
@@ -3819,15 +3800,12 @@ export default function Sidebar() {
       activeKeysById,
       pinnedKeysById,
       serverConfigs,
-      activeKeys,
       activeReorderableThreadKeys,
-      activeOrderDerived,
       draggableThreadKeys,
       pinThread,
       pinnedKeys,
       planForwardNavigation,
       reorderPinnedThread,
-      reorderActiveThread,
       sectionByThreadKey,
       settleThread,
       sidebarListItems,

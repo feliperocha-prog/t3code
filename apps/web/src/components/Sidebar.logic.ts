@@ -229,10 +229,11 @@ export type SidebarThreadDropPlan =
       readonly orderKey: string | undefined;
       readonly extraAssignments: ReadonlyArray<{ readonly id: string; readonly orderKey: string }>;
     }
+  /** From another section into the active list. Only the section change is
+      written: the list orders itself by last activity, so the drop has no
+      position and no order keys. */
   | {
       readonly kind: "move-active";
-      readonly order: readonly string[];
-      readonly assignments: ReadonlyArray<{ readonly id: string; readonly orderKey: string }>;
       readonly unpin: boolean;
       readonly unsettle: boolean;
       readonly unsnooze: boolean;
@@ -268,15 +269,7 @@ export function planSidebarThreadDrop(input: {
   readonly pinnedOrder: readonly string[];
   readonly pinnedKeysById: ReadonlyMap<string, string | null | undefined>;
   readonly reorderableKeys?: ReadonlySet<string>;
-  readonly activeOrder: readonly string[];
-  readonly activeKeysById: ReadonlyMap<string, string | null | undefined>;
   readonly activeReorderableKeys?: ReadonlySet<string>;
-  /**
-   * True when the displayed Active order differs from the manual key order
-   * (the inbox groups waiting/working first). A drop that needs more than one
-   * key rewrite would then persist the grouped order over the manual one.
-   */
-  readonly activeOrderDerived?: boolean;
 }): SidebarThreadDropPlan {
   const {
     activeKey,
@@ -287,7 +280,6 @@ export function planSidebarThreadDrop(input: {
     pinnedOrder,
     pinnedKeysById,
     reorderableKeys,
-    activeKeysById,
     activeReorderableKeys,
   } = input;
   if (input.supportsSettlement === false && (target.section === "settled" || activeSettled)) {
@@ -299,22 +291,11 @@ export function planSidebarThreadDrop(input: {
       // there cannot be rearranged by hand. Moving one in from another
       // section (unpin, unsettle, wake) still works.
       if (activeSection === "active") return { kind: "none" };
-      const order = target.activeOrder;
-      const assignments = planPinnedReorder({
-        orderedIds: order,
-        keysById: activeKeysById,
-        movedId: activeKey,
-      });
-      if (activeReorderableKeys && assignments.some(({ id }) => !activeReorderableKeys.has(id))) {
-        return { kind: "none" };
-      }
-      if (input.activeOrderDerived === true && assignments.length > 1) {
+      if (activeReorderableKeys && !activeReorderableKeys.has(activeKey)) {
         return { kind: "none" };
       }
       return {
         kind: "move-active",
-        order,
-        assignments,
         unpin: activePinned,
         unsettle: activeSettled,
         unsnooze: activeSection === "snoozed",

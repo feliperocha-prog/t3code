@@ -56,7 +56,10 @@ import {
   resolveSidebarDropVerb,
 } from "./Sidebar.logic";
 import { threadSearchMatchKey } from "@t3tools/client-runtime/state/thread-search";
-import { sortSettledThreads } from "@t3tools/client-runtime/state/thread-sort";
+import {
+  sortSettledThreads,
+  threadLastActivityAt,
+} from "@t3tools/client-runtime/state/thread-sort";
 import {
   EnvironmentId,
   MessageId,
@@ -1398,11 +1401,6 @@ describe("planSidebarThreadDrop", () => {
     ["p2", "m"],
     ["p3", "t"],
   ]);
-  const activeKeysById = new Map<string, string | null>([
-    ["a1", "f"],
-    ["a2", "m"],
-    ["a3", "t"],
-  ]);
   const plan = (
     overrides: Partial<Omit<Parameters<typeof planSidebarThreadDrop>[0], "target">> & {
       activeKey: string;
@@ -1415,8 +1413,6 @@ describe("planSidebarThreadDrop", () => {
     planSidebarThreadDrop({
       pinnedOrder: ["p1", "p2", "p3"],
       pinnedKeysById,
-      activeOrder: ["a1", "a2", "a3"],
-      activeKeysById,
       ...overrides,
       target: { activeOrder: [], ...overrides.target },
     });
@@ -1440,26 +1436,18 @@ describe("planSidebarThreadDrop", () => {
     ).toEqual({ kind: "none" });
   });
 
-  it.each(["pinned", "active"] as const)("reserves hidden %s slots during a drop", (section) => {
-    // Active cannot be rearranged from inside, so its case moves a pinned thread in.
-    const order = section === "pinned" ? ["p2", "p1", "p3"] : ["a2", "p1", "a3"];
-    const keys = new Map(section === "pinned" ? pinnedKeysById : activeKeysById);
-    const moved = "p1";
+  it("reserves hidden pinned slots during a drop", () => {
+    const order = ["p2", "p1", "p3"];
+    const keys = new Map(pinnedKeysById);
     const reserved = pinOrderKeyBetween(keys.get(order[0]!)!, keys.get(order[2]!)!)!;
     keys.set("snoozed", reserved);
     const result = plan({
-      activeKey: moved,
+      activeKey: "p1",
       activeSection: "pinned",
-      pinnedKeysById: section === "pinned" ? keys : pinnedKeysById,
-      activeKeysById: section === "active" ? keys : activeKeysById,
-      target: {
-        section,
-        pinnedOrder: section === "pinned" ? order : [],
-        activeOrder: section === "active" ? order : [],
-      },
+      pinnedKeysById: keys,
+      target: { section: "pinned", pinnedOrder: order },
     });
-    if (result.kind !== "reorder-pinned" && result.kind !== "move-active")
-      throw new Error("Expected reorder");
+    if (result.kind !== "reorder-pinned") throw new Error("Expected reorder");
     expect(result.assignments).toHaveLength(1);
     expect(result.assignments[0]!.orderKey).not.toBe(reserved);
   });
@@ -1468,24 +1456,27 @@ describe("planSidebarThreadDrop", () => {
     { key: "p2", section: "pinned" as const, unpin: true, unsettle: false, unsnooze: false },
     { key: "s1", section: "settled" as const, unpin: false, unsettle: true, unsnooze: false },
     { key: "z1", section: "snoozed" as const, unpin: false, unsettle: false, unsnooze: true },
-  ])("moves a $section thread to the chosen Active slot", (source) => {
-    const order = ["a1", source.key, "a2", "a3"];
-    const result = plan({
-      activeKey: source.key,
-      activeSection: source.section,
-      target: { section: "active", pinnedOrder: [], activeOrder: order },
-    });
-    expect(result).toEqual({
-      kind: "move-active",
-      order,
-      assignments: [{ id: source.key, orderKey: expect.any(String) }],
-      unpin: source.unpin,
-      unsettle: source.unsettle,
-      unsnooze: source.unsnooze,
-    });
-    if (result.kind !== "move-active") return;
-    const key = result.assignments[0]!.orderKey;
-    expect(key > "f" && key < "m").toBe(true);
+  ])("moves a $section thread into Active with only its section change", (source) => {
+    // Wherever it lands among the rows, the drop targets the section: no
+    // position and no order keys, so no neighbour gets a fresh timestamp.
+    for (const order of [
+      [source.key, "a1", "a2", "a3"],
+      ["a1", source.key, "a2", "a3"],
+      ["a1", "a2", "a3", source.key],
+    ]) {
+      expect(
+        plan({
+          activeKey: source.key,
+          activeSection: source.section,
+          target: { section: "active", pinnedOrder: [], activeOrder: order },
+        }),
+      ).toEqual({
+        kind: "move-active",
+        unpin: source.unpin,
+        unsettle: source.unsettle,
+        unsnooze: source.unsnooze,
+      });
+    }
   });
 
   it.each([
@@ -1507,8 +1498,6 @@ describe("planSidebarThreadDrop", () => {
       }),
     ).toEqual({
       kind: "move-active",
-      order: ["a1", "z1", "a2", "a3"],
-      assignments: [{ id: "z1", orderKey: expect.any(String) }],
       unpin: hiddenState.activePinned,
       unsettle: hiddenState.activeSettled,
       unsnooze: true,
@@ -1541,7 +1530,7 @@ describe("planSidebarThreadDrop", () => {
     ).toEqual({ kind: "none" });
   });
 
-  it("requires Active ordering support only for the threads whose keys must change", () => {
+  it("requires Active ordering support for the dragged thread", () => {
     const input = {
       activeKey: "p2",
       activeSection: "pinned" as const,
@@ -1553,47 +1542,7 @@ describe("planSidebarThreadDrop", () => {
       activeReorderableKeys: new Set(["p2"]),
     };
     expect(plan(input).kind).toBe("move-active");
-    expect(
-      plan({
-        ...input,
-        activeKeysById: new Map([
-          ["a1", null],
-          ["a2", "m"],
-          ["a3", "t"],
-        ]),
-      }),
-    ).toEqual({ kind: "none" });
     expect(plan({ ...input, activeReorderableKeys: new Set() })).toEqual({ kind: "none" });
-  });
-
-  it("refuses a multi-key rewrite when the Active order is grouped by inbox state", () => {
-    // Displayed a1, a3, a2 (grouping) over manual keys f, m, t: moving a1 to the
-    // end needs a key after "t" only, so the drop is allowed...
-    const single = plan({
-      activeKey: "p2",
-      activeSection: "pinned",
-      activeOrderDerived: true,
-      target: { section: "active", pinnedOrder: [], activeOrder: ["a3", "a2", "a1", "p2"] },
-    });
-    expect(single.kind).toBe("move-active");
-    if (single.kind !== "move-active") return;
-    expect(single.assignments.map(({ id }) => id)).toEqual(["p2"]);
-    // ...while dropping between inverted neighbours (a3 "t" before a2 "m") would
-    // rewrite the whole section with the grouped order, so nothing is written.
-    const input = {
-      activeKey: "p2",
-      activeSection: "pinned" as const,
-      target: {
-        section: "active" as const,
-        pinnedOrder: [],
-        activeOrder: ["a3", "p2", "a2", "a1"],
-      },
-    };
-    const whole = plan(input);
-    expect(whole.kind).toBe("move-active");
-    if (whole.kind !== "move-active") return;
-    expect(whole.assignments.length).toBeGreaterThan(1);
-    expect(plan({ ...input, activeOrderDerived: true })).toEqual({ kind: "none" });
   });
 
   it("settles anything dropped on Settled except a settled thread", () => {
@@ -1797,10 +1746,12 @@ describe("applySidebarThreadDrop", () => {
       snoozedUntil: wakeAt,
     },
   ])("preserves the active sort anchor when clearing a $state", ({ state: _state, ...parked }) => {
+    // An old reopen still counts as activity, so keep it before the
+    // neighbour's to test the anchor rather than a timestamp tie.
     const source = thread({
       ...parked,
       settledOverride: "active",
-      unsettledAt: earlier,
+      unsettledAt: createdAt,
       latestUserMessageAt: createdAt,
     });
     const preview = applySidebarThreadDrop(source, "active", now);
@@ -1963,6 +1914,28 @@ describe("applySidebarThreadDrop", () => {
       "dragged",
       "newer",
     ]);
+  });
+
+  it("puts a reopened thread with an old last message above fresher threads", () => {
+    // The neighbour's id sorts first and its message is newer than the
+    // dragged one's, so only the reopen timestamp can lift the dragged row.
+    const fresher = thread({
+      id: ThreadId.make("a-fresher"),
+      updatedAt: now,
+      latestUserMessageAt: now,
+    });
+    const source = thread({
+      settledOverride: "settled",
+      settledAt: earlier,
+      latestUserMessageAt: createdAt,
+    });
+    const reopened = applySidebarThreadDrop(source, "active", serverNow);
+    expect(sortThreadsForSidebar([fresher, reopened]).map((row) => row.id)).toEqual([
+      "dragged",
+      "a-fresher",
+    ]);
+    // The age label reads the same timestamp, so it shows the reopen.
+    expect(threadLastActivityAt(reopened)).toBe(serverNow);
   });
 });
 
