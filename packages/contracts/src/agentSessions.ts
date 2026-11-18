@@ -25,6 +25,11 @@ export function isImportedAgentSessionMessageId(messageId: string): boolean {
   return messageId.startsWith("import:");
 }
 
+/** Threads created from another client's transcript use `import:<instance>:<session>` ids. */
+export function isImportedAgentSessionThreadId(threadId: string): boolean {
+  return threadId.startsWith("import:");
+}
+
 /**
  * Empty for now. Kept as a struct so future scan options (source filters,
  * explicit roots) can be added without a new method.

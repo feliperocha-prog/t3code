@@ -2,6 +2,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeOS from "node:os";
 import { describe, expect, it } from "@effect/vitest";
 import {
+  type AgentSessionImportSource,
   type OrchestrationProjectShell,
   ProjectId,
   ProviderDriverKind,
@@ -2609,6 +2610,224 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
             outcome._tag === "Importable" ? [outcome.thread.providerSessionId] : [],
           ),
         ).toEqual(["recent-session"]);
+      }),
+    );
+
+    const claudeSession = (input: {
+      readonly cwd: string;
+      readonly sessionId: string;
+      readonly entrypoint?: string | undefined;
+    }) =>
+      `${[
+        encodeTranscriptRecord({
+          type: "user",
+          cwd: input.cwd,
+          sessionId: input.sessionId,
+          ...(input.entrypoint === undefined ? {} : { entrypoint: input.entrypoint }),
+          timestamp: "2026-08-23T12:00:00.000Z",
+          message: { role: "user", content: "Fix the project" },
+        }),
+        encodeTranscriptRecord({
+          type: "assistant",
+          sessionId: input.sessionId,
+          timestamp: "2026-08-23T12:01:00.000Z",
+          message: { role: "assistant", content: [{ type: "text", text: "Done" }] },
+        }),
+      ].join("\n")}\n`;
+
+    const collectOutcomes = (
+      scanner: AgentSessionScanner.AgentSessionScanner["Service"],
+      workspaceRoot: string,
+      completed: ReadonlyArray<AgentSessionImportSource> = [],
+      options: AgentSessionScanner.AgentSessionRecentThreadsOptions = {},
+    ) =>
+      scanner.recentThreads(workspaceRoot, completed, options).pipe(
+        Stream.runCollect,
+        Effect.map((outcomes) => Array.from(outcomes)),
+      );
+
+    const importableIds = (outcomes: ReadonlyArray<AgentSessionScanner.AgentSessionRecentThread>) =>
+      outcomes.flatMap((outcome) =>
+        outcome._tag === "Importable" ? [outcome.thread.providerSessionId] : [],
+      );
+
+    it.effect.each([
+      { entrypoint: "sdk-cli", importable: false },
+      { entrypoint: "sdk-ts", importable: false },
+      { entrypoint: "t3-code", importable: false },
+      { entrypoint: "claude-vscode", importable: true },
+      { entrypoint: "cli", importable: true },
+      { entrypoint: "claude-desktop", importable: true },
+      { entrypoint: undefined, importable: true },
+    ])(
+      "imports a Claude session with entrypoint $entrypoint: $importable",
+      ({ entrypoint, importable }) =>
+        Effect.gen(function* () {
+          const path = yield* Path.Path;
+          const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
+          yield* TestClock.setTime(nowMs);
+          const claudeHomePath = yield* makeTempDir("t3code-entrypoint-claude-");
+          const codexHomePath = yield* makeTempDir("t3code-entrypoint-codex-");
+          const workspace = yield* makeTempDir("t3code-entrypoint-project-");
+          yield* writeTranscript({
+            filePath: path.join(claudeHomePath, "projects", "-p", "session.jsonl"),
+            contents: claudeSession({ cwd: workspace, sessionId: "session", entrypoint }),
+            mtimeMs: nowMs - 60 * 60 * 1000,
+          });
+
+          const outcomes = yield* runRecentThreadOutcomes({
+            claudeHomePath,
+            codexHomePath,
+            workspaceRoot: workspace,
+          });
+
+          expect(outcomes.map((outcome) => outcome._tag)).toEqual([
+            importable ? "Importable" : "Skipped",
+          ]);
+        }),
+    );
+
+    it.effect("does not apply the Claude entrypoint filter to Codex rollouts", () =>
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
+        yield* TestClock.setTime(nowMs);
+        const claudeHomePath = yield* makeTempDir("t3code-entrypoint-codex-claude-");
+        const codexHomePath = yield* makeTempDir("t3code-entrypoint-codex-home-");
+        const workspace = yield* makeTempDir("t3code-entrypoint-codex-project-");
+        yield* writeTranscript({
+          filePath: path.join(codexHomePath, "sessions", "2026", "08", "24", "rollout-sdk.jsonl"),
+          contents: [
+            encodeTranscriptRecord({
+              type: "session_meta",
+              entrypoint: "sdk-cli",
+              payload: { id: "codex-sdk", cwd: workspace },
+            }),
+            encodeTranscriptRecord({
+              type: "event_msg",
+              payload: { type: "user_message", message: "Codex prompt" },
+            }),
+          ].join("\n"),
+          mtimeMs: nowMs - 60 * 60 * 1000,
+        });
+
+        const threads = yield* runRecentThreads({
+          claudeHomePath,
+          codexHomePath,
+          workspaceRoot: workspace,
+        });
+
+        expect(threads.map((thread) => thread.providerSessionId)).toEqual(["codex-sdk"]);
+      }),
+    );
+
+    it.effect("applies the requested window and idle time", () =>
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
+        const minuteMs = 60 * 1000;
+        const dayMs = 24 * 60 * minuteMs;
+        yield* TestClock.setTime(nowMs);
+        const claudeHomePath = yield* makeTempDir("t3code-window-claude-");
+        const codexHomePath = yield* makeTempDir("t3code-window-codex-");
+        const workspace = yield* makeTempDir("t3code-window-project-");
+        for (const [sessionId, ageMs] of [
+          ["fresh", 5 * minuteMs],
+          ["idle", 30 * minuteMs],
+          ["older", 45 * dayMs],
+          ["expired", 61 * dayMs],
+        ] as const) {
+          yield* writeTranscript({
+            filePath: path.join(claudeHomePath, "projects", "-p", `${sessionId}.jsonl`),
+            contents: claudeSession({ cwd: workspace, sessionId }),
+            mtimeMs: nowMs - ageMs,
+          });
+        }
+
+        const [onboarding, autoSync] = yield* Effect.gen(function* () {
+          const scanner = yield* AgentSessionScanner.AgentSessionScanner;
+          return [
+            yield* collectOutcomes(scanner, workspace),
+            yield* collectOutcomes(scanner, workspace, [], {
+              windowMs: 60 * dayMs,
+              minIdleMs: 20 * minuteMs,
+            }),
+          ] as const;
+        }).pipe(Effect.provide(makeScannerTestLayer({ claudeHomePath, codexHomePath })));
+
+        expect(importableIds(onboarding)).toEqual(["fresh", "idle"]);
+        expect(importableIds(autoSync)).toEqual(["idle", "older"]);
+      }),
+    );
+
+    it.effect("rediscovers new sessions without reopening unchanged transcripts", () =>
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const fileSystem = yield* FileSystem.FileSystem;
+        const nowMs = Date.parse("2026-08-24T12:00:00.000Z");
+        yield* TestClock.setTime(nowMs);
+        const claudeHomePath = yield* makeTempDir("t3code-rediscover-claude-");
+        const codexHomePath = yield* makeTempDir("t3code-rediscover-codex-");
+        const workspace = yield* makeTempDir("t3code-rediscover-project-");
+        const directory = path.join(claudeHomePath, "projects", "-p");
+        yield* writeTranscript({
+          filePath: path.join(directory, "first.jsonl"),
+          contents: claudeSession({ cwd: workspace, sessionId: "first" }),
+          mtimeMs: nowMs - 60 * 60 * 1000,
+        });
+        yield* writeTranscript({
+          filePath: path.join(directory, "empty.jsonl"),
+          contents: claudeSessionLine(workspace),
+          mtimeMs: nowMs - 50 * 60 * 1000,
+        });
+        const opens = new Map<string, number>();
+        const observedFileSystem = FileSystem.FileSystem.of({
+          ...fileSystem,
+          open: (filePath, options) => {
+            const name = path.basename(filePath);
+            opens.set(name, (opens.get(name) ?? 0) + 1);
+            return fileSystem.open(filePath, options);
+          },
+        });
+
+        const result = yield* Effect.gen(function* () {
+          const scanner = yield* AgentSessionScanner.AgentSessionScanner;
+          const firstPass = yield* collectOutcomes(scanner, workspace);
+          const firstPassOpens = new Map(opens);
+          opens.clear();
+          yield* writeTranscript({
+            filePath: path.join(directory, "second.jsonl"),
+            contents: claudeSession({ cwd: workspace, sessionId: "second" }),
+            mtimeMs: nowMs - 30 * 60 * 1000,
+          });
+          // Past the candidate reuse window, so discovery runs again.
+          yield* TestClock.setTime(nowMs + 2 * 60 * 1000);
+          const completed = firstPass.flatMap((outcome) =>
+            outcome._tag === "Importable" ? [outcome.source] : [],
+          );
+          const secondPass = yield* collectOutcomes(scanner, workspace, completed);
+          return { firstPass, firstPassOpens, secondPass, secondPassOpens: new Map(opens) };
+        }).pipe(
+          Effect.provide(makeScannerTestLayer({ claudeHomePath, codexHomePath })),
+          Effect.provideService(FileSystem.FileSystem, observedFileSystem),
+        );
+
+        expect(result.firstPass.map((outcome) => outcome._tag)).toEqual(["Skipped", "Importable"]);
+        expect(importableIds(result.firstPass)).toEqual(["first"]);
+        expect(result.firstPassOpens.get("first.jsonl") ?? 0).toBeGreaterThan(0);
+        expect(result.firstPassOpens.get("empty.jsonl") ?? 0).toBeGreaterThan(0);
+        expect(
+          result.secondPass.map((outcome) =>
+            outcome._tag === "Importable"
+              ? `Importable:${outcome.thread.providerSessionId}`
+              : outcome._tag === "AlreadyImported"
+                ? `AlreadyImported:${outcome.source.providerSessionId}`
+                : outcome._tag,
+          ),
+        ).toEqual(["Importable:second", "Skipped", "AlreadyImported:first"]);
+        expect(result.secondPassOpens.get("first.jsonl")).toBeUndefined();
+        expect(result.secondPassOpens.get("empty.jsonl")).toBeUndefined();
+        expect(result.secondPassOpens.get("second.jsonl") ?? 0).toBeGreaterThan(0);
       }),
     );
   });

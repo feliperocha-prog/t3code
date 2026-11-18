@@ -9,6 +9,7 @@ import {
   AgentSessionSource,
   AgentSessionScanError,
   isImportedAgentSessionMessageId,
+  isImportedAgentSessionThreadId,
   MessageId,
   ProjectId,
   ProviderDriverKind,
@@ -97,9 +98,24 @@ function hasImportBlockingActivity(
   );
 }
 
+/** Claude session ids that native T3 threads resume. Imported threads are excluded so they can resync. */
+function nativeClaudeResumeIds(
+  bindings: ReadonlyArray<ProviderSessionDirectory.ProviderRuntimeBindingWithMetadata>,
+): ReadonlySet<string> {
+  const ids = new Set<string>();
+  for (const binding of bindings) {
+    if (isImportedAgentSessionThreadId(binding.threadId)) continue;
+    const cursor = binding.resumeCursor;
+    if (typeof cursor !== "object" || cursor === null || !("resume" in cursor)) continue;
+    if (typeof cursor.resume === "string") ids.add(cursor.resume);
+  }
+  return ids;
+}
+
 /** Import recent transcript text and persist the cursor needed to resume its provider session. */
 export const importRecentAgentThreads = Effect.fn("importRecentAgentThreads")(function* (
   input: AgentSessionImportInput,
+  options: AgentSessionScanner.AgentSessionRecentThreadsOptions = {},
 ) {
   const scanner = yield* AgentSessionScanner.AgentSessionScanner;
   const engine = yield* OrchestrationEngine.OrchestrationEngineService;
@@ -129,9 +145,20 @@ export const importRecentAgentThreads = Effect.fn("importRecentAgentThreads")(fu
     .pipe(
       Effect.mapError((cause) => new AgentSessionScanError({ operation: "read-projects", cause })),
     );
+  // A T3 thread's own Claude session must not come back as an imported copy.
+  const nativeResumeIds = nativeClaudeResumeIds(
+    yield* directory
+      .listBindings()
+      .pipe(
+        Effect.mapError(
+          (cause) => new AgentSessionScanError({ operation: "read-projects", cause }),
+        ),
+      ),
+  );
   const threads = scanner.recentThreads(
     workspaceRoot,
     completedSources.map((entry) => entry.source),
+    options,
   );
   const importedThreadIds = new Set<ThreadId>();
   let importedCount = 0;
@@ -165,6 +192,10 @@ export const importRecentAgentThreads = Effect.fn("importRecentAgentThreads")(fu
         return;
       }
       const thread = outcome.thread;
+      if (thread.source === "claudeAgent" && nativeResumeIds.has(thread.providerSessionId)) {
+        skippedCount += 1;
+        return;
+      }
       const threadId = ThreadId.make(
         `import:${thread.providerInstanceId}:${thread.providerSessionId}`,
       );

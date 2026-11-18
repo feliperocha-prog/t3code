@@ -84,6 +84,12 @@ const MAX_METADATA_RECORDS_PER_SOURCE = 100_000;
 const MAX_METADATA_RECORDS_PER_TRANSCRIPT = 1_000;
 const RECENT_THREAD_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 /**
+ * One discovery serves every project of an import pass. Later passes must
+ * rediscover so sessions written since then can appear; unchanged files reuse
+ * their metadata, so a rediscovery costs one stat per file.
+ */
+const CANDIDATE_REUSE_MS = 60 * 1000;
+/**
  * Large tool results (especially screenshots) can make an otherwise ordinary
  * Codex transcript several GiB. Streaming field selection avoids allocating
  * those payloads. Raw I/O and selected history have separate budgets.
@@ -114,6 +120,7 @@ const TranscriptRecord = Schema.Struct({
   type: Schema.optional(Schema.String),
   timestamp: Schema.optional(Schema.String),
   cwd: Schema.optional(Schema.String),
+  entrypoint: Schema.optional(Schema.String),
   sessionId: Schema.optional(Schema.String),
   aiTitle: Schema.optional(Schema.String),
   isSidechain: Schema.optional(Schema.Boolean),
@@ -192,9 +199,26 @@ export class AgentSessionScanner extends Context.Service<
     readonly recentThreads: (
       workspaceRoot: string,
       completedSources?: ReadonlyArray<AgentSessionImportSource>,
+      options?: AgentSessionRecentThreadsOptions,
     ) => Stream.Stream<AgentSessionRecentThread, AgentSessionScanError>;
   }
 >()("t3/project/AgentSessionScanner") {}
+
+export interface AgentSessionRecentThreadsOptions {
+  /** How old a transcript may be. Defaults to 30 days. */
+  readonly windowMs?: number;
+  /** Leave out transcripts written within this span; they may still be in use. */
+  readonly minIdleMs?: number;
+}
+
+/**
+ * Claude Code stamps each session with the client that started it. SDK runs
+ * (including T3's own provider sessions) are automation, not conversations the
+ * user had in another client, so they are never imported.
+ */
+export function isAutomationClaudeEntrypoint(entrypoint: string | null | undefined): boolean {
+  return entrypoint != null && (entrypoint.startsWith("sdk-") || entrypoint === "t3-code");
+}
 
 type AgentSessionSource = AgentSessionProjectCandidate["sources"][number];
 
@@ -208,7 +232,21 @@ interface RawCandidate {
   readonly transcripts: ReadonlyArray<{
     readonly filePath: string;
     readonly mtimeMs: number | null;
+    readonly entrypoint?: string | null;
   }>;
+}
+
+type MetadataRead =
+  | { readonly _tag: "Found"; readonly cwd: string; readonly entrypoint: string | null }
+  /** `scanLimited`: the per-file read limit ended the search, not a missing record. */
+  | { readonly _tag: "Missing"; readonly scanLimited: boolean }
+  | { readonly _tag: "Unread" };
+
+/** Metadata already read from one file version, keyed by path. */
+interface CachedTranscriptMetadata {
+  readonly mtimeMs: number;
+  readonly size: number;
+  readonly read: Exclude<MetadataRead, { readonly _tag: "Unread" }>;
 }
 
 interface TranscriptCandidate {
@@ -562,8 +600,13 @@ function isT3ManagedWorktree(
   );
 }
 
-/** Extract `cwd` from a session-meta record, tolerating the shapes each CLI writes. */
-function extractCwd(line: string): string | null {
+/**
+ * Extract `cwd` from a session-meta record, tolerating the shapes each CLI
+ * writes. Claude stamps the starting client on the same record.
+ */
+function extractSessionMetadata(
+  line: string,
+): { readonly cwd: string; readonly entrypoint: string | null } | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(line);
@@ -573,15 +616,16 @@ function extractCwd(line: string): string | null {
   if (typeof parsed !== "object" || parsed === null) return null;
 
   const record = parsed as Record<string, unknown>;
+  const entrypoint = typeof record.entrypoint === "string" ? record.entrypoint : null;
   if (typeof record.cwd === "string" && record.cwd.trim().length > 0) {
-    return record.cwd;
+    return { cwd: record.cwd, entrypoint };
   }
   // Codex nests session metadata under `payload`.
   const payload = record.payload;
   if (typeof payload === "object" && payload !== null) {
     const nested = (payload as Record<string, unknown>).cwd;
     if (typeof nested === "string" && nested.trim().length > 0) {
-      return nested;
+      return { cwd: nested, entrypoint };
     }
   }
   return null;
@@ -621,6 +665,13 @@ export const make = Effect.gen(function* () {
   // Different project imports can arrive concurrently from multiple clients.
   // Only one transcript may hold its selected-history budget at a time.
   const importReadLock = yield* Semaphore.make(1);
+  // Rebuilt on every discovery so vanished files drop out; an unchanged file
+  // (same path, mtime and size) is never read again for its metadata.
+  let metadataCache = new Map<string, CachedTranscriptMetadata>();
+  // Fully read files that can never import (automation entrypoint found past
+  // the metadata record, or no conversation). Without this they would spend
+  // the per-project read budget again on every pass.
+  const unimportableTranscripts = new Map<string, ReturnType<typeof transcriptIdentity>>();
   const path = yield* Path.Path;
   const serverConfig = yield* ServerConfig.ServerConfig;
   const serverSettings = yield* ServerSettings.ServerSettingsService;
@@ -729,18 +780,31 @@ export const make = Effect.gen(function* () {
 
   // A large history snapshot can precede session metadata. Read bounded
   // chunks until a complete record names its cwd or the safety budget ends.
-  const readCwd = Effect.fn("AgentSessionScanner.readCwd")(function* (
+  // `Unread` means the shared budget ran out, so the answer may differ next
+  // time; every other result is a fact about this exact file version.
+  const readMetadata = Effect.fn("AgentSessionScanner.readMetadata")(function* (
     transcript: TranscriptCandidate,
     budget: MetadataReadBudget,
   ) {
-    if (transcript.size === 0) return null;
+    const missing = (scanLimited: boolean): MetadataRead => {
+      if (scanLimited) budget.truncated = true;
+      return { _tag: "Missing", scanLimited };
+    };
+    const unread = (): MetadataRead => {
+      budget.truncated = true;
+      return { _tag: "Unread" };
+    };
+    const found = (metadata: ReturnType<typeof extractSessionMetadata>): MetadataRead | null =>
+      metadata === null
+        ? null
+        : { _tag: "Found", cwd: metadata.cwd, entrypoint: metadata.entrypoint };
+    if (transcript.size === 0) return missing(false);
     if (
       budget.bytesRemaining === 0 ||
       budget.operationsRemaining < 2 ||
       budget.recordsRemaining === 0
     ) {
-      budget.truncated = true;
-      return null;
+      return unread();
     }
     budget.operationsRemaining -= 1;
     return yield* Effect.scoped(
@@ -752,27 +816,24 @@ export const make = Effect.gen(function* () {
             let bytesRead = 0;
             let recordsRead = 0;
             const maxBytes = Math.min(MAX_TRANSCRIPT_SCAN_BYTES, transcript.size);
-            const reserveRecord = () => {
-              if (
-                recordsRead === MAX_METADATA_RECORDS_PER_TRANSCRIPT ||
-                budget.recordsRemaining === 0
-              ) {
-                budget.truncated = true;
-                return false;
-              }
+            const reserveRecord = (): MetadataRead | null => {
+              if (recordsRead === MAX_METADATA_RECORDS_PER_TRANSCRIPT) return missing(true);
+              if (budget.recordsRemaining === 0) return unread();
               recordsRead += 1;
               budget.recordsRemaining -= 1;
-              return true;
+              return null;
             };
-            const readLastRecord = () => {
+            const readLastRecord = (): MetadataRead => {
               const record = remaining + decoder.decode();
-              return record.length === 0 || !reserveRecord() ? null : extractCwd(record.trim());
+              if (record.length === 0) return missing(false);
+              return (
+                reserveRecord() ?? found(extractSessionMetadata(record.trim())) ?? missing(false)
+              );
             };
 
             while (bytesRead < maxBytes) {
               if (budget.bytesRemaining === 0 || budget.operationsRemaining === 0) {
-                budget.truncated = true;
-                return null;
+                return unread();
               }
               const readSize = Math.min(
                 METADATA_READ_BYTES,
@@ -792,21 +853,21 @@ export const make = Effect.gen(function* () {
               remaining = lines.pop() ?? "";
 
               for (const line of lines) {
-                if (!reserveRecord()) return null;
-                const cwd = extractCwd(line.trim());
-                if (cwd !== null) return cwd;
+                const stop = reserveRecord();
+                if (stop !== null) return stop;
+                const metadata = found(extractSessionMetadata(line.trim()));
+                if (metadata !== null) return metadata;
               }
             }
 
             if (bytesRead < transcript.size) {
-              budget.truncated = true;
-              return null;
+              return missing(true);
             }
             return readLastRecord();
           }),
         ),
       ),
-    ).pipe(Effect.orElseSucceed(() => null));
+    ).pipe(Effect.orElseSucceed((): MetadataRead => ({ _tag: "Unread" })));
   });
 
   /**
@@ -1043,6 +1104,7 @@ export const make = Effect.gen(function* () {
     source: AgentSessionSource,
     transcripts: ReadonlyArray<TranscriptCandidate>,
     budget: MetadataReadBudget,
+    nextMetadataCache: Map<string, CachedTranscriptMetadata>,
   ) {
     const byOwnerAndCwd = new Map<
       string,
@@ -1050,24 +1112,43 @@ export const make = Effect.gen(function* () {
         cwd: string;
         providerInstanceId: ProviderInstanceId;
         lastActiveAtMs: number;
-        transcripts: Array<{ filePath: string; mtimeMs: number }>;
+        transcripts: Array<TranscriptCandidate & { entrypoint: string | null }>;
       }
     >();
 
     for (const transcript of transcripts) {
-      const cwd = yield* readCwd(transcript, budget);
-      if (cwd === null) continue;
+      const cached = metadataCache.get(transcript.filePath);
+      let read: MetadataRead;
+      if (
+        cached !== undefined &&
+        cached.mtimeMs === transcript.mtimeMs &&
+        cached.size === transcript.size
+      ) {
+        read = cached.read;
+        if (read._tag === "Missing" && read.scanLimited) budget.truncated = true;
+      } else {
+        read = yield* readMetadata(transcript, budget);
+      }
+      if (read._tag !== "Unread") {
+        nextMetadataCache.set(transcript.filePath, {
+          mtimeMs: transcript.mtimeMs,
+          size: transcript.size,
+          read,
+        });
+      }
+      if (read._tag !== "Found") continue;
+      const { cwd, entrypoint } = read;
       const key = `${transcript.providerInstanceId}\0${cwd}`;
       const existing = byOwnerAndCwd.get(key);
       if (existing) {
         existing.lastActiveAtMs = Math.max(existing.lastActiveAtMs, transcript.mtimeMs);
-        existing.transcripts.push(transcript);
+        existing.transcripts.push({ ...transcript, entrypoint });
       } else {
         byOwnerAndCwd.set(key, {
           cwd,
           providerInstanceId: transcript.providerInstanceId,
           lastActiveAtMs: transcript.mtimeMs,
-          transcripts: [transcript],
+          transcripts: [{ ...transcript, entrypoint }],
         });
       }
     }
@@ -1089,6 +1170,7 @@ export const make = Effect.gen(function* () {
 
     const raw: Array<RawCandidate> = [];
     let truncated = false;
+    const nextMetadataCache = new Map<string, CachedTranscriptMetadata>();
 
     for (const source of ["claudeAgent", "codex"] as const) {
       const instances: Array<{
@@ -1189,18 +1271,32 @@ export const make = Effect.gen(function* () {
         recordsRemaining: MAX_METADATA_RECORDS_PER_SOURCE,
         truncated: false,
       };
-      raw.push(...(yield* groupTranscriptsByCwd(source, selectedTranscripts, metadataBudget)));
+      raw.push(
+        ...(yield* groupTranscriptsByCwd(
+          source,
+          selectedTranscripts,
+          metadataBudget,
+          nextMetadataCache,
+        )),
+      );
       truncated ||= metadataBudget.truncated;
     }
 
+    metadataCache = nextMetadataCache;
     return { candidates: raw, truncated };
   });
 
-  let cachedCandidates: ReadonlyArray<RawCandidate> | null = null;
+  let cachedCandidates: {
+    readonly candidates: ReadonlyArray<RawCandidate>;
+    readonly discoveredAtMs: number;
+  } | null = null;
 
   const scan: AgentSessionScanner["Service"]["scan"] = Effect.gen(function* () {
     const { candidates: raw, truncated } = yield* collectCandidates();
-    cachedCandidates = raw;
+    cachedCandidates = {
+      candidates: raw,
+      discoveredAtMs: DateTime.toEpochMillis(yield* DateTime.now),
+    };
 
     // Filesystem identity merges symlinks and case aliases without collapsing
     // distinct case-sensitive directories.
@@ -1328,16 +1424,29 @@ export const make = Effect.gen(function* () {
   const prepareRecentThreads = Effect.fn("AgentSessionScanner.prepareRecentThreads")(function* (
     workspaceRoot: string,
     completedSources: ReadonlyArray<AgentSessionImportSource>,
+    options: AgentSessionRecentThreadsOptions,
   ) {
     const root = path.resolve(expandHomePath(workspaceRoot));
     const realRoot = yield* fileSystem.realPath(root).pipe(Effect.orElseSucceed(() => root));
     if (isExcludedProjectPath(root) || isExcludedProjectPath(realRoot)) return Stream.empty;
     const rootIdentity = yield* directoryIdentity(root);
     const nowMs = DateTime.toEpochMillis(yield* DateTime.now);
-    const cutoffMs = nowMs - RECENT_THREAD_WINDOW_MS;
+    const cutoffMs = nowMs - (options.windowMs ?? RECENT_THREAD_WINDOW_MS);
+    const idleCutoffMs = nowMs - (options.minIdleMs ?? 0);
 
-    const candidates = cachedCandidates ?? (yield* collectCandidates()).candidates;
-    cachedCandidates = candidates;
+    // Reuse a fresh discovery (onboarding's scan, or earlier projects of the
+    // same pass); anything older is rediscovered so new sessions appear.
+    let candidates: ReadonlyArray<RawCandidate>;
+    if (
+      cachedCandidates !== null &&
+      nowMs >= cachedCandidates.discoveredAtMs &&
+      nowMs - cachedCandidates.discoveredAtMs < CANDIDATE_REUSE_MS
+    ) {
+      candidates = cachedCandidates.candidates;
+    } else {
+      candidates = (yield* collectCandidates()).candidates;
+      cachedCandidates = { candidates, discoveredAtMs: nowMs };
+    }
 
     const eligibleTranscripts: Array<{
       readonly candidate: RawCandidate;
@@ -1353,7 +1462,8 @@ export const make = Effect.gen(function* () {
         if (
           transcript.mtimeMs === null ||
           transcript.mtimeMs < cutoffMs ||
-          transcript.mtimeMs > nowMs
+          transcript.mtimeMs > nowMs ||
+          transcript.mtimeMs > idleCutoffMs
         ) {
           continue;
         }
@@ -1382,6 +1492,12 @@ export const make = Effect.gen(function* () {
     return Stream.fromIteratorSucceed(eligibleTranscripts.values(), 1).pipe(
       Stream.mapEffect(({ candidate, transcript }) =>
         Effect.gen(function* () {
+          if (
+            candidate.source === "claudeAgent" &&
+            isAutomationClaudeEntrypoint(transcript.entrypoint)
+          ) {
+            return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
+          }
           const completed = completedByFile.get(
             `${candidate.providerInstanceId}\0${transcript.filePath}`,
           );
@@ -1408,6 +1524,10 @@ export const make = Effect.gen(function* () {
               _tag: "AlreadyImported",
               source: completedSource,
             });
+          }
+          const unimportable = unimportableTranscripts.get(transcript.filePath);
+          if (unimportable !== undefined && sameTranscriptIdentity(unimportable, identity)) {
+            return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
           }
           if (
             transcriptsRemaining === 0 ||
@@ -1438,6 +1558,7 @@ export const make = Effect.gen(function* () {
             if (snapshotCwd !== null) break;
           }
           if (snapshotCwd === null) {
+            unimportableTranscripts.set(transcript.filePath, identity);
             return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
           }
           const expandedCwd = expandHomePath(snapshotCwd.trim());
@@ -1445,6 +1566,16 @@ export const make = Effect.gen(function* () {
             !path.isAbsolute(expandedCwd) ||
             (yield* directoryIdentity(path.resolve(expandedCwd))) !== rootIdentity
           ) {
+            return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
+          }
+          // The metadata record may be absent or past the metadata read limit.
+          if (
+            candidate.source === "claudeAgent" &&
+            isAutomationClaudeEntrypoint(
+              snapshot.records.find((record) => record.entrypoint !== undefined)?.entrypoint,
+            )
+          ) {
+            unimportableTranscripts.set(transcript.filePath, identity);
             return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
           }
 
@@ -1458,6 +1589,7 @@ export const make = Effect.gen(function* () {
             snapshot.records,
           );
           if (parsedThread === null) {
+            unimportableTranscripts.set(transcript.filePath, identity);
             return Option.some<AgentSessionRecentThread>({ _tag: "Skipped" });
           }
 
@@ -1487,7 +1619,8 @@ export const make = Effect.gen(function* () {
   const recentThreads: AgentSessionScanner["Service"]["recentThreads"] = (
     workspaceRoot,
     completedSources = [],
-  ) => Stream.unwrap(prepareRecentThreads(workspaceRoot, completedSources));
+    options = {},
+  ) => Stream.unwrap(prepareRecentThreads(workspaceRoot, completedSources, options));
 
   return AgentSessionScanner.of({ scan, recentThreads });
 });
