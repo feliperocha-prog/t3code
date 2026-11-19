@@ -185,6 +185,11 @@ export type AgentSessionRecentThread =
   | { readonly _tag: "Duplicate"; readonly source: AgentSessionImportSource }
   | { readonly _tag: "Skipped" };
 
+/** Decoding a transcript's records threw; the scanner logs it and skips the file. */
+class TranscriptReadError extends Schema.TaggedError<TranscriptReadError>()("TranscriptReadError", {
+  cause: Schema.Defect(),
+}) {}
+
 /** Service tag for agent session discovery. */
 export class AgentSessionScanner extends Context.Service<
   AgentSessionScanner,
@@ -1009,7 +1014,7 @@ export const make = Effect.gen(function* () {
         try: body,
         catch: (error) => {
           if (error instanceof TranscriptJsonLimitError) refused = true;
-          return error;
+          return new TranscriptReadError({ cause: error });
         },
       });
 

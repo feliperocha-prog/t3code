@@ -10,6 +10,7 @@ import {
   type ServerSettings as ContractServerSettings,
 } from "@t3tools/contracts";
 import { symlinksSupported } from "@t3tools/shared/testing/symlinks";
+import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
@@ -2884,7 +2885,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
               : fileSystem.stat(filePath).pipe(
                   Effect.map((info) => ({
                     ...info,
-                    mtime: Option.some(new Date(nowMs - 5 * minuteMs)),
+                    mtime: Option.some(DateTime.toDate(DateTime.makeUnsafe(nowMs - 5 * minuteMs))),
                   })),
                 );
           },
