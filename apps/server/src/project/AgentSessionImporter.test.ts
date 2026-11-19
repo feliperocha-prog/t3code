@@ -1151,6 +1151,122 @@ it.layer(integrationLayer)("AgentSessionImporter integration", (it) => {
     }),
   );
 
+  it.effect(
+    "reimports into a new project after the old project of the same folder was removed",
+    () =>
+      Effect.gen(function* () {
+        const engine = yield* OrchestrationEngine.OrchestrationEngineService;
+        const snapshots = yield* ProjectionSnapshotQuery.ProjectionSnapshotQuery;
+        const fixture = yield* makeRetiredImportFixture({
+          label: "readded",
+          sessionId: "123e4567-e89b-42d3-a456-426614174105",
+        });
+        const first = yield* fixture.runPass(fixture.projectId);
+        expect(first.result).toEqual({ importedCount: 1, skippedCount: 0 });
+        expect(first.createdThreadIds).toEqual([fixture.threadId]);
+
+        yield* engine.dispatch({
+          type: "project.delete",
+          commandId: CommandId.make("delete-readded-import-project"),
+          projectId: fixture.projectId,
+          force: true,
+        });
+        // The removed project's row is left behind with deleted_at set.
+        expect(Option.isNone(yield* snapshots.getThreadDetailById(fixture.threadId))).toBe(true);
+        expect(yield* snapshots.threadRowExists(fixture.threadId)).toBe(false);
+
+        const newProjectId = ProjectId.make("project-retired-import-readded-new");
+        yield* engine.dispatch({
+          type: "project.create",
+          commandId: CommandId.make("create-readded-import-project"),
+          projectId: newProjectId,
+          title: "Readded folder",
+          workspaceRoot: fixture.workspaceRoot,
+          defaultModelSelection: null,
+          createdAt: "2026-08-24T11:00:00.000Z",
+        });
+        expect(yield* snapshots.getImportedThreadIdsToSkip(newProjectId)).not.toContain(
+          fixture.threadId,
+        );
+
+        const second = yield* fixture.runPass(newProjectId);
+
+        expect(second.result).toEqual({ importedCount: 1, skippedCount: 0 });
+        expect(second.createdThreadIds).toEqual([fixture.threadId]);
+        expect(second.fullReads).toBe(1);
+        const reimported = Option.getOrThrow(
+          yield* snapshots.getThreadDetailById(fixture.threadId),
+        );
+        expect(reimported.projectId).toBe(newProjectId);
+        expect(reimported.messages.map((message) => message.text)).toEqual([
+          "Prompt readded",
+          "Done",
+        ]);
+        expect(new Set(reimported.messages.map((message) => message.id)).size).toBe(2);
+
+        const third = yield* fixture.runPass(newProjectId);
+        expect(third.createdThreadIds).toEqual([]);
+        expect(third.newEvents).toBe(0);
+        expect(
+          Option.getOrThrow(yield* snapshots.getThreadDetailById(fixture.threadId)).messages,
+        ).toHaveLength(2);
+      }),
+  );
+
+  it.effect(
+    "reimports an import deleted before its project was removed and the folder readded",
+    () =>
+      Effect.gen(function* () {
+        const engine = yield* OrchestrationEngine.OrchestrationEngineService;
+        const snapshots = yield* ProjectionSnapshotQuery.ProjectionSnapshotQuery;
+        const fixture = yield* makeRetiredImportFixture({
+          label: "deleted-then-removed",
+          sessionId: "123e4567-e89b-42d3-a456-426614174106",
+        });
+        const first = yield* fixture.runPass(fixture.projectId);
+        expect(first.result).toEqual({ importedCount: 1, skippedCount: 0 });
+
+        yield* engine.dispatch({
+          type: "thread.delete",
+          commandId: CommandId.make("delete-before-project-removal"),
+          threadId: fixture.threadId,
+        });
+        // While the owner project exists, the user's deletion holds.
+        const whileOwnerExists = yield* fixture.runPass(fixture.projectId);
+        expect(whileOwnerExists.createdThreadIds).toEqual([]);
+
+        yield* engine.dispatch({
+          type: "project.delete",
+          commandId: CommandId.make("remove-project-after-deletion"),
+          projectId: fixture.projectId,
+          force: true,
+        });
+        const newProjectId = ProjectId.make("project-retired-import-deleted-then-removed-new");
+        yield* engine.dispatch({
+          type: "project.create",
+          commandId: CommandId.make("readd-folder-after-deletion"),
+          projectId: newProjectId,
+          title: "Readded after deletion",
+          workspaceRoot: fixture.workspaceRoot,
+          defaultModelSelection: null,
+          createdAt: "2026-08-24T11:00:00.000Z",
+        });
+
+        const afterReadd = yield* fixture.runPass(newProjectId);
+
+        expect(afterReadd.result).toEqual({ importedCount: 1, skippedCount: 0 });
+        expect(afterReadd.createdThreadIds).toEqual([fixture.threadId]);
+        const reimported = Option.getOrThrow(
+          yield* snapshots.getThreadDetailById(fixture.threadId),
+        );
+        expect(reimported.projectId).toBe(newProjectId);
+        expect(reimported.messages.map((message) => message.text)).toEqual([
+          "Prompt deleted-then-removed",
+          "Done",
+        ]);
+      }),
+  );
+
   it.effect("skips a T3 thread's own Claude session without reading it", () =>
     Effect.gen(function* () {
       const directory = yield* ProviderSessionDirectory.ProviderSessionDirectory;

@@ -1259,17 +1259,23 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
     Request: ProjectIdLookupInput,
     Result: ProjectionThreadIdLookupRowSchema,
     execute: ({ projectId }) =>
+      // A deleted or archived import does not come back while its owner
+      // project exists; removing the project and re-adding the folder
+      // reimports everything, so rows of a removed project do not count.
       sql`
         SELECT
-          thread_id AS "threadId"
-        FROM projection_threads
-        WHERE thread_id GLOB 'import:*'
+          threads.thread_id AS "threadId"
+        FROM projection_threads AS threads
+        INNER JOIN projection_projects AS projects
+          ON projects.project_id = threads.project_id
+        WHERE threads.thread_id GLOB 'import:*'
+          AND projects.deleted_at IS NULL
           AND (
-            deleted_at IS NOT NULL
-            OR archived_at IS NOT NULL
-            OR project_id <> ${projectId}
+            threads.deleted_at IS NOT NULL
+            OR threads.archived_at IS NOT NULL
+            OR threads.project_id <> ${projectId}
           )
-        ORDER BY thread_id ASC
+        ORDER BY threads.thread_id ASC
       `,
   });
 
@@ -1277,11 +1283,17 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
     Request: ThreadIdLookupInput,
     Result: ProjectionThreadIdLookupRowSchema,
     execute: ({ threadId }) =>
+      // Same rule as listImportedThreadIdsToSkip: a row left behind by a
+      // removed project does not block recreating the id, even if the user
+      // had deleted or archived it before removing the project.
       sql`
         SELECT
-          thread_id AS "threadId"
-        FROM projection_threads
-        WHERE thread_id = ${threadId}
+          threads.thread_id AS "threadId"
+        FROM projection_threads AS threads
+        INNER JOIN projection_projects AS projects
+          ON projects.project_id = threads.project_id
+        WHERE threads.thread_id = ${threadId}
+          AND projects.deleted_at IS NULL
         LIMIT 1
       `,
   });

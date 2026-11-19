@@ -230,14 +230,20 @@ export interface ProjectionSnapshotQueryShape {
 
   /**
    * Imported thread ids the importer must not read again for this project:
-   * deleted, archived, or owned by another project. Deleted rows are included
-   * so an import the user removed is never recreated.
+   * deleted, archived, or owned by another project. A deleted or archived
+   * import does not come back while its owner project exists; removing the
+   * project and re-adding the folder reimports everything, so rows of a
+   * removed project are left out.
    */
   readonly getImportedThreadIdsToSkip: (
     projectId: ProjectId,
   ) => Effect.Effect<ReadonlyArray<ThreadId>, ProjectionRepositoryError>;
 
-  /** Whether any thread row exists for this id, including deleted and archived ones. */
+  /**
+   * Whether a thread row exists for this id, including deleted and archived
+   * ones, while its owner project exists. Rows of a removed project do not
+   * count, so re-adding the folder reimports them.
+   */
   readonly threadRowExists: (
     threadId: ThreadId,
   ) => Effect.Effect<boolean, ProjectionRepositoryError>;

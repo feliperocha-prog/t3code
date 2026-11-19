@@ -1248,7 +1248,8 @@ describe("mobile move availability", () => {
     },
   );
 
-  it.each(["pinned"] as const)("reserves snoozed %s keys when moving visible rows", (section) => {
+  it("reserves snoozed pinned keys when moving visible rows", () => {
+    const section = "pinned" as const;
     const ordered = rows(section, ["bb", "dd", "ff"]);
     const input = { ordered, section, reorderableEnvironmentIds: new Set([environmentId]) };
     const collision = createThreadMovePlanner(input)(`${environmentId}:move-0`, "down")![0]!
@@ -1258,8 +1259,8 @@ describe("mobile move availability", () => {
       id: ThreadId.make("snoozed"),
       snoozedAt: NOW,
       snoozedUntil: "2099-01-01T00:00:00.000Z",
-      pinOrderKey: section === "pinned" ? collision : null,
-      activeOrderKey: section === "active" ? collision : null,
+      pinOrderKey: collision,
+      activeOrderKey: null,
     };
     const assignments = createThreadMovePlanner({ ...input, allThreads: [...ordered, hidden] })(
       `${environmentId}:move-0`,
